@@ -54,21 +54,25 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 
 function setupCodeBlocks() {
   nextTick(() => {
-    document.querySelectorAll('.markdown-body pre').forEach((pre) => {
-      if (pre.querySelector('.code-toggle')) return
+    if (!mdBodyRef.value) return
+    mdBodyRef.value.querySelectorAll('pre').forEach((pre) => {
+      if (pre.parentElement?.classList.contains('code-block-wrapper')) return
       const wrapper = document.createElement('div')
       wrapper.className = 'code-block-wrapper'
-      const btn = document.createElement('button')
-      btn.className = 'code-toggle'
-      btn.textContent = '收起'
-      btn.onclick = () => {
-        const code = wrapper.querySelector('code')
+      wrapper.innerHTML = `
+        <button class="code-toggle" title="收起">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+      `
+      const btn = wrapper.querySelector('.code-toggle')!
+      btn.addEventListener('click', () => {
         const collapsed = wrapper.classList.toggle('collapsed')
-        btn.textContent = collapsed ? '展开' : '收起'
-        if (code) code.style.display = collapsed ? 'none' : ''
-      }
+        btn.innerHTML = collapsed
+          ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
+          : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>'
+        btn.title = collapsed ? '展开' : '收起'
+      })
       pre.parentNode!.insertBefore(wrapper, pre)
-      wrapper.appendChild(btn)
       wrapper.appendChild(pre)
     })
   })
@@ -125,8 +129,8 @@ onUpdated(setupCodeBlocks)
 
 .code-block-wrapper { position: relative; margin: 8px 0; }
 .code-block-wrapper :deep(pre) { margin: 0; }
-.code-block-wrapper :deep(.code-toggle) { position: absolute; top: 6px; right: 8px; z-index: 1; background: rgba(255,255,255,0.1); color: rgba(250,249,245,0.7); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; }
-.code-block-wrapper :deep(.code-toggle):hover { background: rgba(255,255,255,0.2); color: #faf9f5; }
-.code-block-wrapper.collapsed :deep(pre) { max-height: 120px; overflow: hidden; border-radius: 8px 8px 0 0; }
+.code-block-wrapper :deep(.code-toggle) { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; border: none; background: rgba(255,255,255,0.08); color: rgba(250,249,245,0.5); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.code-block-wrapper :deep(.code-toggle):hover { background: rgba(255,255,255,0.18); color: #faf9f5; }
+.code-block-wrapper.collapsed :deep(pre) { max-height: 120px; overflow: hidden; }
 .code-block-wrapper:not(.collapsed) :deep(pre) { max-height: none; }
 </style>
