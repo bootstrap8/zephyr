@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 import { useChatStore } from '@/store/chat'
 import { useConversationsStore } from '@/store/conversations'
 import MessageBubble from './MessageBubble.vue'
@@ -12,10 +12,20 @@ const areaRef = ref<HTMLElement>()
 const fontSize = ref(16)
 const sizes = [12, 14, 16, 18, 20]
 
+const STORAGE_KEY = 'zephyr-font-size'
+
+onMounted(() => {
+  const saved = localStorage.getItem(STORAGE_KEY)
+  if (saved && sizes.includes(Number(saved))) fontSize.value = Number(saved)
+})
+
 function changeFont(step: number) {
   const idx = sizes.indexOf(fontSize.value)
   const next = idx + step
-  if (next >= 0 && next < sizes.length) fontSize.value = sizes[next]
+  if (next >= 0 && next < sizes.length) {
+    fontSize.value = sizes[next]
+    localStorage.setItem(STORAGE_KEY, String(fontSize.value))
+  }
 }
 
 function scrollToBottom() {
