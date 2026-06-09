@@ -387,7 +387,7 @@ function goBack() { window.history.back() }
     <!-- Skill 详情弹窗 -->
     <Teleport to="body">
       <div v-if="showDetail && detailSkill" class="modal-overlay" @click.self="closeDetail">
-        <div class="modal" style="width: 560px">
+        <div class="modal" style="width: 680px; max-width: calc(100vw - 48px)">
           <div class="modal-header">
             <h2>{{ detailSkill.displayName || detailSkill.skillName }}</h2>
             <button class="btn-icon" @click="closeDetail"><Icon icon="lucide:x" width="18" /></button>
@@ -412,11 +412,11 @@ function goBack() { window.history.back() }
               </div>
               <div class="detail-item" v-if="detailSkill.sourceUrl">
                 <span class="detail-label">来源地址</span>
-                <span class="detail-value font-mono" style="word-break:break-all">{{ detailSkill.sourceUrl }}</span>
+                <span class="detail-value font-mono" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ detailSkill.sourceUrl }}</span>
               </div>
               <div class="detail-item" v-if="detailSkill.installPath">
                 <span class="detail-label">安装路径</span>
-                <span class="detail-value font-mono" style="word-break:break-all">{{ detailSkill.installPath }}</span>
+                <span class="detail-value font-mono" style="white-space:nowrap">{{ detailSkill.installPath }}</span>
               </div>
               <div class="detail-item" v-if="detailSkill.createdAt">
                 <span class="detail-label">安装时间</span>
@@ -497,7 +497,11 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-.modal { background: var(--el-bg-color); border-radius: 16px; width: 520px; max-width: calc(100vw - 48px); max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.1); }
+.modal { background: var(--el-bg-color); border-radius: 16px; width: 520px; max-width: calc(100vw - 48px); max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.1); scrollbar-gutter: stable; }
+.modal::-webkit-scrollbar { width: 6px; }
+.modal::-webkit-scrollbar-track { background: transparent; border-radius: 16px; }
+.modal::-webkit-scrollbar-thumb { background: var(--el-border-color); border-radius: 3px; }
+.modal::-webkit-scrollbar-thumb:hover { background: var(--el-text-color-placeholder); }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 24px 28px 0; }
 .modal-header h2 { font-family: Georgia, serif; font-size: 24px; color: var(--el-text-color-primary); letter-spacing: -0.3px; margin: 0; }
 .modal-body { padding: 24px 28px; }
