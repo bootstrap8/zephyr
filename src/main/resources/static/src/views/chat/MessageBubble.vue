@@ -143,11 +143,11 @@ onUpdated(setupCodeBlocks)
 </style>
 
 <style>
-.code-block-wrapper { position: relative; margin: 8px 0; }
-.code-block-wrapper pre { margin: 0; }
-.code-actions { position: absolute; top: 6px; right: 6px; z-index: 1; display: flex; gap: 4px; }
-.code-btn { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; border: none; background: rgba(255,255,255,0.08); color: rgba(250,249,245,0.5); cursor: pointer; transition: background 0.15s, color 0.15s; }
-.code-btn:hover { background: rgba(255,255,255,0.18); color: #faf9f5; }
+.code-block-wrapper { position: relative; margin: 8px 0; background: #181715; border-radius: 8px; overflow: hidden; }
+.code-block-wrapper pre { margin: 0; background: #181715; color: #faf9f5; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
+.code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 4px; }
+.code-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: none; background: #252320; color: #a09d96; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.code-btn:hover { background: #2d2b27; color: #faf9f5; }
 .code-block-wrapper.collapsed pre { max-height: 120px; overflow: hidden; }
 .code-block-wrapper:not(.collapsed) pre { max-height: none; }
 </style>
