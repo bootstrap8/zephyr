@@ -126,11 +126,13 @@ onUpdated(setupCodeBlocks)
 .markdown-body :deep(code) { background: var(--el-fill-color); padding: 1px 6px; border-radius: 4px; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; color: var(--el-color-primary-dark-2); }
 .markdown-body :deep(pre) { background: #181715; color: #faf9f5; border-radius: 8px; padding: 16px; margin: 8px 0; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; line-height: 1.55; }
 .markdown-body :deep(pre code) { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
+</style>
 
+<style>
 .code-block-wrapper { position: relative; margin: 8px 0; }
-.code-block-wrapper :deep(pre) { margin: 0; }
-.code-block-wrapper :deep(.code-toggle) { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; border: none; background: rgba(255,255,255,0.08); color: rgba(250,249,245,0.5); cursor: pointer; transition: background 0.15s, color 0.15s; }
-.code-block-wrapper :deep(.code-toggle):hover { background: rgba(255,255,255,0.18); color: #faf9f5; }
-.code-block-wrapper.collapsed :deep(pre) { max-height: 120px; overflow: hidden; }
-.code-block-wrapper:not(.collapsed) :deep(pre) { max-height: none; }
+.code-block-wrapper pre { margin: 0; }
+.code-toggle { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; border: none; background: rgba(255,255,255,0.08); color: rgba(250,249,245,0.5); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.code-toggle:hover { background: rgba(255,255,255,0.18); color: #faf9f5; }
+.code-block-wrapper.collapsed pre { max-height: 120px; overflow: hidden; }
+.code-block-wrapper:not(.collapsed) pre { max-height: none; }
 </style>
