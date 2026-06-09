@@ -9,7 +9,7 @@ const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 const settingsStore = useSettingsStore()
 
-watch(() => props.visible, (v) => { if (v) settingsStore.loadMcpServers() })
+watch(() => props.visible, (v) => { if (v) { settingsStore.loadMcpServers(); settingsStore.loadSkills(); settingsStore.loadMemories() } })
 const isDark = ref(false)
 if (typeof document !== 'undefined') isDark.value = document.documentElement.classList.contains('dark')
 
@@ -57,6 +57,7 @@ function toggleDark() {
         <div class="sp-item" @click="goTo('/settings/memory')">
           <Icon icon="lucide:hard-drive" class="sp-item-icon" />
           <span>记忆管理</span>
+          <span class="sp-value">{{ settingsStore.memories.length > 0 ? '用户 ' + settingsStore.memories.filter((m: any) => m.type === 'user').length + '  项目 ' + settingsStore.memories.filter((m: any) => m.type === 'project').length : '无' }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
         <div class="sp-divider"></div>
