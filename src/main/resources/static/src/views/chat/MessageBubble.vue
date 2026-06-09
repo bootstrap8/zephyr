@@ -59,16 +59,7 @@ function setupCodeBlocks() {
       if (pre.parentElement?.classList.contains('code-block-wrapper')) return
       const wrapper = document.createElement('div')
       wrapper.className = 'code-block-wrapper'
-      wrapper.innerHTML = `
-        <div class="code-actions">
-          <button class="code-btn code-copy" title="复制">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          </button>
-          <button class="code-btn code-toggle" title="收起">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-          </button>
-        </div>
-      `
+      wrapper.innerHTML = '<button class="code-btn code-copy" title="复制"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button><button class="code-btn code-toggle" title="收起"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button>'
       const copyBtn = wrapper.querySelector('.code-copy')!
       copyBtn.addEventListener('click', async () => {
         const text = pre.textContent || ''
@@ -145,9 +136,10 @@ onUpdated(setupCodeBlocks)
 <style>
 .code-block-wrapper { position: relative; margin: 8px 0; background: #efe9de; border-radius: 8px; overflow: hidden; }
 .code-block-wrapper pre { margin: 0; background: #f5f0e8; color: #141413; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
-.code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 4px; }
-.code-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid #e6dfd8; background: #faf9f5; color: #6c6a64; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.code-btn { position: absolute; top: 8px; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid #e6dfd8; background: #faf9f5; color: #6c6a64; cursor: pointer; z-index: 1; transition: background 0.15s, color 0.15s; }
 .code-btn:hover { background: #f5f0e8; color: #141413; }
+.code-copy { right: 38px; }
+.code-toggle { right: 8px; }
 .code-block-wrapper.collapsed pre { max-height: 120px; overflow: hidden; }
 .code-block-wrapper:not(.collapsed) pre { max-height: none; }
 </style>
