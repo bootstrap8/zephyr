@@ -71,9 +71,16 @@ public class LlmClient {
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                String errorBody = response.body() != null ? response.body().string() : "";
+                int code = response.code();
+                String errorBody = "";
+                try {
+                    if (response.body() != null) errorBody = response.body().string();
+                } catch (Exception ignored) {}
+                log.warn("LLM API 调用失败: {} {} - {}", baseUrl + "v1/chat/completions", code, errorBody);
+                String errMsg = String.format("API 错误 [%d]: %s", code,
+                        errorBody.isEmpty() ? (code == 401 ? "API Key 无效" : code == 404 ? "接口不存在，请检查 Base URL" : "请求失败") : errorBody);
                 emitter.send(SseEmitter.event().name("message")
-                        .data(ChatEvent.builder().type("error").content("API 错误: " + errorBody).build()));
+                        .data(ChatEvent.builder().type("error").content(errMsg).build()));
                 return LlmResult.builder().content("").build();
             }
 
