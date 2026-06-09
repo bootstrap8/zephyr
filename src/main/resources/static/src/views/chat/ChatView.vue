@@ -38,6 +38,7 @@ function onSend(text: string) {
   chatStore.addMessage({ id: '', role: 'assistant', content: '', timestamp: Date.now() / 1000 })
   chatStore.streaming = true
 
+  let lastPos = 0
   axios({
     url: `/chat/send`,
     method: 'post',
@@ -46,7 +47,9 @@ function onSend(text: string) {
     signal: abortController.signal,
     onDownloadProgress(evt: any) {
       const raw = evt.event?.target?.responseText || evt.currentTarget?.responseText || ''
-      const lines = raw.split('\n')
+      const newData = raw.substring(lastPos)
+      lastPos = raw.length
+      const lines = newData.split('\n')
       for (const line of lines) {
         if (!line.startsWith('data:')) continue
         try {
