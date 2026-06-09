@@ -17,6 +17,11 @@ const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 const showSettings = ref(false)
 
+function newChat() {
+  chatStore.clearMessages()
+  convStore.currentId = null
+}
+
 function onSend(text: string) {
   chatStore.addMessage({ id: '', role: 'user', content: text, timestamp: Date.now() / 1000 })
   chatStore.addMessage({ id: '', role: 'assistant', content: '', timestamp: Date.now() / 1000 })
@@ -90,7 +95,7 @@ onMounted(() => {
 
 <template>
   <div class="app-layout">
-    <ChatSidebar @open-settings="showSettings = true" />
+    <ChatSidebar @open-settings="showSettings = true" @new-chat="newChat" />
     <div class="main-area">
       <div class="top-toolbar" :class="{ show: convStore.sidebarCollapsed }">
         <button class="tb-btn" @click="convStore.toggleSidebar()" title="展开侧边栏">
@@ -98,7 +103,7 @@ onMounted(() => {
         </button>
         <span class="tb-logo" @click="convStore.toggleSidebar()">zephyr</span>
         <span class="tb-divider"></span>
-        <button class="tb-btn" title="新对话">
+        <button class="tb-btn" title="新对话" @click="newChat">
           <Icon icon="lucide:square-pen" />
         </button>
         <button class="tb-btn" title="搜索会话">
