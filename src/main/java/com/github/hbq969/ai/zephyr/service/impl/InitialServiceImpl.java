@@ -32,6 +32,9 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
     @Resource
     private com.github.hbq969.ai.zephyr.mcp.dao.McpDao mcpDao;
 
+    @Resource
+    private com.github.hbq969.ai.zephyr.skill.dao.SkillDao skillDao;
+
     @Override
     protected void tableCreate0() {
         com.github.hbq969.code.common.utils.ThrowUtils.call("model_configs",
@@ -40,6 +43,8 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
                 () -> mcpDao.createMcpServersTable());
         com.github.hbq969.code.common.utils.ThrowUtils.call("mcp_tools",
                 () -> mcpDao.createMcpToolsTable());
+        com.github.hbq969.code.common.utils.ThrowUtils.call("skill_configs",
+                () -> skillDao.createSkillConfigsTable());
     }
 
     @Override

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.github.hbq969.ai.zephyr.skill.dao.SkillDao">
+
+  <update id="createSkillConfigsTable">
+    create table if not exists skill_configs (
+      id varchar(64) primary key,
+      user_name varchar(64) not null,
+      skill_name varchar(128) not null,
+      display_name varchar(256),
+      description text,
+      source varchar(32) not null,
+      source_url varchar(1024),
+      version varchar(32),
+      enabled smallint default 1,
+      install_path varchar(512),
+      created_at bigint,
+      updated_at bigint
+    );
+    create index if not exists idx_sc_user on skill_configs(user_name);
+    create index if not exists idx_sc_skill_name on skill_configs(skill_name);
+  </update>
+
+</mapper>
