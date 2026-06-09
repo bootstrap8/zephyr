@@ -132,6 +132,7 @@ onUpdated(setupCodeBlocks)
 .ai-label { font-size: 13px; font-weight: 600; color: var(--el-text-color-primary); }
 
 .markdown-body { font-size: inherit; }
+.markdown-body :deep(hr) { display: none; }
 .markdown-body :deep(h3) { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 1.25em; letter-spacing: -0.3px; margin: 14px 0 6px; color: var(--el-text-color-primary); }
 .markdown-body :deep(p) { margin: 6px 0; }
 .markdown-body :deep(ul) { padding-left: 20px; margin: 6px 0; }
@@ -143,7 +144,7 @@ onUpdated(setupCodeBlocks)
 </style>
 
 <style>
-.code-block-wrapper { position: relative; margin: 8px 0; background: #efe9de; border-radius: 8px; overflow: hidden; }
+.code-block-wrapper { position: relative; margin: 8px 0 0; background: #efe9de; border-radius: 8px; overflow: hidden; }
 .code-block-wrapper pre { margin: 0; background: #f5f0e8; color: #141413; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
 .code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 0; }
 .code-icon { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; color: #8e8b82; transition: color 0.15s; }
