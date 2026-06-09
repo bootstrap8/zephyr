@@ -308,14 +308,31 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spac
   font-size: 14px; color: var(--el-text-color-regular); line-height: 1.65;
 }
 .card-expand-body :deep(p) { margin: 6px 0; }
-.card-expand-body :deep(ul), .card-expand-body :deep(ol) { padding-left: 20px; margin: 6px 0; }
+.card-expand-body :deep(ul),
+.card-expand-body :deep(ol) { padding-left: 24px; margin: 6px 0; }
 .card-expand-body :deep(li) { margin: 3px 0; }
 .card-expand-body :deep(a) { color: var(--el-color-primary); }
+.card-expand-body :deep(blockquote) { border-left: 3px solid var(--el-color-primary-light-5); padding: 4px 12px; margin: 8px 0; color: var(--el-text-color-secondary); }
+.card-expand-body :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.card-expand-body :deep(th),
+.card-expand-body :deep(td) { border: 1px solid var(--el-border-color); padding: 6px 10px; text-align: left; font-size: 0.95em; }
+.card-expand-body :deep(th) { background: var(--el-fill-color-light); font-weight: 600; }
 .card-expand-body :deep(code) { background: var(--el-fill-color); padding: 1px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--el-color-primary-dark-2); }
 .card-expand-body :deep(pre) { background: #181715; color: #faf9f5; border-radius: 8px; padding: 14px; margin: 8px 0; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
 .card-expand-body :deep(pre code) { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
 .card-expand-body :deep(strong) { font-weight: 600; color: var(--el-text-color-primary); }
-.card-expand-body :deep(h3), .card-expand-body :deep(h4) { font-family: Georgia, serif; font-weight: 400; margin: 10px 0 4px; color: var(--el-text-color-primary); }
+.card-expand-body :deep(h1),
+.card-expand-body :deep(h2),
+.card-expand-body :deep(h3),
+.card-expand-body :deep(h4),
+.card-expand-body :deep(h5),
+.card-expand-body :deep(h6) { font-family: Georgia, serif; font-weight: 400; margin: 12px 0 6px; color: var(--el-text-color-primary); }
+.card-expand-body :deep(h1) { font-size: 1.4em; }
+.card-expand-body :deep(h2) { font-size: 1.25em; }
+.card-expand-body :deep(h3) { font-size: 1.15em; }
+.card-expand-body :deep(h4),
+.card-expand-body :deep(h5),
+.card-expand-body :deep(h6) { font-size: 1.05em; }
 .card-expand-footer {
   display: flex; align-items: center; gap: 8px;
   margin-top: 10px; font-size: 12px; color: var(--el-text-color-placeholder);

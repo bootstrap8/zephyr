@@ -95,8 +95,11 @@ public class LlmClient {
                     try {
                         JsonObject event = gson.fromJson(data, JsonObject.class);
                         if (event.has("choices") && event.getAsJsonArray("choices").size() > 0) {
-                            JsonObject choice = event.getAsJsonArray("choices").get(0).getAsJsonObject();
-                            JsonObject delta = choice.has("delta") ? choice.getAsJsonObject("delta") : null;
+                            JsonElement choiceEl = event.getAsJsonArray("choices").get(0);
+                            if (!choiceEl.isJsonObject()) continue;
+                            JsonObject choice = choiceEl.getAsJsonObject();
+                            JsonObject delta = (choice.has("delta") && !choice.get("delta").isJsonNull())
+                                    ? choice.getAsJsonObject("delta") : null;
                             if (delta == null) continue;
 
                             // text content
@@ -116,7 +119,7 @@ public class LlmClient {
                             }
 
                             // tool calls
-                            if (delta.has("tool_calls")) {
+                            if (delta.has("tool_calls") && !delta.get("tool_calls").isJsonNull()) {
                                 JsonArray tcArray = delta.getAsJsonArray("tool_calls");
                                 for (int i = 0; i < tcArray.size(); i++) {
                                     JsonObject tc = tcArray.get(i).getAsJsonObject();
@@ -160,7 +163,7 @@ public class LlmClient {
                         }
 
                         // usage
-                        if (event.has("usage")) {
+                        if (event.has("usage") && !event.get("usage").isJsonNull()) {
                             JsonObject usage = event.getAsJsonObject("usage");
                             Map<String, Integer> usageMap = new LinkedHashMap<>();
                             if (usage.has("prompt_tokens")) usageMap.put("inputTokens", usage.get("prompt_tokens").getAsInt());

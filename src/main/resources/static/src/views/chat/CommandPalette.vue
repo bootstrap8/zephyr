@@ -33,13 +33,7 @@ const grouped = computed(() => {
 })
 
 function onKeydown(e: KeyboardEvent) {
-  if (!visible.value) {
-    if (e.key === '/' && (e.target as HTMLTextAreaElement)?.value === '') {
-      e.preventDefault()
-      open('')
-    }
-    return
-  }
+  if (!visible.value) return
   if (e.key === 'Escape') { close(); return }
   if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx.value = Math.min(activeIdx.value + 1, filteredCommands.value.length - 1) }
   if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx.value = Math.max(activeIdx.value - 1, 0) }

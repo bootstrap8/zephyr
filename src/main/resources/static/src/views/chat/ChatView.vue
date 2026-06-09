@@ -61,7 +61,12 @@ function onSend(text: string) {
           } else if (event.type === 'meta') {
             convStore.currentId = event.content
             refreshConversationList()
+          } else if (event.type === 'clear') {
+            chatStore.clearMessages()
+            convStore.currentId = null
+            chatStore.streaming = false
           } else if (event.type === 'done') {
+            chatStore.pruneEmptyAssistant()
             refreshConversationList()
             chatStore.streaming = false
           } else if (event.type === 'error') {

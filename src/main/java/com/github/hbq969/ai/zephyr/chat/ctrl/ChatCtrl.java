@@ -4,6 +4,7 @@ import com.github.hbq969.ai.zephyr.chat.model.ChatRequest;
 import com.github.hbq969.ai.zephyr.chat.service.ChatService;
 import com.github.hbq969.code.common.restful.ReturnMessage;
 import com.github.hbq969.code.common.spring.context.UserInfo;
+import com.github.hbq969.code.common.utils.GsonUtils;
 import com.github.hbq969.code.sm.login.session.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ public class ChatCtrl {
 
     private String userName() {
         UserInfo ui = UserContext.getNoCheck();
+        log.info("++++ 会话信息: {}", ui == null ? "无" : ui.getUserName());
         return ui != null ? ui.getUserName() : "admin";
     }
 

@@ -50,5 +50,16 @@ export const useChatStore = defineStore('chat', () => {
     currentThinking.value = ''
   }
 
-  return { messages, streaming, currentThinking, addMessage, appendToken, setThinking, updateLastThinking, clearMessages }
+  function pruneEmptyAssistant() {
+    flushTokens()
+    const msgs = messages.value
+    if (msgs.length > 0) {
+      const last = msgs[msgs.length - 1]
+      if (last.role === 'assistant' && !(last.content || '').trim() && (!last.toolCalls || last.toolCalls.length === 0)) {
+        msgs.pop()
+      }
+    }
+  }
+
+  return { messages, streaming, currentThinking, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, pruneEmptyAssistant }
 })

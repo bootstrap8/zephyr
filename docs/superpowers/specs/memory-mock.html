@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记忆管理 — Zephyr</title>
+<style>
+:root {
+  --c-canvas: #faf9f5;
+  --c-ink: #141413;
+  --c-body: #3d3d3a;
+  --c-muted: #6c6a64;
+  --c-muted-soft: #8e8b82;
+  --c-hairline: #e6dfd8;
+  --c-surface-card: #efe9de;
+  --c-primary: #cc785c;
+  --c-primary-active: #a9583e;
+  --c-error: #c64545;
+  --c-on-primary: #ffffff;
+  --r-md: 8px;
+  --r-lg: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--c-canvas);
+  color: var(--c-body);
+  font-size: 14px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+.app { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+/* -- header -- */
+.header { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.back-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--c-hairline); background: var(--c-canvas);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--c-muted); font-size: 18px;
+}
+.back-btn:hover { background: var(--c-surface-card); }
+.header h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px; font-weight: 400; letter-spacing: -0.3px; color: var(--c-ink);
+}
+
+/* -- toolbar -- */
+.toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: 4px; margin-right: auto; }
+.filter-tab {
+  padding: 6px 14px; border-radius: var(--r-md); border: none;
+  background: transparent; color: var(--c-muted);
+  font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-tab:hover { background: var(--c-surface-card); color: var(--c-ink); }
+.filter-tab.active { background: var(--c-surface-card); color: var(--c-ink); }
+.filter-tab .count { font-weight: 400; color: var(--c-muted-soft); margin-left: 2px; }
+
+.add-btn {
+  padding: 8px 18px; border-radius: var(--r-md); border: none;
+  background: var(--c-primary); color: var(--c-on-primary);
+  font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background 0.15s;
+}
+.add-btn:hover { background: var(--c-primary-active); }
+
+/* -- batch bar -- */
+.batch-bar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  padding: 8px 12px; border-radius: var(--r-md);
+  background: var(--c-surface-card); font-size: 13px; color: var(--c-muted);
+}
+.batch-bar.hidden { display: none; }
+.batch-del-btn {
+  padding: 4px 12px; border-radius: var(--r-md); border: 1px solid var(--c-error);
+  background: transparent; color: var(--c-error);
+  font-family: inherit; font-size: 13px; cursor: pointer;
+}
+.batch-del-btn:hover { background: var(--c-error); color: var(--c-on-primary); }
+
+/* -- card list -- */
+.card-list { display: flex; flex-direction: column; gap: 1px; background: var(--c-hairline); border-radius: var(--r-lg); overflow: hidden; }
+
+/* -- card -- */
+.card { background: var(--c-canvas); transition: background 0.1s; }
+.card:hover { background: #f7f4ee; }
+.card-inner { padding: 14px 16px; }
+.card-header { display: flex; align-items: flex-start; gap: 10px; }
+.card-checkbox { margin-top: 2px; accent-color: var(--c-primary); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+.card-icon { color: var(--c-muted-soft); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.card-body { flex: 1; min-width: 0; }
+.card-title { font-size: 14px; font-weight: 500; color: var(--c-ink); cursor: pointer; }
+.card-title:hover { color: var(--c-primary); }
+.card-desc { font-size: 13px; color: var(--c-muted); margin-top: 2px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--c-muted-soft); }
+.type-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 9999px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.3px;
+}
+.type-badge.user { background: rgba(204,120,92,0.1); color: var(--c-primary); }
+.type-badge.project { background: rgba(93,184,114,0.1); color: #3d8b4f; }
+
+.card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.card-action-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: transparent; color: var(--c-muted-soft); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  transition: all 0.15s;
+}
+.card-action-btn:hover { background: var(--c-surface-card); color: var(--c-ink); }
+.card-action-btn.danger:hover { background: rgba(198,69,69,0.08); color: var(--c-error); }
+
+/* -- expanded body -- */
+.card-expand { display: none; }
+.card.expanded .card-expand { display: block; }
+.card-expand-body {
+  padding: 0 16px 14px;
+  margin: 0 16px 0 41px;
+  border-top: 1px solid var(--c-hairline);
+  font-size: 14px; color: var(--c-body); line-height: 1.65;
+}
+.card-expand-body p { margin: 10px 0; }
+.card-expand-body p:first-child { margin-top: 12px; }
+.card-expand-body code {
+  background: var(--c-surface-card); padding: 1px 5px; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px;
+}
+.card-expand-body ul { padding-left: 20px; margin: 8px 0; }
+.card-expand-body li { margin: 4px 0; }
+.card-expand-footer {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; font-size: 12px; color: var(--c-muted-soft);
+}
+
+/* -- empty -- */
+.empty-state {
+  text-align: center; padding: 80px 20px; color: var(--c-muted);
+}
+.empty-state svg { margin-bottom: 16px; opacity: 0.4; }
+.empty-state h3 { font-family: Georgia, serif; font-size: 18px; font-weight: 400; color: var(--c-ink); margin-bottom: 6px; }
+.empty-state p { font-size: 14px; }
+
+/* -- modal overlay -- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(20,20,19,0.35);
+  z-index: 300; display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--c-canvas); border-radius: var(--r-lg);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12); width: 480px; max-width: 95vw;
+  max-height: 80vh; overflow-y: auto;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--c-hairline);
+}
+.modal-header h2 {
+  font-family: Georgia, serif; font-size: 18px; font-weight: 400; letter-spacing: -0.3px; color: var(--c-ink);
+}
+.modal-close {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: transparent; color: var(--c-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.modal-close:hover { background: var(--c-surface-card); }
+.modal-body { padding: 20px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--c-hairline); }
+
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--c-ink); margin-bottom: 6px; }
+.form-label .required { color: var(--c-error); margin-left: 1px; }
+.form-input {
+  width: 100%; padding: 9px 12px; border-radius: var(--r-md);
+  border: 1px solid var(--c-hairline); background: var(--c-canvas);
+  color: var(--c-ink); font-family: inherit; font-size: 14px;
+  outline: none; transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(204,120,92,0.12); }
+.form-select {
+  width: 100%; padding: 9px 12px; border-radius: var(--r-md);
+  border: 1px solid var(--c-hairline); background: var(--c-canvas);
+  color: var(--c-ink); font-family: inherit; font-size: 14px;
+  outline: none; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c6a64' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px;
+}
+.form-textarea {
+  width: 100%; padding: 10px 12px; border-radius: var(--r-md);
+  border: 1px solid var(--c-hairline); background: var(--c-canvas);
+  color: var(--c-ink); font-family: inherit; font-size: 14px; line-height: 1.6;
+  outline: none; resize: vertical; min-height: 120px;
+}
+.form-textarea:focus { border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(204,120,92,0.12); }
+
+.btn {
+  padding: 8px 18px; border-radius: var(--r-md); border: none;
+  font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-primary { background: var(--c-primary); color: var(--c-on-primary); }
+.btn-primary:hover { background: var(--c-primary-active); }
+.btn-secondary { background: var(--c-canvas); color: var(--c-ink); border: 1px solid var(--c-hairline); }
+.btn-secondary:hover { background: var(--c-surface-card); }
+.btn-danger { background: transparent; color: var(--c-error); border: 1px solid var(--c-error); }
+.btn-danger:hover { background: var(--c-error); color: var(--c-on-primary); }
+
+/* confirm dialog */
+.confirm-list { margin: 10px 0; padding-left: 18px; }
+.confirm-list li { font-size: 13px; color: var(--c-body); margin: 4px 0; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- header -->
+  <div class="header">
+    <button class="back-btn" title="返回">←</button>
+    <h1>记忆管理</h1>
+  </div>
+
+  <!-- toolbar -->
+  <div class="toolbar">
+    <div class="filter-tabs" id="filterTabs"></div>
+    <button class="add-btn" onclick="openModal('add')">+ 新增记忆</button>
+  </div>
+
+  <!-- batch bar -->
+  <div class="batch-bar hidden" id="batchBar">
+    <span>已选 <strong id="batchCount">0</strong> 项</span>
+    <button class="batch-del-btn" onclick="showConfirmDelete()">批量删除</button>
+  </div>
+
+  <!-- cards -->
+  <div class="card-list" id="cardList"></div>
+  <!-- empty state -->
+  <div class="empty-state hidden" id="emptyState">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+    <h3>暂无记忆</h3>
+    <p>点击「+ 新增记忆」创建第一条</p>
+  </div>
+</div>
+
+<!-- add/edit modal -->
+<div class="modal-overlay hidden" id="formModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="formTitle">新增记忆</h2>
+      <button class="modal-close" onclick="closeModal('form')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editIndex" value="-1">
+      <div class="form-group">
+        <label class="form-label">名称<span class="required">*</span></label>
+        <input class="form-input" id="memName" placeholder="简短标题，如「用户偏好简洁回复风格」">
+      </div>
+      <div class="form-group">
+        <label class="form-label">类型<span class="required">*</span></label>
+        <select class="form-select" id="memType">
+          <option value="user">用户</option>
+          <option value="project">项目</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">内容<span class="required">*</span></label>
+        <textarea class="form-textarea" id="memContent" placeholder="记忆详情，支持 Markdown。例如：用户希望回复简洁、直接，避免大段文字和重复解释。"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('form')">取消</button>
+      <button class="btn btn-primary" onclick="saveMemory()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- delete confirm modal -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>确认删除</h2>
+      <button class="modal-close" onclick="closeModal('delete')">✕</button>
+    </div>
+    <div class="modal-body" id="deleteBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('delete')">取消</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">删除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  {
+    name: '用户偏好：简洁回复风格',
+    type: 'user',
+    content: '用户希望回复**简洁、直接**，避免大段文字和重复解释。\n\n在不需要详细解释时，用 2-3 句话直接回答问题。\n\n如果用户问"为什么"，则需要展开说明原因。',
+    createdAt: 1717891200,
+    updatedAt: 1717891200
+  },
+  {
+    name: '项目使用 Spring Boot 3.5.4',
+    type: 'project',
+    content: '后端技术栈：\n\n- **JDK** 17\n- **Spring Boot** 3.5.4\n- **ORM** MyBatis\n- **定时任务** XXL-Job\n- **工具库** Hutool\n\n所有配置先定义在 `application.yml` 中，各环境文件只覆盖差异配置。',
+    createdAt: 1717804800,
+    updatedAt: 1717977600
+  },
+  {
+    name: '禁止使用自定义颜色值',
+    type: 'user',
+    content: '前端配色**必须使用 Element-plus 主题色**（如 `var(--el-color-primary)`、`var(--el-color-danger)` 等）。\n\n禁止使用自定义颜色值（如 `#409EFF`、`red` 等）。\n\n暗黑模式适配用 `html.dark` 选择器 + `:deep()` 穿透 scoped 样式。',
+    createdAt: 1717718400,
+    updatedAt: 1717718400
+  },
+  {
+    name: 'Pipeline 问题跟踪在 Linear INGEST',
+    type: 'project',
+    content: '所有 pipeline 相关的 bug 和任务跟踪在 Linear 项目 `INGEST` 中。\n\n非 critical 的合并请求在 mobile release cut 前冻结。',
+    createdAt: 1717632000,
+    updatedAt: 1717632000
+  }
+];
+
+let currentFilter = 'all';
+let expandedCard = null;
+
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  return d.toISOString().slice(0, 10);
+}
+
+function renderFilterTabs() {
+  const all = DATA.length;
+  const user = DATA.filter(m => m.type === 'user').length;
+  const project = DATA.filter(m => m.type === 'project').length;
+  const tabs = [
+    { key: 'all', label: '全部', count: all },
+    { key: 'user', label: '用户', count: user },
+    { key: 'project', label: '项目', count: project }
+  ];
+  document.getElementById('filterTabs').innerHTML = tabs.map(t =>
+    `<button class="filter-tab${currentFilter === t.key ? ' active' : ''}" data-filter="${t.key}" onclick="setFilter('${t.key}')">${t.label} <span class="count">${t.count}</span></button>`
+  ).join('');
+}
+
+function getFiltered() {
+  return currentFilter === 'all' ? DATA : DATA.filter(m => m.type === currentFilter);
+}
+
+function renderCards() {
+  const list = getFiltered();
+  const container = document.getElementById('cardList');
+  const empty = document.getElementById('emptyState');
+
+  if (list.length === 0) {
+    container.innerHTML = '';
+    empty.classList.remove('hidden');
+  } else {
+    empty.classList.add('hidden');
+    container.innerHTML = list.map((m, i) => {
+      const idx = DATA.indexOf(m);
+      const isExpanded = expandedCard === idx;
+      const typeLabel = m.type === 'user' ? '用户' : '项目';
+      const contentHtml = m.content
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+      return `
+        <div class="card${isExpanded ? ' expanded' : ''}" id="card-${idx}">
+          <div class="card-inner">
+            <div class="card-header">
+              <input type="checkbox" class="card-checkbox" id="cb-${idx}" onchange="updateBatchBar()" onclick="event.stopPropagation()">
+              <span class="card-icon">📄</span>
+              <div class="card-body">
+                <div class="card-title" onclick="toggleCard(${idx})">${m.name}</div>
+                <div class="card-desc">${m.content.slice(0, 60).replace(/\n/g, ' ')}${m.content.length > 60 ? '...' : ''}</div>
+                <div class="card-meta">
+                  <span class="type-badge ${m.type}">${typeLabel}</span>
+                  <span>${fmtTime(m.updatedAt)}</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="card-action-btn" onclick="openModal('edit',${idx})" title="编辑">✎</button>
+                <button class="card-action-btn danger" onclick="showConfirmDelete(${idx})" title="删除">🗑</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-expand">
+            <div class="card-expand-body">
+              ${'<p>' + contentHtml + '</p>'}
+              <div class="card-expand-footer">
+                <span>创建于 ${fmtTime(m.createdAt)}</span>
+                <span>·</span>
+                <span>更新于 ${fmtTime(m.updatedAt)}</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  updateBatchBar();
+}
+
+function toggleCard(idx) {
+  expandedCard = expandedCard === idx ? null : idx;
+  renderCards();
+}
+
+function setFilter(key) {
+  currentFilter = key;
+  expandedCard = null;
+  renderFilterTabs();
+  renderCards();
+}
+
+function updateBatchBar() {
+  const checked = document.querySelectorAll('.card-checkbox:checked').length;
+  document.getElementById('batchCount').textContent = checked;
+  document.getElementById('batchBar').classList.toggle('hidden', checked === 0);
+}
+
+function getCheckedIndices() {
+  return [...document.querySelectorAll('.card-checkbox:checked')].map(cb => parseInt(cb.id.replace('cb-','')));
+}
+
+// -- modal --
+function openModal(mode, idx) {
+  document.getElementById('editIndex').value = idx >= 0 ? idx : -1;
+  if (mode === 'add') {
+    document.getElementById('formTitle').textContent = '新增记忆';
+    document.getElementById('memName').value = '';
+    document.getElementById('memType').value = 'user';
+    document.getElementById('memContent').value = '';
+  } else {
+    document.getElementById('formTitle').textContent = '编辑记忆';
+    const m = DATA[idx];
+    document.getElementById('memName').value = m.name;
+    document.getElementById('memType').value = m.type;
+    document.getElementById('memContent').value = m.content;
+  }
+  document.getElementById('formModal').classList.remove('hidden');
+}
+
+function closeModal(which) {
+  document.getElementById(which === 'form' ? 'formModal' : 'deleteModal').classList.add('hidden');
+}
+
+function saveMemory() {
+  const name = document.getElementById('memName').value.trim();
+  const type = document.getElementById('memType').value;
+  const content = document.getElementById('memContent').value.trim();
+  if (!name || !content) { alert('请填写名称和内容'); return; }
+
+  const idx = parseInt(document.getElementById('editIndex').value);
+  const now = Math.floor(Date.now() / 1000);
+  if (idx >= 0) {
+    DATA[idx].name = name;
+    DATA[idx].type = type;
+    DATA[idx].content = content;
+    DATA[idx].updatedAt = now;
+  } else {
+    DATA.push({ name, type, content, createdAt: now, updatedAt: now });
+  }
+  closeModal('form');
+  renderFilterTabs();
+  renderCards();
+}
+
+function showConfirmDelete(idx) {
+  const indices = idx !== undefined ? [idx] : getCheckedIndices();
+  if (indices.length === 0) return;
+  const names = indices.map(i => DATA[i].name);
+  document.getElementById('deleteBody').innerHTML = `
+    <p style="font-size:14px;color:var(--c-body)">确定删除以下 ${names.length} 条记忆？</p>
+    <ul class="confirm-list">${names.map(n => `<li>${n}</li>`).join('')}</ul>
+  `;
+  document.getElementById('deleteModal').dataset.indices = JSON.stringify(indices);
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function confirmDelete() {
+  const indices = JSON.parse(document.getElementById('deleteModal').dataset.indices);
+  indices.sort((a,b) => b - a).forEach(i => DATA.splice(i, 1));
+  expandedCard = null;
+  closeModal('delete');
+  renderFilterTabs();
+  renderCards();
+}
+
+// init
+renderFilterTabs();
+renderCards();
+</script>
+</body>
+</html>

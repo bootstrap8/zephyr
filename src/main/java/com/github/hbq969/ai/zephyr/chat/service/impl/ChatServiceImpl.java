@@ -52,13 +52,22 @@ public class ChatServiceImpl implements ChatService {
     private McpConnectionManager mcpConnectionManager;
 
     @Override
-    public SseEmitter send(String userName, String conversationId, String message) {
+    public SseEmitter send(String userName, String conversationId, String originalMessage) {
         SseEmitter emitter = new SseEmitter(300000L);
 
         executor.execute(() -> {
             try {
                 String cid = conversationId;
                 long now = System.currentTimeMillis() / 1000;
+
+                // 0. 预处理斜杠命令
+                String message = originalMessage;
+                if (message.startsWith("/")) {
+                    String handled = handleSlashCommand(message, userName, cid, emitter, now);
+                    if (handled == null) return; // 已直接处理完成
+                    message = handled; // 改写后的消息
+                }
+
                 // 1. 确保会话存在（首次对话自动创建）
                 if (cid == null || cid.isEmpty()) {
                     cid = UUID.fastUUID().toString(true).substring(0, 12);
@@ -89,8 +98,9 @@ public class ChatServiceImpl implements ChatService {
                 messages.add(Map.of("role", "user", "content", message));
 
                 // 4. 工具调用循环
+                LlmResult result = null;
                 for (int round = 0; round < MAX_ROUNDS; round++) {
-                    LlmResult result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter);
+                    result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter);
 
                     if (result.hasToolCalls()) {
                         // 4a. 添加 assistant 消息（含 tool_calls）
@@ -108,14 +118,14 @@ public class ChatServiceImpl implements ChatService {
                         }
                         messages.add(assistantMsg);
 
-                        // 4b. 持久化 assistant 消息
-                        persistAssistantMessage(cid, result, now);
+                        // 4b. 持久化 assistant 消息（每轮递增时间戳，保证消息顺序）
+                        persistAssistantMessage(cid, result, now + round);
 
                         // 4c. 分发工具调用
                         List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName);
                         messages.addAll(toolResults);
 
-                        // 4d. 持久化 tool 消息
+                        // 4d. 持久化 tool 消息（用统一时间戳保证排序在 assistant 之后）
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
                             LlmResult.ToolCall tc = result.getToolCalls().get(i);
                             MessageEntity toolMsg = new MessageEntity();
@@ -124,12 +134,14 @@ public class ChatServiceImpl implements ChatService {
                             toolMsg.setRole("tool");
                             toolMsg.setContent(toolResults.get(i).get("content").toString());
                             toolMsg.setToolCallId(tc.getId());
-                            toolMsg.setCreatedAt(System.currentTimeMillis() / 1000);
+                            toolMsg.setCreatedAt(now + i + 1); // 比 assistant 晚 1-2 秒，保证排序正确
                             chatDao.insertMessage(toolMsg);
                         }
                     } else {
-                        // 5. 正常结束
-                        persistAssistantMessage(cid, result, now);
+                        // 5. 正常结束（内容为空时跳过持久化，避免空消息气泡）
+                        if (isNotBlank(result.getContent()) || result.hasToolCalls()) {
+                            persistAssistantMessage(cid, result, now + round);
+                        }
                         emitter.send(SseEmitter.event().name("message")
                                 .data(ChatEvent.builder().type("done").build()));
                         emitter.complete();
@@ -137,6 +149,9 @@ public class ChatServiceImpl implements ChatService {
                     }
                 }
                 // 超轮次结束
+                if (result != null && (isNotBlank(result.getContent()) || result.hasToolCalls())) {
+                    persistAssistantMessage(cid, result, now + MAX_ROUNDS);
+                }
                 emitter.send(SseEmitter.event().name("message")
                         .data(ChatEvent.builder().type("done").build()));
                 emitter.complete();
@@ -160,7 +175,7 @@ public class ChatServiceImpl implements ChatService {
         msg.setId(cn.hutool.core.lang.UUID.fastUUID().toString(true).substring(0, 12));
         msg.setConversationId(cid);
         msg.setRole("assistant");
-        msg.setContent(result.getContent());
+        msg.setContent(result.getContent() != null ? result.getContent().trim() : "");
         msg.setThinking(result.getThinking());
         if (result.getToolCalls() != null) {
             msg.setToolCallsJson(gson.toJson(result.getToolCalls().stream().map(tc -> {
@@ -181,6 +196,78 @@ public class ChatServiceImpl implements ChatService {
             chatDao.updateConversationTitle(cid, conv.getTitle(),
                     System.currentTimeMillis() / 1000, conv.getUserName());
         }
+    }
+
+    /**
+     * 处理斜杠命令。返回 null 表示已直接处理完成（emitter 已关闭），
+     * 返回非 null 字符串表示改写后的消息（继续走 LLM 流程）。
+     */
+    private String handleSlashCommand(String message, String userName, String cid,
+                                       SseEmitter emitter, long now) throws IOException {
+        String cmd = message.trim();
+        int spaceIdx = cmd.indexOf(' ');
+        String cmdName = spaceIdx > 0 ? cmd.substring(1, spaceIdx) : cmd.substring(1);
+        String cmdArgs = spaceIdx > 0 ? cmd.substring(spaceIdx + 1).trim() : "";
+
+        // 内置命令：直接处理，不走 LLM
+        switch (cmdName) {
+            case "clear" -> {
+                emitter.send(SseEmitter.event().name("message")
+                        .data(ChatEvent.builder().type("clear").build()));
+                emitter.send(SseEmitter.event().name("message")
+                        .data(ChatEvent.builder().type("done").build()));
+                emitter.complete();
+                return null;
+            }
+            case "help" -> {
+                String help = """
+                        ## zephyr 可用命令
+
+                        ### MCP 工具
+                        输入 `/工具名` 直接调用 MCP 工具，如 `/browser_navigate`
+
+                        ### 技能
+                        输入 `/技能名` 加载并使用技能，如 `/frontend-design`
+
+                        ### 会话
+                        - `/context` — 查看上下文占比
+
+                        ### 操作
+                        - `/clear` — 清空当前对话
+                        - `/help` — 查看此帮助
+                        """;
+                emitter.send(SseEmitter.event().name("message")
+                        .data(ChatEvent.builder().type("token").content(help).build()));
+                emitter.send(SseEmitter.event().name("message")
+                        .data(ChatEvent.builder().type("done").build()));
+                emitter.complete();
+                return null;
+            }
+            case "context" -> {
+                Map<String, Object> usage = contextUsage(userName, cid);
+                StringBuilder sb = new StringBuilder("## 上下文占比\n\n");
+                sb.append("| 类型 | Token 数 |\n");
+                sb.append("|------|----------|\n");
+                sb.append("| 系统提示词 | ").append(usage.get("systemPrompt")).append(" |\n");
+                sb.append("| 历史消息 | ").append(usage.get("history")).append(" |\n");
+                sb.append("| 技能内容 | ").append(usage.get("skillContent")).append(" |\n");
+                sb.append("| 记忆内容 | ").append(usage.get("memoryContent")).append(" |\n");
+                sb.append("| 工具定义 | ").append(usage.get("toolDefinitions")).append(" |\n");
+                sb.append("| **总计** | **").append(usage.get("total")).append("** |\n");
+                emitter.send(SseEmitter.event().name("message")
+                        .data(ChatEvent.builder().type("token").content(sb.toString()).build()));
+                emitter.send(SseEmitter.event().name("message")
+                        .data(ChatEvent.builder().type("done").build()));
+                emitter.complete();
+                return null;
+            }
+        }
+
+        // MCP 工具 / 技能 / 记忆命令：改写为更明确的消息
+        if (!cmdArgs.isEmpty()) {
+            return "请使用 " + cmdName + " 工具，参数: " + cmdArgs;
+        }
+        return "请调用 " + cmdName;
     }
 
     private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls, String userName) {
@@ -289,5 +376,9 @@ public class ChatServiceImpl implements ChatService {
 
     private int estimateTokens(String text) {
         return (int) Math.ceil(text.length() * 0.3);
+    }
+
+    private boolean isNotBlank(String s) {
+        return s != null && !s.isBlank();
     }
 }

@@ -255,6 +255,9 @@ public class McpClient {
                         McpToolEntity entity = new McpToolEntity();
                         entity.setToolName(t.has("name") ? t.get("name").getAsString() : "");
                         entity.setDescription(t.has("description") ? t.get("description").getAsString() : "");
+                        if (t.has("inputSchema")) {
+                            entity.setParametersJson(gson.toJson(t.get("inputSchema")));
+                        }
                         entity.setSource("discovered");
                         entity.setEnabled(1);
                         tools.add(entity);

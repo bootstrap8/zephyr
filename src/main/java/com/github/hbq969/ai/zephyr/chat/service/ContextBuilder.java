@@ -53,6 +53,13 @@ public class ContextBuilder {
             - 需要特定任务的详细指导时，使用 use_skill 工具
             - 需要了解用户的背景或偏好时，使用 use_memory 工具
             - 你可以多次调用工具，直到获得足够信息后再回答
+
+            ## 命令约定
+            当用户消息以 `/` 开头时，这是一个工具调用快捷命令，你必须调用对应工具：
+            - `/工具名`（如 `/browser_navigate`）→ 直接调用同名 MCP 工具，不要用文字回复
+            - `/技能名`（如 `/frontend-design`）→ 调用 use_skill(skill_name="技能名") 加载该技能
+            - `/记忆名` → 调用 use_memory(memory_name="记忆名") 查看该记忆
+            收到 `/` 命令后必须调用工具，禁止只回复文字而不调用工具。
             """;
 
     public Context build(String userName, String conversationId) {
@@ -103,10 +110,16 @@ public class ContextBuilder {
         List<ToolDef> defs = new ArrayList<>();
         List<McpToolEntity> tools = mcpDao.queryEnabledToolsByUserName(userName);
         for (McpToolEntity t : tools) {
-            Map<String, Object> params = new LinkedHashMap<>();
-            params.put("type", "object");
-            params.put("properties", new LinkedHashMap<>());
-            params.put("required", Collections.emptyList());
+            Map<String, Object> params;
+            if (t.getParametersJson() != null && !t.getParametersJson().isEmpty()) {
+                params = gson.fromJson(t.getParametersJson(),
+                        new TypeToken<Map<String, Object>>(){}.getType());
+            } else {
+                params = new LinkedHashMap<>();
+                params.put("type", "object");
+                params.put("properties", new LinkedHashMap<>());
+                params.put("required", Collections.emptyList());
+            }
 
             defs.add(ToolDef.builder()
                     .type("function")
@@ -169,8 +182,21 @@ public class ContextBuilder {
                     msg.put("tool_call_id", e.getToolCallId());
                 }
                 if (e.getToolCallsJson() != null && !e.getToolCallsJson().isEmpty()) {
-                    msg.put("tool_calls", gson.fromJson(e.getToolCallsJson(),
-                            new TypeToken<List<Map<String, Object>>>(){}.getType()));
+                    List<Map<String, Object>> stored = gson.fromJson(e.getToolCallsJson(),
+                            new TypeToken<List<Map<String, Object>>>(){}.getType());
+                    // 转换为 OpenAI 格式：{id, input} → {id, type:"function", function:{name, arguments}}
+                    List<Map<String, Object>> openaiFormat = new ArrayList<>();
+                    for (Map<String, Object> tc : stored) {
+                        Map<String, Object> converted = new LinkedHashMap<>();
+                        converted.put("id", tc.get("id"));
+                        converted.put("type", "function");
+                        Map<String, Object> function = new LinkedHashMap<>();
+                        function.put("name", tc.get("name"));
+                        function.put("arguments", gson.toJson(tc.get("input")));
+                        converted.put("function", function);
+                        openaiFormat.add(converted);
+                    }
+                    msg.put("tool_calls", openaiFormat);
                 }
                 messages.add(msg);
             }

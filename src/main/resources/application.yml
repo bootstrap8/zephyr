@@ -80,6 +80,7 @@ spring:
           - "/${spring.mvc.interceptors.login.ui-output-dir}/system/captcha"
           - "/${spring.mvc.interceptors.login.ui-output-dir}/system/captcha/verify"
           - "/${spring.mvc.interceptors.login.ui-output-dir}/**/forgot-password/**"
+#          - "/zephyr-ui/**"
         sm-initial-script:
           language: zh-CN
           charset: utf-8

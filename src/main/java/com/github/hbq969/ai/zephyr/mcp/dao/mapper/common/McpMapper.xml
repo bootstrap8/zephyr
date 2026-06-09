@@ -45,16 +45,16 @@
 
     <select id="queryToolsByServerId" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity">
         select id, user_name as userName, server_id as serverId,
-               tool_name as toolName, description, enabled, source,
-               created_at as createdAt
+               tool_name as toolName, description, parameters_json as parametersJson,
+               enabled, source, created_at as createdAt
         from mcp_tools
         where server_id = #{serverId} and user_name = #{userName}
         order by source desc, tool_name asc
     </select>
 
     <insert id="insertTool">
-        insert into mcp_tools (id, user_name, server_id, tool_name, description, enabled, source, created_at)
-        values (#{id}, #{userName}, #{serverId}, #{toolName}, #{description}, #{enabled}, #{source}, #{createdAt})
+        insert into mcp_tools (id, user_name, server_id, tool_name, description, parameters_json, enabled, source, created_at)
+        values (#{id}, #{userName}, #{serverId}, #{toolName}, #{description}, #{parametersJson}, #{enabled}, #{source}, #{createdAt})
     </insert>
 
     <update id="updateTool">
@@ -81,12 +81,12 @@
 
     <select id="queryEnabledToolsByUserName" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity">
         select t.id, t.user_name as userName, t.server_id as serverId,
-               t.tool_name as toolName, t.description, t.enabled, t.source,
-               t.created_at as createdAt
+               t.tool_name as toolName, t.description, t.parameters_json as parametersJson,
+               t.enabled, t.source, t.created_at as createdAt
         from mcp_tools t
         inner join mcp_servers s on s.id = t.server_id and s.user_name = t.user_name
         where t.user_name = #{userName} and t.enabled = 1
-          and s.status = '1'
+          and s.status = 'connected'
         order by t.source desc, t.tool_name asc
     </select>
 

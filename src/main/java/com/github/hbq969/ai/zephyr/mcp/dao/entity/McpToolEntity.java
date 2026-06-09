@@ -9,6 +9,7 @@ public class McpToolEntity {
     private String serverId;
     private String toolName;
     private String description;
+    private String parametersJson;
     private Integer enabled;
     private String source;
     private Long createdAt;

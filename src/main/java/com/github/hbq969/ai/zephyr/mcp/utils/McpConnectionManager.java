@@ -3,11 +3,14 @@ package com.github.hbq969.ai.zephyr.mcp.utils;
 import com.github.hbq969.ai.zephyr.mcp.dao.McpDao;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
+import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +23,12 @@ public class McpConnectionManager {
     private static final long IDLE_TIMEOUT_MS = 15 * 60 * 1000L; // 15 分钟
 
     private final Map<String, McpConnection> connections = new ConcurrentHashMap<>();
+
+    @Value("${encrypt.restful.aes.key}")
+    private String aesKey;
+
+    @Value("${encrypt.restful.aes.iv}")
+    private String aesIv;
 
     @Resource
     private McpDao mcpDao;
@@ -44,6 +53,11 @@ public class McpConnectionManager {
         McpServerEntity server = mcpDao.queryServerById(serverId);
         if (server == null || !server.getUserName().equals(userName)) {
             throw new RuntimeException("MCP 服务器不存在");
+        }
+
+        // 解密 headers
+        if (server.getHeaders() != null && !server.getHeaders().isEmpty()) {
+            server.setHeaders(AESUtil.decrypt(server.getHeaders(), aesKey, aesIv, StandardCharsets.UTF_8));
         }
 
         McpConnection conn = McpConnection.create(server);

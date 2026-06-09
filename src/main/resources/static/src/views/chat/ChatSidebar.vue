@@ -29,8 +29,10 @@ function startRename(id: string, currentTitle: string) {
 }
 
 function confirmRename(id: string) {
-  if (renameText.value.trim()) {
-    convStore.renameConversation(id, renameText.value.trim())
+  const title = renameText.value.trim()
+  if (title) {
+    axios({ url: '/conversations/rename', method: 'post', data: { id, title } })
+      .then(() => convStore.renameConversation(id, title))
   }
   renameId.value = null
 }

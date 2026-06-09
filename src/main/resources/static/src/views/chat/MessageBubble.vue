@@ -23,12 +23,20 @@ const md = new MarkdownIt({
 
 const streaming = computed(() => props.isLast)
 const mdBodyRef = ref<HTMLElement>()
+const toolExpanded = ref(false)
 let rafId = 0
 let lastRendered = ''
 
+const contentSummary = computed(() => {
+  const c = props.message.content || ''
+  if (c.length <= 200) return c.substring(0, 200)
+  return c.substring(0, 200) + '...'
+})
+
 function renderMarkdown() {
   if (!mdBodyRef.value) return
-  const html = props.message.role === 'assistant' ? md.render(props.message.content) : ''
+  const html = props.message.role !== 'user' && props.message.role !== 'tool'
+    ? md.render(props.message.content) : ''
   if (html !== lastRendered) {
     lastRendered = html
     mdBodyRef.value.innerHTML = html
@@ -84,7 +92,7 @@ function setupCodeBlocks() {
         toggleBtn.innerHTML = collapsed
           ? '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
           : '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>'
-        toggleBtn.title = collapsed ? '展开' : '收起'
+        ;(toggleBtn as HTMLElement).title = collapsed ? '展开' : '收起'
       })
       pre.parentNode!.insertBefore(wrapper, pre)
       wrapper.appendChild(pre)
@@ -100,6 +108,15 @@ onUpdated(setupCodeBlocks)
   <div class="msg-row" :class="message.role">
     <div v-if="message.role === 'user'" class="msg-bubble user-bubble">
       {{ message.content }}
+    </div>
+    <div v-else-if="message.role === 'tool'" class="tool-bubble">
+      <div class="tool-result-header" @click="toolExpanded = !toolExpanded">
+        <Icon icon="lucide:wrench" class="tool-result-icon" />
+        <span class="tool-result-label">工具返回</span>
+        <span class="tool-result-summary">{{ contentSummary }}</span>
+        <Icon :icon="toolExpanded ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="tool-result-toggle" />
+      </div>
+      <pre v-if="toolExpanded" class="tool-result-body">{{ message.content }}</pre>
     </div>
     <div v-else class="msg-bubble ai-bubble">
       <div class="ai-header">
@@ -131,13 +148,39 @@ onUpdated(setupCodeBlocks)
 .ai-avatar { width: 28px; height: 28px; border-radius: 8px; background: rgba(204,120,92,0.12); display: flex; align-items: center; justify-content: center; color: var(--el-color-primary); font-size: 14px; flex-shrink: 0; }
 .ai-label { font-size: 13px; font-weight: 600; color: var(--el-text-color-primary); }
 
+.tool-bubble { margin-left: 16px; max-width: calc(88% - 32px); box-sizing: border-box; border: 1px solid var(--el-border-color); border-radius: 8px; overflow: hidden; padding: 8px 12px; font-size: var(--chat-font-size, 16px); line-height: 1.65; }
+.tool-result-header { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 12px; color: var(--el-text-color-secondary); }
+.tool-result-header:hover { background: var(--el-fill-color); }
+.tool-result-icon { font-size: 14px; color: var(--el-color-primary); flex-shrink: 0; }
+.tool-result-label { font-weight: 500; flex-shrink: 0; }
+.tool-result-summary { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--el-text-color-placeholder); }
+.tool-result-toggle { font-size: 14px; flex-shrink: 0; }
+.tool-result-body { padding: 8px 0 0; margin: 8px 0 0; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 11px; line-height: 1.4; color: var(--el-text-color-secondary); max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-all; border-top: 1px solid var(--el-border-color); }
+
 .markdown-body { font-size: inherit; }
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; margin: 16px 0 8px; color: var(--el-text-color-primary); }
+.markdown-body :deep(h1) { font-size: 1.5em; }
+.markdown-body :deep(h2) { font-size: 1.35em; }
+.markdown-body :deep(h3) { font-size: 1.2em; letter-spacing: -0.3px; }
+.markdown-body :deep(h4) { font-size: 1.1em; }
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) { font-size: 1em; }
 .markdown-body :deep(hr) { display: none; }
-.markdown-body :deep(h3) { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 1.25em; letter-spacing: -0.3px; margin: 14px 0 6px; color: var(--el-text-color-primary); }
 .markdown-body :deep(p) { margin: 6px 0; }
-.markdown-body :deep(ul) { padding-left: 20px; margin: 6px 0; }
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) { padding-left: 24px; margin: 6px 0; }
 .markdown-body :deep(li) { margin: 3px 0; }
 .markdown-body :deep(a) { color: var(--el-color-primary); }
+.markdown-body :deep(blockquote) { border-left: 3px solid var(--el-color-primary-light-5); padding: 4px 12px; margin: 8px 0; color: var(--el-text-color-secondary); }
+.markdown-body :deep(table) { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.markdown-body :deep(th),
+.markdown-body :deep(td) { border: 1px solid var(--el-border-color); padding: 6px 10px; text-align: left; font-size: 0.95em; }
+.markdown-body :deep(th) { background: var(--el-fill-color-light); font-weight: 600; }
 .markdown-body :deep(code) { background: var(--el-fill-color); padding: 1px 6px; border-radius: 4px; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; color: var(--el-color-primary-dark-2); }
 .markdown-body :deep(pre) { background: #f5f0e8; color: #141413; border-radius: 8px; padding: 16px; margin: 0; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; line-height: 1.55; }
 .markdown-body :deep(pre code) { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
