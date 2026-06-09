@@ -30,4 +30,5 @@ public interface McpDao {
     void toggleTool(@Param("id") String id, @Param("enabled") Integer enabled, @Param("userName") String userName);
 
     int countEnabledTools(@Param("userName") String userName);
+    List<McpToolEntity> queryEnabledToolsByUserName(@Param("userName") String userName);
 }

@@ -79,4 +79,15 @@
         select count(*) from mcp_tools where user_name = #{userName} and enabled = 1
     </select>
 
+    <select id="queryEnabledToolsByUserName" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity">
+        select t.id, t.user_name as userName, t.server_id as serverId,
+               t.tool_name as toolName, t.description, t.enabled, t.source,
+               t.created_at as createdAt
+        from mcp_tools t
+        inner join mcp_servers s on s.id = t.server_id and s.user_name = t.user_name
+        where t.user_name = #{userName} and t.enabled = 1
+          and s.status = '1'
+        order by t.source desc, t.tool_name asc
+    </select>
+
 </mapper>
