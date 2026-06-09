@@ -17,6 +17,45 @@ const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 const showSettings = ref(false)
 
+function onSend(text: string) {
+  chatStore.addMessage({ id: '', role: 'user', content: text, timestamp: Date.now() / 1000 })
+  chatStore.addMessage({ id: '', role: 'assistant', content: '', timestamp: Date.now() / 1000 })
+  chatStore.streaming = true
+
+  const url = `/chat/send`
+  axios({
+    url,
+    method: 'post',
+    data: { conversationId: convStore.currentId, message: text },
+    responseType: 'text',
+    onDownloadProgress(evt: any) {
+      const raw = evt.event?.target?.responseText || evt.currentTarget?.responseText || ''
+      const lines = raw.split('\n')
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue
+        try {
+          const event = JSON.parse(line.substring(5).trim())
+          if (event.type === 'token') {
+            chatStore.appendToken(event.content)
+          } else if (event.type === 'thinking') {
+            chatStore.updateLastThinking(event.content)
+          } else if (event.type === 'meta') {
+            convStore.currentId = event.content
+          } else if (event.type === 'done') {
+            chatStore.streaming = false
+          } else if (event.type === 'error') {
+            chatStore.appendToken('\n\n[错误] ' + (event.content || '请求失败'))
+            chatStore.streaming = false
+          }
+        } catch (_) {}
+      }
+    }
+  }).catch(() => {
+    chatStore.appendToken('\n\n[请求失败]')
+    chatStore.streaming = false
+  })
+}
+
 onMounted(() => {
   axios({ url: '/conversations/list', method: 'get' })
     .then(res => {
@@ -49,7 +88,7 @@ onMounted(() => {
       </div>
       <ChatArea />
       <CommandPalette />
-      <InputArea />
+      <InputArea @send="onSend" />
       <StatusBar />
     </div>
     <SettingsPanel :visible="showSettings" @close="showSettings = false" />
