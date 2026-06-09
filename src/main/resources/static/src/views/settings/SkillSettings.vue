@@ -497,11 +497,8 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-.modal { background: var(--el-bg-color); border-radius: 16px; width: 520px; max-width: calc(100vw - 48px); max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.1); scrollbar-gutter: stable; }
-.modal::-webkit-scrollbar { width: 6px; }
-.modal::-webkit-scrollbar-track { background: transparent; border-radius: 16px; }
-.modal::-webkit-scrollbar-thumb { background: var(--el-border-color); border-radius: 3px; }
-.modal::-webkit-scrollbar-thumb:hover { background: var(--el-text-color-placeholder); }
+.modal { background: var(--el-bg-color); border-radius: 16px; width: 520px; max-width: calc(100vw - 48px); max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.1); scrollbar-width: none; }
+.modal::-webkit-scrollbar { display: none; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 24px 28px 0; }
 .modal-header h2 { font-family: Georgia, serif; font-size: 24px; color: var(--el-text-color-primary); letter-spacing: -0.3px; margin: 0; }
 .modal-body { padding: 24px 28px; }
