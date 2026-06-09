@@ -16,6 +16,7 @@ const convStore = useConversationsStore()
 const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 const showSettings = ref(false)
+let abortController: AbortController | null = null
 
 function refreshConversationList() {
   axios({ url: '/conversations/list', method: 'get' })
@@ -30,16 +31,19 @@ function newChat() {
 }
 
 function onSend(text: string) {
+  if (abortController) abortController.abort()
+  abortController = new AbortController()
+
   chatStore.addMessage({ id: '', role: 'user', content: text, timestamp: Date.now() / 1000 })
   chatStore.addMessage({ id: '', role: 'assistant', content: '', timestamp: Date.now() / 1000 })
   chatStore.streaming = true
 
-  const url = `/chat/send`
   axios({
-    url,
+    url: `/chat/send`,
     method: 'post',
     data: { conversationId: convStore.currentId, message: text },
     responseType: 'text',
+    signal: abortController.signal,
     onDownloadProgress(evt: any) {
       const raw = evt.event?.target?.responseText || evt.currentTarget?.responseText || ''
       const lines = raw.split('\n')
@@ -71,6 +75,7 @@ function onSend(text: string) {
 }
 
 function onStop() {
+  if (abortController) { abortController.abort(); abortController = null }
   axios({ url: '/chat/cancel', method: 'post' }).catch(() => {})
   chatStore.streaming = false
 }
