@@ -72,6 +72,7 @@ public class SkillServiceImpl implements SkillService {
             }
 
             Path destDir = Paths.get(SKILLS_HOME, skillName);
+            if (Files.exists(destDir)) FileUtil.del(destDir.toFile());
 
             if ("local".equals(source)) {
                 FileUtil.copy(Paths.get(path).toFile(), destDir.toFile(), true);
@@ -122,6 +123,7 @@ public class SkillServiceImpl implements SkillService {
             }
 
             Path destDir = Paths.get(SKILLS_HOME, skillName);
+            if (Files.exists(destDir)) FileUtil.del(destDir.toFile());
             FileUtil.copy(tmpDir.toFile(), destDir.toFile(), true);
 
             return insertSkillConfig(destDir, skillName, "upload", originalFilename, userName);
@@ -190,6 +192,7 @@ public class SkillServiceImpl implements SkillService {
             if (!Files.isDirectory(srcDir)) continue;
 
             Path destDir = Paths.get(SKILLS_HOME, skillName);
+            if (Files.exists(destDir)) FileUtil.del(destDir.toFile());
             FileUtil.copy(srcDir.toFile(), destDir.toFile(), true);
 
             SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
