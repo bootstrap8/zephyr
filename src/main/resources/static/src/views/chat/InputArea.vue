@@ -17,8 +17,8 @@ const mcpGroups = ref<{ server: string; tools: { name: string; desc: string }[] 
 const skillList = ref<{ name: string; desc: string }[]>([])
 
 const abilityItems = [
-  { key: 'mcp', label: 'MCP 工具列表' },
-  { key: 'skills', label: '可用技能' },
+  { key: 'mcp', label: 'MCP' },
+  { key: 'skills', label: 'Skills' },
 ]
 const sessionItems = [
   { cmd: '/resume', label: '恢复之前的对话' },
