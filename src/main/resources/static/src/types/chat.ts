@@ -100,3 +100,13 @@ export interface ModelConfig {
   apiKey?: string
   isDefault: boolean
 }
+
+// === Memory ===
+export interface MemoryItem {
+  name: string
+  type: 'user' | 'project'
+  description: string
+  content?: string
+  createdAt: number
+  updatedAt: number
+}
