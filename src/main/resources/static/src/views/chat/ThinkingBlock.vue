@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps<{ content: string; streaming: boolean }>()
-const collapsed = ref(false)
+const collapsed = ref(true)
+watch(() => props.streaming, (v) => { if (v) collapsed.value = false })
 
 const hasContent = computed(() => props.content && props.content.length > 0)
 </script>
