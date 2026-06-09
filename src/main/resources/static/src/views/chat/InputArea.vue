@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useSettingsStore } from '@/store/settings'
 import { Icon } from '@iconify/vue'
+import axios from '@/network'
 
 const emit = defineEmits<{ send: [text: string] }>()
 const text = ref('')
@@ -11,11 +12,13 @@ const showModelList = ref(false)
 const showAbility = ref(false)
 const showSession = ref(false)
 const showAction = ref(false)
+const hoveredAbility = ref('')
+const mcpGroups = ref<{ server: string; tools: { name: string; desc: string }[] }[]>([])
+const skillList = ref<{ name: string; desc: string }[]>([])
 
 const abilityItems = [
-  { cmd: '/mcp', label: 'MCP 工具列表' },
-  { cmd: '/skills', label: '可用技能' },
-  { cmd: '/memory', label: '用户记忆' },
+  { key: 'mcp', label: 'MCP 工具列表' },
+  { key: 'skills', label: '可用技能' },
 ]
 const sessionItems = [
   { cmd: '/resume', label: '恢复之前的对话' },
@@ -58,6 +61,38 @@ async function selectModel(name: string) {
 
 function closeModelList() { showModelList.value = false }
 
+function onAbilityHover(key: string) {
+  hoveredAbility.value = key
+  if (key === 'mcp' && mcpGroups.value.length === 0) loadMcpTools()
+  if (key === 'skills' && skillList.value.length === 0) loadSkills()
+}
+
+async function loadMcpTools() {
+  try {
+    const res = await axios({ url: '/mcp/server/list', method: 'get' })
+    if (res.data.state !== 'OK') return
+    const servers = res.data.body
+    const groups: typeof mcpGroups.value = []
+    const toolReqs = servers.map((s: any) =>
+      axios({ url: '/mcp/tool/list', method: 'get', params: { serverId: s.id } })
+        .then(r => ({ server: s.name, tools: (r.data.state === 'OK' ? r.data.body : []).filter((t: any) => t.enabled === 1).map((t: any) => ({ name: t.toolName, desc: t.description })) }))
+        .catch(() => ({ server: s.name, tools: [] }))
+    )
+    const results = await Promise.all(toolReqs)
+    mcpGroups.value = results.filter(g => g.tools.length > 0)
+  } catch (_) {}
+}
+
+async function loadSkills() {
+  try {
+    const res = await axios({ url: '/skill/list', method: 'get' })
+    if (res.data.state === 'OK') {
+      skillList.value = (res.data.body as any[]).filter((s: any) => s.enabled === 1 || s.enabled === true)
+        .map((s: any) => ({ name: s.skillName || s.displayName, desc: s.description }))
+    }
+  } catch (_) {}
+}
+
 function insertCommand(cmd: string) {
   const el = inputRef.value
   if (el) {
@@ -81,6 +116,7 @@ function closeAll() {
   showAbility.value = false
   showSession.value = false
   showAction.value = false
+  hoveredAbility.value = ''
 }
 </script>
 
@@ -110,14 +146,41 @@ function closeAll() {
             </div>
           </div>
 
-          <!-- 能力 -->
+          <!-- 能力（二级菜单） -->
           <div class="tool-pick" @click.stop="closeAll(); showAbility = !showAbility">
             <span>能力</span>
             <Icon icon="lucide:chevron-down" class="pick-arrow" />
-            <div v-if="showAbility" class="pick-dropdown" @click.stop>
-              <div v-for="it in abilityItems" :key="it.cmd" class="pick-option" @click="insertCommand(it.cmd)">
-                <span class="cmd-name">{{ it.cmd }}</span>
-                <span class="cmd-desc">{{ it.label }}</span>
+            <div v-if="showAbility" class="pick-dropdown ability-menu" @click.stop>
+              <div v-for="it in abilityItems" :key="it.key"
+                   class="pick-option ability-parent"
+                   :class="{ active: hoveredAbility === it.key }"
+                   @mouseenter="onAbilityHover(it.key)">
+                <span>{{ it.label }}</span>
+                <Icon icon="lucide:chevron-right" class="sub-arrow" />
+                <!-- 二级子菜单 -->
+                <div v-if="hoveredAbility === it.key" class="sub-dropdown">
+                  <template v-if="it.key === 'mcp'">
+                    <template v-if="mcpGroups.length > 0">
+                      <template v-for="g in mcpGroups" :key="g.server">
+                        <div class="sub-group-label">{{ g.server }}</div>
+                        <div v-for="t in g.tools" :key="t.name" class="pick-option sub-option" @click="insertCommand('/' + t.name)">
+                          <span class="cmd-name">{{ t.name }}</span>
+                          <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
+                        </div>
+                      </template>
+                    </template>
+                    <div v-else class="sub-loading">加载中...</div>
+                  </template>
+                  <template v-if="it.key === 'skills'">
+                    <template v-if="skillList.length > 0">
+                      <div v-for="s in skillList" :key="s.name" class="pick-option sub-option" @click="insertCommand('/' + s.name)">
+                        <span class="cmd-name">{{ s.name }}</span>
+                        <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
+                      </div>
+                    </template>
+                    <div v-else class="sub-loading">暂无技能</div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
@@ -208,6 +271,27 @@ export default { inheritAttrs: false }
 .check-icon { font-size: 15px; color: var(--el-color-primary); flex-shrink: 0; }
 .cmd-name { font-weight: 600; color: var(--el-color-primary); min-width: 60px; font-size: 12px; }
 .cmd-desc { color: var(--el-text-color-secondary); font-size: 12px; }
+
+/* 能力二级菜单 */
+.ability-menu { min-width: 180px; max-height: 360px; overflow-y: auto; }
+.ability-parent { justify-content: space-between; position: relative; }
+.ability-parent.active { background: var(--el-fill-color-light); color: var(--el-color-primary); }
+.sub-arrow { font-size: 12px; color: var(--el-text-color-placeholder); flex-shrink: 0; }
+
+.sub-dropdown {
+  position: absolute; left: 100%; top: 0;
+  background: var(--el-bg-color); border: 1px solid var(--el-border-color);
+  border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  min-width: 200px; max-width: 300px; max-height: 320px; overflow-y: auto; padding: 4px; z-index: 110;
+}
+.sub-group-label {
+  font-size: 11px; color: var(--el-text-color-placeholder);
+  padding: 6px 10px 2px; text-transform: uppercase; letter-spacing: 0.3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sub-option { white-space: nowrap; }
+.sub-option .cmd-name { min-width: auto; font-size: 13px; font-weight: 500; }
+.sub-loading { padding: 20px; text-align: center; font-size: 12px; color: var(--el-text-color-placeholder); }
 
 .model-overlay { position: fixed; inset: 0; z-index: 99; }
 
