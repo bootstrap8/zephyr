@@ -7,15 +7,27 @@ export const useChatStore = defineStore('chat', () => {
   const streaming = ref(false)
   const currentThinking = ref('')
 
+  let tokenBuf = ''
+  let thinkingBuf = ''
+  let rafId = 0
+
+  function flushTokens() {
+    const last = messages.value[messages.value.length - 1]
+    if (last && last.role === 'assistant') {
+      if (tokenBuf) { last.content += tokenBuf; tokenBuf = '' }
+      if (thinkingBuf) { last.thinking = (last.thinking || '') + thinkingBuf; thinkingBuf = '' }
+    }
+    rafId = 0
+  }
+
   function addMessage(msg: Message) {
+    flushTokens()
     messages.value.push(msg)
   }
 
   function appendToken(token: string) {
-    const last = messages.value[messages.value.length - 1]
-    if (last && last.role === 'assistant') {
-      last.content += token
-    }
+    tokenBuf += token
+    scheduleFlush()
   }
 
   function setThinking(text: string) {
@@ -23,13 +35,17 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function updateLastThinking(text: string) {
-    const last = messages.value[messages.value.length - 1]
-    if (last && last.role === 'assistant') {
-      last.thinking = (last.thinking || '') + text
-    }
+    thinkingBuf += text
+    scheduleFlush()
+  }
+
+  function scheduleFlush() {
+    if (!rafId) rafId = requestAnimationFrame(flushTokens)
   }
 
   function clearMessages() {
+    cancelAnimationFrame(rafId); rafId = 0
+    tokenBuf = ''; thinkingBuf = ''
     messages.value = []
     currentThinking.value = ''
   }
