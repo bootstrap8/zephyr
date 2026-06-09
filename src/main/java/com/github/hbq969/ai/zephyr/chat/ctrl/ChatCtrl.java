@@ -15,7 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 @Tag(name = "聊天接口")
 @RestController
-@RequestMapping(path = "/chat")
+@RequestMapping(path = "/zephyr-ui/chat")
 public class ChatCtrl {
 
     @Resource

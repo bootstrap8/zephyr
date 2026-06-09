@@ -14,7 +14,7 @@ import java.util.Map;
 
 @Tag(name = "会话接口")
 @RestController
-@RequestMapping(path = "/conversations")
+@RequestMapping(path = "/zephyr-ui/conversations")
 public class ConversationCtrl {
 
     @Resource
