@@ -3,6 +3,8 @@ package com.github.hbq969.ai.zephyr.skill.service.impl;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ZipUtil;
+import java.util.Comparator;
+import java.util.stream.Stream;
 import com.github.hbq969.ai.zephyr.skill.dao.SkillDao;
 import com.github.hbq969.ai.zephyr.skill.dao.entity.SkillConfigEntity;
 import com.github.hbq969.ai.zephyr.skill.model.SkillVO;
@@ -72,12 +74,11 @@ public class SkillServiceImpl implements SkillService {
             }
 
             Path destDir = Paths.get(SKILLS_HOME, skillName);
-            if (Files.exists(destDir)) FileUtil.del(destDir.toFile());
 
             if ("local".equals(source)) {
-                FileUtil.copy(Paths.get(path).toFile(), destDir.toFile(), true);
+                deleteAndCopyDir(Paths.get(path), destDir);
             } else {
-                FileUtil.copy(tmpDir.toFile(), destDir.toFile(), true);
+                deleteAndCopyDir(tmpDir, destDir);
             }
 
             SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
@@ -123,8 +124,7 @@ public class SkillServiceImpl implements SkillService {
             }
 
             Path destDir = Paths.get(SKILLS_HOME, skillName);
-            if (Files.exists(destDir)) FileUtil.del(destDir.toFile());
-            FileUtil.copy(tmpDir.toFile(), destDir.toFile(), true);
+            deleteAndCopyDir(tmpDir, destDir);
 
             return insertSkillConfig(destDir, skillName, "upload", originalFilename, userName);
         } catch (IOException e) {
@@ -192,8 +192,7 @@ public class SkillServiceImpl implements SkillService {
             if (!Files.isDirectory(srcDir)) continue;
 
             Path destDir = Paths.get(SKILLS_HOME, skillName);
-            if (Files.exists(destDir)) FileUtil.del(destDir.toFile());
-            FileUtil.copy(srcDir.toFile(), destDir.toFile(), true);
+            deleteAndCopyDir(srcDir, destDir);
 
             SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
             if (existing == null) {
@@ -297,6 +296,47 @@ public class SkillServiceImpl implements SkillService {
             if (code != 0) throw new RuntimeException("git clone 失败，退出码: " + code);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("git clone 失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 先删除目标目录（如果存在），再将源目录的*内容*复制到目标目录。
+     * 完全使用 NIO 实现，确保不会出现嵌套目录问题。
+     */
+    private static void deleteAndCopyDir(Path src, Path dest) {
+        // 递归删除目标
+        if (Files.exists(dest)) {
+            try (Stream<Path> stream = Files.walk(dest)) {
+                stream.sorted(Comparator.reverseOrder())
+                      .forEach(p -> {
+                          try { Files.delete(p); } catch (IOException ignored) {}
+                      });
+            } catch (IOException e) {
+                throw new RuntimeException("删除目标目录失败: " + dest, e);
+            }
+        }
+        // 创建目标目录
+        try {
+            Files.createDirectories(dest);
+        } catch (IOException e) {
+            throw new RuntimeException("创建目录失败: " + dest, e);
+        }
+        // NIO 递归复制源目录内容到目标（不嵌套）
+        try (Stream<Path> stream = Files.walk(src)) {
+            stream.forEach(source -> {
+                try {
+                    Path target = dest.resolve(src.relativize(source));
+                    if (Files.isDirectory(source)) {
+                        Files.createDirectories(target);
+                    } else {
+                        Files.copy(source, target);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException("复制文件失败: " + source, e);
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException("遍历源目录失败: " + src, e);
         }
     }
 
