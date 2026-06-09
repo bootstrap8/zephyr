@@ -216,11 +216,14 @@ function closeAll() {
           <button class="action-btn" title="上传附件">
             <Icon icon="lucide:paperclip" />
           </button>
-          <button v-if="chatStore.streaming" class="send-btn stop-btn" @click="$emit('stop')" title="停止输出">
-            <Icon icon="lucide:square" class="stop-icon" />
-          </button>
-          <button v-else class="send-btn" :class="{ 'has-text': text.trim() }" @click="doSend" :disabled="!text.trim()">
-            <Icon icon="lucide:arrow-up" />
+          <button
+            class="send-btn"
+            :class="{ stop: chatStore.streaming, 'has-text': !chatStore.streaming && text.trim() }"
+            @click="chatStore.streaming ? $emit('stop') : doSend()"
+            :disabled="!chatStore.streaming && !text.trim()"
+            :title="chatStore.streaming ? '停止输出' : '发送'"
+          >
+            <Icon :icon="chatStore.streaming ? 'lucide:square' : 'lucide:arrow-up'" class="send-icon" />
           </button>
         </div>
       </div>
@@ -317,7 +320,7 @@ export default { inheritAttrs: false }
 .send-btn.has-text { background: var(--el-color-primary); color: #fff; }
 .send-btn.has-text:hover { background: var(--el-color-primary-dark-2); }
 .send-btn:disabled { cursor: default; }
-.stop-btn { background: var(--el-color-danger) !important; color: #fff !important; animation: stopPulse 1.5s ease-in-out infinite; }
-@keyframes stopPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(198,69,69,0.4); } 50% { box-shadow: 0 0 0 6px rgba(198,69,69,0); } }
-.stop-icon { font-size: 12px; fill: #fff; }
+.send-btn.stop { background: var(--el-color-danger) !important; box-shadow: 0 0 0 0 rgba(198,69,69,0.4); animation: stopPulse 1.5s ease-in-out infinite; }
+@keyframes stopPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(198,69,69,0.4); } 50% { box-shadow: 0 0 0 8px rgba(198,69,69,0); } }
+.send-btn.stop .send-icon { color: #fff; font-size: 12px; }
 </style>
