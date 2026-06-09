@@ -68,8 +68,10 @@ function onSend(text: string) {
         } catch (_) {}
       }
     }
-  }).catch(() => {
-    chatStore.appendToken('\n\n[请求失败]')
+  }).catch((err: any) => {
+    if (err?.code !== 'ERR_CANCELED' && err?.name !== 'AbortError' && err?.name !== 'CanceledError') {
+      chatStore.appendToken('\n\n[请求失败]')
+    }
     chatStore.streaming = false
   })
 }
