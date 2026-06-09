@@ -145,7 +145,7 @@ onUpdated(setupCodeBlocks)
 <style>
 .code-block-wrapper { position: relative; margin: 8px 0; background: #efe9de; border-radius: 8px; overflow: hidden; }
 .code-block-wrapper pre { margin: 0; background: #f5f0e8; color: #141413; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
-.code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 4px; }
+.code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 0; }
 .code-icon { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; color: #8e8b82; transition: color 0.15s; }
 .code-icon:hover { color: #141413; }
 .code-block-wrapper.collapsed pre { max-height: 120px; overflow: hidden; }
