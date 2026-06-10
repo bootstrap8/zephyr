@@ -70,6 +70,12 @@ export const useSettingsStore = defineStore('settings', () => {
     await loadModels()
   }
 
+  async function detectContextRemote(id: string) {
+    const res = await axios({ url: '/model-config/detect-context', method: 'post', data: { id } })
+    if (res.data.state === 'OK') await loadModels()
+    return res.data
+  }
+
   // === MCP API 方法 ===
 
   async function loadMcpServers() {
@@ -255,7 +261,7 @@ export const useSettingsStore = defineStore('settings', () => {
     currentModel, models, mcpServers, mcpToolCount, skills, memories,
     contextUsed, contextTotal, contextPercent,
     setModel, addModel,
-    loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote,
+    loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote,
     loadMcpServers, createMcpServer, updateMcpServer, deleteMcpServer,
     connectMcpServer, disconnectMcpServer,
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, loadMcpToolCount,

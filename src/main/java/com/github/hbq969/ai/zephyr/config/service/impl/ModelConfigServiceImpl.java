@@ -54,21 +54,20 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         entity.setCreatedAt(System.currentTimeMillis() / 1000);
         entity.setUpdatedAt(System.currentTimeMillis() / 1000);
         modelConfigDao.insert(entity);
-        // 自动探测最大上下文
-        String apiKeyRaw = body.get("apiKey");
-        Long maxTokens = detectMaxContextTokens(entity, apiKeyRaw);
-        if (maxTokens != null) {
-            entity.setMaxContextTokens(maxTokens);
-            modelConfigDao.updateMaxContextTokens(entity.getId(), maxTokens, System.currentTimeMillis() / 1000, userName);
-        } else {
-            String manualStr = body.get("maxContextTokens");
-            if (manualStr != null && !manualStr.isBlank()) {
-                Long manual = Long.parseLong(manualStr);
-                entity.setMaxContextTokens(manual);
-                modelConfigDao.updateMaxContextTokens(entity.getId(), manual, System.currentTimeMillis() / 1000, userName);
-            }
-        }
         return entity;
+    }
+
+    @Override
+    @Transactional
+    public Long detectContext(String id, String userName) {
+        ModelConfigEntity entity = modelConfigDao.queryById(id);
+        if (entity == null) return null;
+        String apiKey = entity.getApiKeyEncrypted();
+        Long tokens = detectMaxContextTokens(entity, apiKey);
+        if (tokens != null) {
+            modelConfigDao.updateMaxContextTokens(id, tokens, System.currentTimeMillis() / 1000, userName);
+        }
+        return tokens;
     }
 
     @Override

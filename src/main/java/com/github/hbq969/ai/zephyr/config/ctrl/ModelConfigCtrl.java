@@ -61,4 +61,13 @@ public class ModelConfigCtrl {
         modelConfigService.setDefault(body.get("id"), userName());
         return ReturnMessage.success("ok");
     }
+
+    @Operation(summary = "探测上下文大小")
+    @RequestMapping(path = "/detect-context", method = RequestMethod.POST)
+    @ResponseBody
+    public ReturnMessage<?> detectContext(@RequestBody Map<String, String> body) {
+        Long result = modelConfigService.detectContext(body.get("id"), userName());
+        if (result != null) return ReturnMessage.success(result);
+        return ReturnMessage.fail("探测失败，请手动填写最大上下文");
+    }
 }

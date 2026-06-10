@@ -10,6 +10,7 @@ const baseUrl = ref('')
 const apiKey = ref('')
 const maxCtx = ref('')
 const editId = ref<string | null>(null)
+const detectingId = ref('')
 
 onMounted(() => { settingsStore.loadModels() })
 
@@ -46,6 +47,12 @@ function cancelForm() {
   showForm.value = false
 }
 
+async function detectContext(id: string) {
+  detectingId.value = id
+  await settingsStore.detectContextRemote(id)
+  detectingId.value = ''
+}
+
 async function removeModel(id: string) {
   await settingsStore.deleteModelRemote(id)
 }
@@ -75,6 +82,8 @@ async function onSetCurrent(name: string) {
             <div class="row-title">{{ m.name }}</div>
             <div v-if="m.baseUrl" class="row-sub">{{ m.baseUrl }}</div>
             <div v-if="m.maxContextTokens" class="row-sub ctx-info">上下文: {{ (m.maxContextTokens / 1024).toFixed(0) }}K</div>
+            <button v-else-if="m.id && detectingId !== m.id" class="detect-btn" @click="detectContext(m.id)" title="探测上下文大小"><Icon icon="lucide:scan" /> 探测上下文</button>
+            <span v-if="detectingId === m.id" class="detecting-text"><Icon icon="svg-spinners:3-dots-scale" /> 探测中...</span>
           </div>
         </div>
         <div class="row-right">
@@ -112,6 +121,9 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spac
 .row-title { font-size: 14px; color: var(--el-text-color-primary); }
 .row-sub { font-size: 12px; color: var(--el-text-color-placeholder); margin-top: 2px; }
 .ctx-info { color: #5db8a6; font-weight: 500; }
+.detect-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 2px 8px; border-radius: 4px; border: 1px dashed var(--el-border-color); background: transparent; cursor: pointer; font-size: 11px; color: var(--el-text-color-placeholder); font-family: inherit; }
+.detect-btn:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
+.detecting-text { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--el-color-primary); }
 .row-right { display: flex; align-items: center; gap: 6px; }
 .action-icon { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: var(--el-text-color-placeholder); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.15s; }
 .action-icon:hover { background: var(--el-fill-color-light); color: var(--el-text-color-primary); }
