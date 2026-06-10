@@ -441,8 +441,10 @@ export default { inheritAttrs: false }
 .send-btn.stop { background: var(--el-color-danger) !important; box-shadow: 0 0 0 0 rgba(198,69,69,0.4); animation: stopPulse 1.5s ease-in-out infinite; }
 @keyframes stopPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(198,69,69,0.4); } 50% { box-shadow: 0 0 0 8px rgba(198,69,69,0); } }
 .send-btn.stop .send-icon { color: #fff; font-size: 12px; }
+</style>
 
-/* tag 标签 */
+<!-- 非 scoped：动态创建的 tag 元素需要全局样式 -->
+<style>
 .cmd-tag {
   display: inline-block;
   vertical-align: middle;
@@ -464,7 +466,6 @@ export default { inheritAttrs: false }
 .cmd-tag__sep { color: #8e8b82; margin: 0 1px; }
 .cmd-tag__name { color: #141413; }
 
-/* tag 暗黑模式 */
 html.dark .cmd-tag {
   background-color: var(--el-fill-color-light);
   border-color: var(--el-border-color);
