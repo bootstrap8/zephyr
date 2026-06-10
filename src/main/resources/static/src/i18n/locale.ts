@@ -231,6 +231,10 @@ const locale: any = {
         "skillMgmt_source_upload": "上传",
         "skillMgmt_source_sync": "平台同步",
         "skillMgmt_source_marketplace": "市场",
+        "skillMgmt_searchPlaceholder": "搜索名称、描述...",
+        "skillMgmt_filterSource": "全部来源",
+        "skillMgmt_noMatch": "没有匹配的 Skill",
+        "skillMgmt_noMatchDesc": "尝试调整搜索关键词或来源筛选条件。",
 
         // 记忆管理
         "memoryMgmt_title": "记忆管理",
@@ -496,6 +500,10 @@ const locale: any = {
         "skillMgmt_source_upload": "Upload",
         "skillMgmt_source_sync": "Platform sync",
         "skillMgmt_source_marketplace": "Marketplace",
+        "skillMgmt_searchPlaceholder": "Search name, description...",
+        "skillMgmt_filterSource": "All sources",
+        "skillMgmt_noMatch": "No matching Skills",
+        "skillMgmt_noMatchDesc": "Try adjusting the search keyword or source filter.",
 
         // Memory Management
         "memoryMgmt_title": "Memory Management",
@@ -761,6 +769,10 @@ const locale: any = {
         "skillMgmt_source_upload": "アップロード",
         "skillMgmt_source_sync": "プラットフォーム同期",
         "skillMgmt_source_marketplace": "マーケットプレイス",
+        "skillMgmt_searchPlaceholder": "名前・説明を検索...",
+        "skillMgmt_filterSource": "すべてのソース",
+        "skillMgmt_noMatch": "一致する Skill がありません",
+        "skillMgmt_noMatchDesc": "検索キーワードまたはソースフィルターを調整してください。",
 
         // Memory Management
         "memoryMgmt_title": "メモリ管理",
