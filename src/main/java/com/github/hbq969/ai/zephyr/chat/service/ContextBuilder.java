@@ -55,11 +55,17 @@ public class ContextBuilder {
             - 你可以多次调用工具，直到获得足够信息后再回答
 
             ## 命令约定
-            当用户消息以 `/` 开头时，这是一个工具调用快捷命令，你必须调用对应工具：
-            - `/工具名`（如 `/browser_navigate`）→ 直接调用同名 MCP 工具，不要用文字回复
+            当用户消息中以下列格式引用工具或技能时，必须调用对应工具，禁止只回复文字而不调用工具：
+
+            ### 前缀格式（tag 插入）
+            - `MCP/工具名` → 调用同名 MCP 工具
+            - `Skill/技能名` → 调用 use_skill(skill_name="技能名")
+            - `Memory/记忆名` → 调用 use_memory(memory_name="记忆名")
+
+            ### 斜杠格式（手动输入，兼容保留）
+            - `/工具名`（如 `/browser_navigate`）→ 调用同名 MCP 工具
             - `/技能名`（如 `/frontend-design`）→ 调用 use_skill(skill_name="技能名") 加载该技能
             - `/记忆名` → 调用 use_memory(memory_name="记忆名") 查看该记忆
-            收到 `/` 命令后必须调用工具，禁止只回复文字而不调用工具。
             """;
 
     public Context build(String userName, String conversationId) {
