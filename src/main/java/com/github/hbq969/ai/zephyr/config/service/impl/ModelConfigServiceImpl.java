@@ -59,11 +59,24 @@ public class ModelConfigServiceImpl implements ModelConfigService {
 
     @Override
     @Transactional
-    public Long detectContext(String id, String userName) {
+    public Long detectContext(Map<String, String> body, String userName) {
+        String id = body.get("id");
+        String name = body.get("name");
+        String baseUrl = body.get("baseUrl");
+        String apiKey = body.get("apiKey");
+
+        // 原始参数探测（不存库）
+        if (id == null || id.isBlank()) {
+            ModelConfigEntity tmp = new ModelConfigEntity();
+            tmp.setName(name);
+            tmp.setBaseUrl(baseUrl);
+            return detectMaxContextTokens(tmp, apiKey);
+        }
+
+        // 按 ID 探测并回存
         ModelConfigEntity entity = modelConfigDao.queryById(id);
         if (entity == null) return null;
-        String apiKey = entity.getApiKeyEncrypted();
-        Long tokens = detectMaxContextTokens(entity, apiKey);
+        Long tokens = detectMaxContextTokens(entity, entity.getApiKeyEncrypted());
         if (tokens != null) {
             modelConfigDao.updateMaxContextTokens(id, tokens, System.currentTimeMillis() / 1000, userName);
         }

@@ -76,6 +76,11 @@ export const useSettingsStore = defineStore('settings', () => {
     return res.data
   }
 
+  async function detectCtxRaw(name: string, baseUrl: string, apiKey: string) {
+    const res = await axios({ url: '/model-config/detect-context', method: 'post', data: { name, baseUrl, apiKey } })
+    return res.data
+  }
+
   // === MCP API 方法 ===
 
   async function loadMcpServers() {
@@ -261,7 +266,7 @@ export const useSettingsStore = defineStore('settings', () => {
     currentModel, models, mcpServers, mcpToolCount, skills, memories,
     contextUsed, contextTotal, contextPercent,
     setModel, addModel,
-    loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote,
+    loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote, detectCtxRaw,
     loadMcpServers, createMcpServer, updateMcpServer, deleteMcpServer,
     connectMcpServer, disconnectMcpServer,
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, loadMcpToolCount,

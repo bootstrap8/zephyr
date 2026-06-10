@@ -48,6 +48,6 @@ const hasContent = computed(() => props.content && props.content.length > 0)
   40% { opacity: 1; transform: translateY(-2px); }
 }
 
-.chevron { margin-left: auto; transition: transform 0.2s; font-size: 14px; color: var(--el-text-color-placeholder); }
+.chevron { transition: transform 0.2s; font-size: 14px; color: var(--el-text-color-placeholder); }
 .thinking-body { padding: 8px 0 8px 22px; font-size: 13px; color: var(--el-text-color-placeholder); line-height: 1.65; border-left: 2px solid var(--el-border-color); margin-left: 7px; white-space: pre-wrap; word-break: break-word; }
 </style>

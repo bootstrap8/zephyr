@@ -45,15 +45,15 @@ npm run type-check   # 仅类型检查
 
 ### 测试验证
 
-测试账号密码：`admin:123456`
+测试账号密码：`admin:1`
 
 ```bash
 # 通用 curl 模板
-curl -u admin:123456 -H "X-SM-Test: 1" \
+curl -u admin:1 -H "X-SM-Test: 1" \
   "http://localhost:30733/zephyr/zephyr-ui/{path}"
 
 # 带 JSON body 的 POST
-curl -u admin:123456 -H "X-SM-Test: 1" \
+curl -u admin:1 -H "X-SM-Test: 1" \
   -H "Content-Type: application/json" \
   -X POST "http://localhost:30733/zephyr/zephyr-ui/{path}" \
   -d '{"key":"value"}'
@@ -72,7 +72,7 @@ npm run build
 mkdir -p ../../../target/classes/static && cp -rf zephyr-ui ../../../target/classes/static/
 
 # 3. curl 验证接口
-curl -u admin:123456 -H "X-SM-Test: 1" \
+curl -u admin:1 -H "X-SM-Test: 1" \
   "http://localhost:30733/zephyr/zephyr-ui/mcp/server/list"
 
 # 4. 浏览器打开

@@ -10,5 +10,5 @@ public interface ModelConfigService {
     void update(Map<String, String> body, String userName);
     void delete(String id, String userName);
     void setDefault(String id, String userName);
-    Long detectContext(String id, String userName);
+    Long detectContext(Map<String, String> body, String userName);
 }

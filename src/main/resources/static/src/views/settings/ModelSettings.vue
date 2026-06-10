@@ -10,7 +10,8 @@ const baseUrl = ref('')
 const apiKey = ref('')
 const maxCtx = ref('')
 const editId = ref<string | null>(null)
-const detectingId = ref('')
+const detecting = ref(false)
+const detectMsg = ref('')
 
 onMounted(() => { settingsStore.loadModels() })
 
@@ -47,10 +48,18 @@ function cancelForm() {
   showForm.value = false
 }
 
-async function detectContext(id: string) {
-  detectingId.value = id
-  await settingsStore.detectContextRemote(id)
-  detectingId.value = ''
+async function detectCtx() {
+  if (!baseUrl.value.trim() || !apiKey.value) return
+  detecting.value = true
+  detectMsg.value = ''
+  const res = await settingsStore.detectCtxRaw(name.value.trim(), baseUrl.value.trim(), apiKey.value)
+  detecting.value = false
+  if (res?.state === 'OK' && res.body) {
+    maxCtx.value = String(res.body)
+    detectMsg.value = '探测成功'
+  } else {
+    detectMsg.value = '探测失败'
+  }
 }
 
 async function removeModel(id: string) {
@@ -82,7 +91,6 @@ async function onSetCurrent(name: string) {
             <div class="row-title">{{ m.name }}</div>
             <div v-if="m.baseUrl" class="row-sub">{{ m.baseUrl }}</div>
             <div v-if="m.maxContextTokens" class="row-sub ctx-info">上下文: {{ (m.maxContextTokens / 1024).toFixed(0) }}K</div>
-            <button v-else-if="m.id && detectingId !== m.id" class="detect-btn" @click="detectContext(m.id)" title="探测上下文大小"><Icon icon="lucide:scan" /> 探测上下文</button>
             <span v-if="detectingId === m.id" class="detecting-text"><Icon icon="svg-spinners:3-dots-scale" /> 探测中...</span>
           </div>
         </div>
@@ -98,7 +106,14 @@ async function onSetCurrent(name: string) {
         <input v-model="name" placeholder="模型名称" />
         <input v-model="baseUrl" placeholder="Base URL（可选）" />
         <input v-model="apiKey" placeholder="API Key" type="password" />
-        <input v-model="maxCtx" placeholder="最大上下文 (tokens, 可选，自动探测失败时填写)" />
+        <div class="ctx-row">
+          <input v-model="maxCtx" placeholder="最大上下文 (tokens, 可选)" />
+          <button class="detect-icon" :class="{ detecting }" @click="detectCtx" :disabled="detecting" title="探测上下文大小">
+            <Icon v-if="!detecting" icon="lucide:scan-search" />
+            <Icon v-else icon="svg-spinners:3-dots-scale" />
+          </button>
+          <span v-if="detectMsg" class="detect-msg" :class="{ fail: detectMsg === '探测失败' }">{{ detectMsg }}</span>
+        </div>
         <div class="form-actions">
           <button class="btn btn-sec" @click="cancelForm">取消</button>
           <button class="btn btn-pri" @click="add">{{ editId ? '保存' : '添加' }}</button>
@@ -121,9 +136,15 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spac
 .row-title { font-size: 14px; color: var(--el-text-color-primary); }
 .row-sub { font-size: 12px; color: var(--el-text-color-placeholder); margin-top: 2px; }
 .ctx-info { color: #5db8a6; font-weight: 500; }
-.detect-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 2px 8px; border-radius: 4px; border: 1px dashed var(--el-border-color); background: transparent; cursor: pointer; font-size: 11px; color: var(--el-text-color-placeholder); font-family: inherit; }
-.detect-btn:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
 .detecting-text { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--el-color-primary); }
+.ctx-row { display: flex; align-items: center; gap: 6px; }
+.ctx-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--el-border-color); background: var(--el-bg-color); font-size: 14px; color: var(--el-text-color-primary); outline: none; font-family: inherit; }
+.ctx-row input:focus { border-color: var(--el-color-primary); }
+.detect-icon { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: var(--el-text-color-placeholder); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.detect-icon:hover { color: var(--el-color-primary); background: rgba(204,120,92,0.08); }
+.detect-icon.detecting { color: var(--el-color-primary); }
+.detect-msg { font-size: 11px; white-space: nowrap; color: #5db8a6; }
+.detect-msg.fail { color: var(--el-color-danger); }
 .row-right { display: flex; align-items: center; gap: 6px; }
 .action-icon { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: var(--el-text-color-placeholder); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.15s; }
 .action-icon:hover { background: var(--el-fill-color-light); color: var(--el-text-color-primary); }
