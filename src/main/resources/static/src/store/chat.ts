@@ -6,6 +6,7 @@ export const useChatStore = defineStore('chat', () => {
   const messages = ref<Message[]>([])
   const streaming = ref(false)
   const currentThinking = ref('')
+  const sessionStartTime = ref(0)
 
   let tokenBuf = ''
   let thinkingBuf = ''
@@ -48,6 +49,11 @@ export const useChatStore = defineStore('chat', () => {
     tokenBuf = ''; thinkingBuf = ''
     messages.value = []
     currentThinking.value = ''
+    sessionStartTime.value = 0
+  }
+
+  function startSession() {
+    if (sessionStartTime.value === 0) sessionStartTime.value = Date.now()
   }
 
   function pruneEmptyAssistant() {
@@ -61,5 +67,5 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  return { messages, streaming, currentThinking, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, pruneEmptyAssistant }
+  return { messages, streaming, currentThinking, sessionStartTime, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, startSession, pruneEmptyAssistant }
 })

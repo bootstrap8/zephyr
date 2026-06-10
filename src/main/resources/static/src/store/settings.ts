@@ -16,7 +16,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const skills = ref<SkillConfig[]>([])
   const memories = ref<MemoryItem[]>([])
   const contextUsed = ref(53248)
-  const contextTotal = ref(131072)
+
+  const contextTotal = computed(() => {
+    const def = models.value.find(m => m.name === currentModel.value)
+    return def?.maxContextTokens || 131072
+  })
 
   const contextPercent = computed(() =>
     Math.round((contextUsed.value / contextTotal.value) * 100)
@@ -36,7 +40,8 @@ export const useSettingsStore = defineStore('settings', () => {
           name: m.name,
           baseUrl: m.baseUrl,
           isDefault: m.isDefault === 1,
-          apiKey: m.apiKeyEncrypted
+          apiKey: m.apiKeyEncrypted,
+          maxContextTokens: m.maxContextTokens
         }))
         models.value = list
         const def = list.find((m: ModelConfig) => m.isDefault)

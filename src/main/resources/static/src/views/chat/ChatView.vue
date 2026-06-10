@@ -31,6 +31,7 @@ function newChat() {
 }
 
 function onSend(text: string) {
+  chatStore.startSession()
   if (abortController) abortController.abort()
   abortController = new AbortController()
 

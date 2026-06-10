@@ -99,6 +99,7 @@ export interface ModelConfig {
   baseUrl?: string
   apiKey?: string
   isDefault: boolean
+  maxContextTokens?: number
 }
 
 // === Memory ===
