@@ -34,8 +34,6 @@ import java.util.concurrent.Executors;
 public class ChatServiceImpl implements ChatService {
 
     private static final Gson gson = new Gson();
-    private static final int MAX_ROUNDS = 10;
-
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @Resource
@@ -98,9 +96,9 @@ public class ChatServiceImpl implements ChatService {
                 List<Map<String, Object>> messages = ctx.getMessages();
                 messages.add(Map.of("role", "user", "content", message));
 
-                // 4. 工具调用循环
+                // 4. 工具调用循环（无轮次限制，模型自行决定何时停止）
                 LlmResult result = null;
-                for (int round = 0; round < MAX_ROUNDS; round++) {
+                while (true) {
                     result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter);
 
                     if (result.hasToolCalls()) {
@@ -149,13 +147,6 @@ public class ChatServiceImpl implements ChatService {
                         return;
                     }
                 }
-                // 超轮次结束
-                if (result != null && (isNotBlank(result.getContent()) || result.hasToolCalls())) {
-                    persistAssistantMessage(cid, result, msgSeq++);
-                }
-                emitter.send(SseEmitter.event().name("message")
-                        .data(ChatEvent.builder().type("done").build()));
-                emitter.complete();
             } catch (Exception e) {
                 log.error("Chat error", e);
                 try {
