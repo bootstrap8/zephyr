@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getLangData } from '@/i18n/locale'
 import { useSettingsStore } from '@/store/settings'
 import { Icon } from '@iconify/vue'
@@ -30,6 +30,32 @@ const detailSkill = ref<SkillConfig | null>(null)
 const showDetail = ref(false)
 
 onMounted(async () => { await store.loadSkills() })
+
+// 搜索过滤
+const filterKeyword = ref('')
+const filterSource = ref('')
+
+const filteredSkills = computed(() => {
+  let list = [...store.skills]
+  const kw = filterKeyword.value.trim().toLowerCase()
+  if (kw) {
+    list = list.filter(s =>
+      (s.skillName || '').toLowerCase().includes(kw) ||
+      (s.displayName || '').toLowerCase().includes(kw) ||
+      (s.description || '').toLowerCase().includes(kw)
+    )
+  }
+  if (filterSource.value) {
+    list = list.filter(s => s.source === filterSource.value)
+  }
+  list.sort((a, b) => (a.skillName || '').localeCompare(b.skillName || ''))
+  return list
+})
+
+function clearFilters() {
+  filterKeyword.value = ''
+  filterSource.value = ''
+}
 
 const installMethods = [
   { key: 'git', label: langData.skillMgmt_source_git, icon: 'lucide:git-branch' },
