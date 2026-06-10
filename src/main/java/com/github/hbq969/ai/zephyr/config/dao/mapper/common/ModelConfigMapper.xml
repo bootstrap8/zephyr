@@ -4,20 +4,20 @@
 <mapper namespace="com.github.hbq969.ai.zephyr.config.dao.ModelConfigDao">
 
   <select id="queryByUserName" resultType="com.github.hbq969.ai.zephyr.config.dao.entity.ModelConfigEntity">
-    select id, user_name as userName, name, base_url as baseUrl, api_key_encrypted as apiKeyEncrypted, is_default as isDefault, created_at as createdAt, updated_at as updatedAt
+    select id, user_name as userName, name, base_url as baseUrl, api_key_encrypted as apiKeyEncrypted, is_default as isDefault, created_at as createdAt, updated_at as updatedAt, max_context_tokens as maxContextTokens
     from model_configs
     where user_name = #{userName}
     order by created_at desc
   </select>
 
   <insert id="insert">
-    insert into model_configs (id, user_name, name, base_url, api_key_encrypted, is_default, created_at, updated_at)
-    values (#{id}, #{userName}, #{name}, #{baseUrl}, #{apiKeyEncrypted}, #{isDefault}, #{createdAt}, #{updatedAt})
+    insert into model_configs (id, user_name, name, base_url, api_key_encrypted, max_context_tokens, is_default, created_at, updated_at)
+    values (#{id}, #{userName}, #{name}, #{baseUrl}, #{apiKeyEncrypted}, #{maxContextTokens}, #{isDefault}, #{createdAt}, #{updatedAt})
   </insert>
 
   <update id="update">
     update model_configs
-    set name = #{name}, base_url = #{baseUrl}, api_key_encrypted = #{apiKeyEncrypted}, updated_at = #{updatedAt}
+    set name = #{name}, base_url = #{baseUrl}, api_key_encrypted = #{apiKeyEncrypted}, max_context_tokens = #{maxContextTokens}, updated_at = #{updatedAt}
     where id = #{id} and user_name = #{userName}
   </update>
 
@@ -26,7 +26,7 @@
   </delete>
 
   <select id="queryById" resultType="com.github.hbq969.ai.zephyr.config.dao.entity.ModelConfigEntity">
-    select id, user_name as userName, name, base_url as baseUrl, api_key_encrypted as apiKeyEncrypted, is_default as isDefault, created_at as createdAt, updated_at as updatedAt
+    select id, user_name as userName, name, base_url as baseUrl, api_key_encrypted as apiKeyEncrypted, is_default as isDefault, created_at as createdAt, updated_at as updatedAt, max_context_tokens as maxContextTokens
     from model_configs where id = #{id}
   </select>
 
