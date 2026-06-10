@@ -6,6 +6,7 @@ import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
 import com.github.hbq969.ai.zephyr.mcp.service.McpService;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpClient;
+import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,9 @@ public class McpServiceImpl implements McpService {
 
     @Resource
     private McpDao mcpDao;
+
+    @Resource
+    private com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager connectionManager;
 
     @Override
     public List<McpServerEntity> listServers(String userName) {
@@ -130,6 +134,7 @@ public class McpServiceImpl implements McpService {
     @Override
     @Transactional
     public void disconnect(String id, String userName) {
+        connectionManager.removeConnection(userName, id);
         mcpDao.updateServerStatus(id, "disconnected", userName);
     }
 
