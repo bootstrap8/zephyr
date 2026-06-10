@@ -202,7 +202,13 @@ public class McpConnection {
     }
 
     private String readMsg() throws Exception {
-        return reader.readLine();
+        for (int i = 0; i < 200; i++) {
+            String line = reader.readLine();
+            if (line == null) return null;
+            String trimmed = line.trim();
+            if (trimmed.startsWith("{")) return trimmed;
+        }
+        return null;
     }
 
     private String _httpPost(String json) throws Exception {

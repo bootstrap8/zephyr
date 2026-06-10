@@ -53,6 +53,20 @@ public class McpClient {
                 }
             }
             Process process = pb.start();
+
+            // 消费 stderr，避免缓冲区满导致进程阻塞
+            StringBuilder stderrBuf = new StringBuilder();
+            Thread stderrThread = new Thread(() -> {
+                try (BufferedReader errReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = errReader.readLine()) != null) {
+                        stderrBuf.append(line).append("\n");
+                    }
+                } catch (Exception ignored) {}
+            });
+            stderrThread.setDaemon(true);
+            stderrThread.start();
+
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
 
@@ -71,9 +85,13 @@ public class McpClient {
             initParams.add("clientInfo", clientInfo);
             initReq.add("params", initParams);
 
-            String resp = sendAndRead(reader, writer, gson.toJson(initReq));
+            String resp = sendAndReadJson(reader, writer, gson.toJson(initReq));
             if (resp == null || !resp.contains("\"id\":1")) {
                 process.destroyForcibly();
+                String errInfo = stderrBuf.toString().trim();
+                if (!errInfo.isEmpty()) {
+                    log.warn("stdio MCP initialize 失败，stderr: {}", errInfo.substring(0, Math.min(500, errInfo.length())));
+                }
                 return tools;
             }
 
@@ -90,7 +108,7 @@ public class McpClient {
             listReq.addProperty("method", "tools/list");
             listReq.add("params", new JsonObject());
 
-            resp = sendAndRead(reader, writer, gson.toJson(listReq));
+            resp = sendAndReadJson(reader, writer, gson.toJson(listReq));
             if (resp != null) {
                 tools = parseTools(resp);
             }
@@ -147,9 +165,9 @@ public class McpClient {
         return tools;
     }
 
-    private static String sendAndRead(BufferedReader reader, BufferedWriter writer, String json) throws Exception {
+    private static String sendAndReadJson(BufferedReader reader, BufferedWriter writer, String json) throws Exception {
         writeMsg(writer, json);
-        return readMsg(reader);
+        return readMsgJson(reader);
     }
 
     private static void writeMsg(BufferedWriter writer, String json) throws Exception {
@@ -158,8 +176,15 @@ public class McpClient {
         writer.flush();
     }
 
-    private static String readMsg(BufferedReader reader) throws Exception {
-        return reader.readLine();
+    /** 读取一行 JSON-RPC 响应，自动跳过非 JSON 行（如 MCP 服务器误打到 stdout 的日志） */
+    private static String readMsgJson(BufferedReader reader) throws Exception {
+        for (int i = 0; i < 200; i++) {
+            String line = reader.readLine();
+            if (line == null) return null;
+            String trimmed = line.trim();
+            if (trimmed.startsWith("{")) return trimmed;
+        }
+        return null;
     }
 
     private static String[] httpPost(String url, String headersStr, String json, String sessionId) throws Exception {
