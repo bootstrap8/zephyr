@@ -50,13 +50,13 @@ export const useSettingsStore = defineStore('settings', () => {
     } catch (_) { /* keep defaults */ }
   }
 
-  async function addModelRemote(name: string, baseUrl: string, apiKey: string) {
-    const res = await axios({ url: '/model-config/create', method: 'post', data: { name, baseUrl, apiKey } })
+  async function addModelRemote(name: string, baseUrl: string, apiKey: string, maxContextTokens: string) {
+    const res = await axios({ url: '/model-config/create', method: 'post', data: { name, baseUrl, apiKey, maxContextTokens } })
     if (res.data.state === 'OK') await loadModels()
   }
 
-  async function updateModelRemote(id: string, name: string, baseUrl: string, apiKey: string) {
-    await axios({ url: '/model-config/update', method: 'post', data: { id, name, baseUrl, apiKey } })
+  async function updateModelRemote(id: string, name: string, baseUrl: string, apiKey: string, maxContextTokens: string) {
+    await axios({ url: '/model-config/update', method: 'post', data: { id, name, baseUrl, apiKey, maxContextTokens } })
     await loadModels()
   }
 

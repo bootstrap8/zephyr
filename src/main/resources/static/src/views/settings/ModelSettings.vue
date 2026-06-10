@@ -8,6 +8,7 @@ const showForm = ref(false)
 const name = ref('')
 const baseUrl = ref('')
 const apiKey = ref('')
+const maxCtx = ref('')
 const editId = ref<string | null>(null)
 
 onMounted(() => { settingsStore.loadModels() })
@@ -15,13 +16,14 @@ onMounted(() => { settingsStore.loadModels() })
 async function add() {
   if (!name.value.trim()) return
   if (editId.value) {
-    await settingsStore.updateModelRemote(editId.value, name.value.trim(), baseUrl.value.trim(), apiKey.value)
+    await settingsStore.updateModelRemote(editId.value, name.value.trim(), baseUrl.value.trim(), apiKey.value, maxCtx.value)
   } else {
-    await settingsStore.addModelRemote(name.value.trim(), baseUrl.value.trim(), apiKey.value)
+    await settingsStore.addModelRemote(name.value.trim(), baseUrl.value.trim(), apiKey.value, maxCtx.value)
   }
   name.value = ''
   baseUrl.value = ''
   apiKey.value = ''
+  maxCtx.value = ''
   editId.value = null
   showForm.value = false
 }
@@ -31,6 +33,7 @@ function startEdit(m: any) {
   name.value = m.name
   baseUrl.value = m.baseUrl || ''
   apiKey.value = ''
+  maxCtx.value = m.maxContextTokens ? String(m.maxContextTokens) : ''
   showForm.value = true
 }
 
@@ -38,6 +41,7 @@ function cancelForm() {
   name.value = ''
   baseUrl.value = ''
   apiKey.value = ''
+  maxCtx.value = ''
   editId.value = null
   showForm.value = false
 }
@@ -84,6 +88,7 @@ async function onSetCurrent(name: string) {
         <input v-model="name" placeholder="模型名称" />
         <input v-model="baseUrl" placeholder="Base URL（可选）" />
         <input v-model="apiKey" placeholder="API Key" type="password" />
+        <input v-model="maxCtx" placeholder="最大上下文 (tokens, 可选，自动探测失败时填写)" />
         <div class="form-actions">
           <button class="btn btn-sec" @click="cancelForm">取消</button>
           <button class="btn btn-pri" @click="add">{{ editId ? '保存' : '添加' }}</button>
