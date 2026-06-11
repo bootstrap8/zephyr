@@ -179,7 +179,9 @@ watch(name, (val) => {
   clearThinkingParams()
   if (t) {
     selectedTemplateName.value = t.name
-    applyTemplate(t)
+    if (showForm.value) {
+      applyTemplate(t)
+    }
   } else {
     matchedTemplate.value = null
     selectedTemplateName.value = '__custom__'
