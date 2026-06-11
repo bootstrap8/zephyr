@@ -71,6 +71,32 @@ public class LlmClient {
 
         int timeout = getTimeoutSeconds(params);
 
+        // 打印请求体（不含消息内容）
+        JsonObject logJson = bodyJson.deepCopy();
+        if (logJson.has("messages")) {
+            JsonArray msgs = logJson.getAsJsonArray("messages");
+            JsonArray summary = new JsonArray();
+            for (int i = 0; i < msgs.size(); i++) {
+                JsonObject m = msgs.get(i).getAsJsonObject();
+                JsonObject s = new JsonObject();
+                s.addProperty("role", m.get("role").getAsString());
+                if (m.has("tool_call_id")) s.addProperty("tool_call_id", m.get("tool_call_id").getAsString());
+                if (m.has("tool_calls")) s.addProperty("tool_calls_count", m.getAsJsonArray("tool_calls").size());
+                if (m.has("content")) {
+                    JsonElement c = m.get("content");
+                    if (c.isJsonPrimitive()) {
+                        String cs = c.getAsString();
+                        s.addProperty("content_len", cs.length());
+                    } else {
+                        s.addProperty("content_type", c.isJsonArray() ? "array[" + c.getAsJsonArray().size() + "]" : "object");
+                    }
+                }
+                summary.add(s);
+            }
+            logJson.add("messages", summary);
+        }
+        log.info("LLM 请求模型={} 完整参数: {}", model.getName(), gson.toJson(logJson));
+
         RequestBody reqBody = RequestBody.create(gson.toJson(bodyJson), JSON);
         OkHttpClient client = (timeout != 120)
                 ? httpClient.newBuilder().readTimeout(timeout, TimeUnit.SECONDS).build()
@@ -240,6 +266,7 @@ public class LlmClient {
         addJsonProperty(cur, parts[parts.length - 1], value);
     }
 
+    @SuppressWarnings("unchecked")
     private void addJsonProperty(JsonObject obj, String key, Object value) {
         if (value instanceof Number) {
             double d = ((Number) value).doubleValue();
@@ -250,6 +277,8 @@ public class LlmClient {
             }
         } else if (value instanceof Boolean) {
             obj.addProperty(key, (Boolean) value);
+        } else if (value instanceof Map) {
+            obj.add(key, gson.toJsonTree(value));
         } else {
             obj.addProperty(key, String.valueOf(value));
         }
