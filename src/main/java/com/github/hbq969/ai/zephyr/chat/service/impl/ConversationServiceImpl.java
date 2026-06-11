@@ -98,8 +98,11 @@ public class ConversationServiceImpl implements ConversationService {
             msg.put("content", e.getContent());
             msg.put("thinking", e.getThinking());
             msg.put("timestamp", e.getCreatedAt());
-            // toolCalls 仅 LLM 上下文重建用（ContextBuilder 走 chatDao 直接取），
-            // 前端历史展示不需要，不传给前端
+            if (e.getToolCallsJson() != null && !e.getToolCallsJson().isBlank()) {
+                msg.put("toolCalls", gson.fromJson(e.getToolCallsJson(),
+                        new TypeToken<List<Map<String, Object>>>(){}.getType()));
+            }
+            // toolCalls 传给前端用于展示工具调用卡片
             result.add(msg);
         }
         return result;
