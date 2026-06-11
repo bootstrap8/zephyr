@@ -132,7 +132,7 @@ onUpdated(setupCodeBlocks)
         <ThinkingBlock :content="message.thinking" :animating="streaming" />
       </div>
       <div v-for="tc in message.toolCalls" :key="tc.name" class="mb-2">
-        <ToolCallCard :tool="tc" :animating="streaming" />
+        <ToolCallCard :tool="tc" />
       </div>
       <div v-if="message.content" ref="mdBodyRef" class="markdown-body"></div>
     </div>

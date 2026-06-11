@@ -8,7 +8,6 @@ const langData = getLangData()
 
 const props = defineProps<{
   tool: ToolCall
-  animating: boolean
 }>()
 
 const collapsed = ref(true)
@@ -38,9 +37,6 @@ const elapsedText = computed(() => {
   return `${m}m${rs}s`
 })
 
-watch(() => props.animating, (v) => { if (v) startTimer(); else stopTimer() })
-
-onMounted(() => { if (props.animating) startTimer() })
 onBeforeUnmount(stopTimer)
 
 const inputStr = computed(() => {
@@ -49,21 +45,27 @@ const inputStr = computed(() => {
 })
 
 const hasDetails = computed(() => inputStr.value || props.tool.output)
+
+const isRunning = computed(() => props.tool.status === 'running')
+
+watch(isRunning, (v) => { if (v) startTimer(); else stopTimer() })
+
+onMounted(() => { if (isRunning.value) startTimer() })
 </script>
 
 <template>
-  <div class="tool-call-block" :class="{ collapsed, animating }">
+  <div class="tool-call-block" :class="{ collapsed, running: isRunning }">
     <div class="tool-header" @click="collapsed = !collapsed">
       <span class="tool-text">
         <Icon icon="lucide:wrench" class="tool-icon" />
         {{ tool.name }}
-        <template v-if="animating">
+        <template v-if="isRunning">
           <span class="dot-anim"><i>.</i><i>.</i><i>.</i></span>
         </template>
         <span v-if="elapsedSeconds > 0" class="elapsed-time">{{ elapsedText }}</span>
       </span>
       <Icon v-if="hasDetails" :icon="collapsed ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="chevron" />
-      <span class="tool-status" :class="tool.status">
+      <span v-if="tool.status !== 'running'" class="tool-status" :class="tool.status">
         <Icon v-if="tool.status === 'success'" icon="lucide:check-circle" style="font-size:11px" />
         <Icon v-else-if="tool.status === 'error'" icon="lucide:x-circle" style="font-size:11px" />
         <Icon v-else icon="lucide:loader-circle" style="font-size:11px" />
@@ -71,7 +73,7 @@ const hasDetails = computed(() => inputStr.value || props.tool.output)
       </span>
     </div>
     <!-- 折叠时显示参数预览（仅 animating 且有 input 时） -->
-    <div v-if="collapsed && animating && inputStr" class="tool-preview">{{ inputStr }}</div>
+    <div v-if="collapsed && isRunning && inputStr" class="tool-preview">{{ inputStr }}</div>
     <!-- 展开详情 -->
     <div v-if="!collapsed && hasDetails" class="tool-body">
       <div v-if="inputStr" class="tool-section">
