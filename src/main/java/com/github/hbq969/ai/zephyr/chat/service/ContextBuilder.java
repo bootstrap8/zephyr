@@ -1,7 +1,10 @@
 package com.github.hbq969.ai.zephyr.chat.service;
 
 import com.github.hbq969.ai.zephyr.chat.dao.ChatDao;
+import com.github.hbq969.ai.zephyr.chat.dao.entity.ConversationEntity;
 import com.github.hbq969.ai.zephyr.chat.dao.entity.MessageEntity;
+import com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao;
+import com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity;
 import com.github.hbq969.ai.zephyr.chat.model.ToolDef;
 import com.github.hbq969.ai.zephyr.config.dao.ModelConfigDao;
 import com.github.hbq969.ai.zephyr.config.dao.entity.ModelConfigEntity;
@@ -39,6 +42,8 @@ public class ContextBuilder {
     private SkillService skillService;
     @Resource
     private MemoryService memoryService;
+    @Resource
+    private WorkspaceDao workspaceDao;
     @Resource
     private ChatDao chatDao;
 
@@ -97,6 +102,19 @@ public class ContextBuilder {
         if (!memoryIndex.isEmpty()) {
             systemPrompt.append("\n\n## 用户记忆\n").append(memoryIndex)
                     .append("\n（需要完整内容时使用 use_memory 工具查看）");
+        }
+
+        // 4.5 工作空间
+        if (conversationId != null && !conversationId.isEmpty()) {
+            ConversationEntity conv = chatDao.queryConversationById(conversationId);
+            if (conv != null && conv.getWorkspaceId() != null && !conv.getWorkspaceId().isEmpty()) {
+                WorkspaceEntity ws = workspaceDao.queryById(conv.getWorkspaceId());
+                if (ws != null) {
+                    systemPrompt.append("\n\n## 工作空间\n")
+                        .append("当前工作目录: ").append(ws.getPath()).append("\n")
+                        .append("使用文件系统工具时，请将文件路径限定在此目录下。\n");
+                }
+            }
         }
 
         // 6. 添加内置工具
