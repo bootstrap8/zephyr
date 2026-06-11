@@ -96,7 +96,8 @@ public class SkillServiceImpl implements SkillService {
             if (skillRoots.isEmpty()) {
                 throw new RuntimeException("未找到任何 SKILL.md，请确认包内包含有效 Skill");
             }
-            String packName = detectPackName(tmpDir, skillRoots);
+            String fallbackName = extractSourceName(source, url, path);
+            String packName = detectPackName(tmpDir, skillRoots, fallbackName);
             return installSkills(tmpDir, skillRoots, packName, source, url, userName);
         } catch (IOException e) {
             throw new RuntimeException("安装失败: " + e.getMessage(), e);
@@ -138,7 +139,10 @@ public class SkillServiceImpl implements SkillService {
             if (skillRoots.isEmpty()) {
                 throw new RuntimeException("未找到任何 SKILL.md，请确认包内包含有效 Skill");
             }
-            String packName = detectPackName(tmpDir, skillRoots);
+            String fallbackName = originalFilename.contains(".")
+                    ? originalFilename.substring(0, originalFilename.lastIndexOf('.'))
+                    : originalFilename;
+            String packName = detectPackName(tmpDir, skillRoots, fallbackName);
             return installSkills(tmpDir, skillRoots, packName, "upload", originalFilename, userName);
         } catch (IOException e) {
             throw new RuntimeException("上传失败: " + e.getMessage(), e);
@@ -304,8 +308,9 @@ public class SkillServiceImpl implements SkillService {
 
     /**
      * 判定是否组合包并返回包名。只有 1 个 skill 返回 null（无包）。
+     * fallbackName 为从来源 URL/路径中提取的名称，作为最后回退。
      */
-    private String detectPackName(Path tmpDir, List<Path> skillRoots) {
+    private String detectPackName(Path tmpDir, List<Path> skillRoots, String fallbackName) {
         if (skillRoots.size() <= 1) return null;
         Path topSkillMd = tmpDir.resolve("SKILL.md");
         if (Files.exists(topSkillMd)) {
@@ -313,7 +318,29 @@ public class SkillServiceImpl implements SkillService {
             String name = meta.get("name");
             if (name != null && !name.isEmpty()) return name;
         }
-        return tmpDir.getFileName().toString();
+        return fallbackName;
+    }
+
+    /** 从来源 URL/路径中提取项目名，作为组合包名的回退值。 */
+    private String extractSourceName(String source, String url, String path) {
+        return switch (source) {
+            case "git" -> {
+                String name = url.substring(url.lastIndexOf('/') + 1);
+                if (name.endsWith(".git")) name = name.substring(0, name.length() - 4);
+                yield name;
+            }
+            case "url" -> {
+                String u = url;
+                int q = u.indexOf('?');
+                if (q >= 0) u = u.substring(0, q);
+                String name = u.substring(u.lastIndexOf('/') + 1);
+                int dot = name.lastIndexOf('.');
+                if (dot >= 0) name = name.substring(0, dot);
+                yield name;
+            }
+            case "local" -> Paths.get(path).getFileName().toString();
+            default -> "unknown";
+        };
     }
 
     private List<SkillVO> installSkills(Path tmpDir, List<Path> skillRoots, String packName,
