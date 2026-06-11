@@ -120,8 +120,8 @@ public class SkillServiceImpl implements SkillService {
         if (!isArchive && !isSkillMd) {
             throw new IllegalArgumentException("仅支持 .zip、.tar、.tar.gz、.tgz、.md 格式");
         }
-        if (file.getSize() > 10 * 1024 * 1024) {
-            throw new IllegalArgumentException("文件大小不能超过 10MB");
+        if (file.getSize() > 100 * 1024 * 1024) {
+            throw new IllegalArgumentException("文件大小不能超过 100MB");
         }
 
         Path tmpDir = null;

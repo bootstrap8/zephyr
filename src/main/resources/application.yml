@@ -161,6 +161,10 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
 
+  servlet:
+    multipart:
+      max-file-size: 500MB
+
 knife4j:
   enable: true
   production: false
