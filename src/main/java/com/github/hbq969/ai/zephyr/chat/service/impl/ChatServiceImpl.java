@@ -284,7 +284,9 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private String executeUseSkill(String skillName) {
-        Path skillMd = Paths.get(System.getProperty("user.home"), ".zephyr", "skills", skillName, "SKILL.md");
+        // pack:skill 格式 → pack/skill 路径
+        String relativePath = skillName.replace(':', '/');
+        Path skillMd = Paths.get(System.getProperty("user.home"), ".zephyr", "skills", relativePath, "SKILL.md");
         if (Files.exists(skillMd)) {
             try {
                 String raw = Files.readString(skillMd);
