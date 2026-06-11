@@ -7,6 +7,7 @@ public class ConversationEntity {
     private String id;
     private String userName;
     private String title;
+    private String workspaceId;
     private Long createdAt;
     private Long updatedAt;
 }

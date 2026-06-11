@@ -4,7 +4,7 @@
 <mapper namespace="com.github.hbq969.ai.zephyr.chat.dao.ChatDao">
 
     <select id="queryConversations" resultType="com.github.hbq969.ai.zephyr.chat.dao.entity.ConversationEntity">
-        select id, user_name as userName, title,
+        select id, user_name as userName, title, workspace_id as workspaceId,
                created_at as createdAt, updated_at as updatedAt
         from conversations
         where user_name = #{userName}
@@ -12,8 +12,8 @@
     </select>
 
     <insert id="insertConversation">
-        insert into conversations (id, user_name, title, created_at, updated_at)
-        values (#{id}, #{userName}, #{title}, #{createdAt}, #{updatedAt})
+        insert into conversations (id, user_name, title, workspace_id, created_at, updated_at)
+        values (#{id}, #{userName}, #{title}, #{workspaceId}, #{createdAt}, #{updatedAt})
     </insert>
 
     <update id="updateConversationTitle">
@@ -26,7 +26,7 @@
     </delete>
 
     <select id="queryConversationById" resultType="com.github.hbq969.ai.zephyr.chat.dao.entity.ConversationEntity">
-        select id, user_name as userName, title,
+        select id, user_name as userName, title, workspace_id as workspaceId,
                created_at as createdAt, updated_at as updatedAt
         from conversations where id = #{id}
     </select>

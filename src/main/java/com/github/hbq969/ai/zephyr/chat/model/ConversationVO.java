@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class ConversationVO {
     private String id;
     private String title;
+    private String workspaceId;
     private long updatedAt;
     private long createdAt;
     private int messageCount;
