@@ -274,44 +274,37 @@ public class SkillServiceImpl implements SkillService {
     }
 
     /**
-     * 递归查找所有包含 SKILL.md 的目录，返回每个 skill 的根目录列表。
-     * 跳过名为 skills 的中间层目录。
+     * 递归查找所有 SKILL.md 文件，返回每个 skill 根目录（SKILL.md 所在目录）的列表。
      */
     private List<Path> findSkillRoots(Path dir) {
         List<Path> result = new ArrayList<>();
+        collectSkillMdDirs(dir, result);
+        // 如果 dir 自身有 SKILL.md 且没在子目录中找到 → 单 skill
+        if (result.isEmpty() && Files.exists(dir.resolve("SKILL.md"))) {
+            result.add(dir);
+        }
+        result.sort(Comparator.comparing(Path::toString));
+        return result;
+    }
+
+    private void collectSkillMdDirs(Path dir, List<Path> result) {
         File[] children = dir.toFile().listFiles();
-        if (children == null) return result;
-        boolean topHasSkillMd = Files.exists(dir.resolve("SKILL.md"));
+        if (children == null) return;
         for (File child : children) {
             if (!child.isDirectory()) continue;
             Path childPath = child.toPath();
-            if ("skills".equals(child.getName())) {
-                // skills/ 中间层：取其下子目录
-                File[] inner = child.listFiles(File::isDirectory);
-                if (inner != null) {
-                    for (File innerDir : inner) {
-                        if (Files.exists(innerDir.toPath().resolve("SKILL.md"))) {
-                            result.add(innerDir.toPath());
-                        }
-                    }
-                }
-            } else if (Files.exists(childPath.resolve("SKILL.md"))) {
+            if (Files.exists(childPath.resolve("SKILL.md"))) {
                 result.add(childPath);
             } else {
-                // 非 skills 目录且无直接 SKILL.md → 递归进去查找
-                // 处理 superpowers/skills/brainstorming/SKILL.md 这类两层嵌套
-                result.addAll(findSkillRoots(childPath));
+                collectSkillMdDirs(childPath, result);
             }
         }
-        if (result.isEmpty() && topHasSkillMd) {
-            result.add(dir);
-        }
-        return result;
     }
 
     /**
      * 判定是否组合包并返回包名。只有 1 个 skill 返回 null（无包）。
-     * fallbackName 为从来源 URL/路径中提取的名称，作为最后回退。
+     * 包名取所有 skill 根目录相对于 tmpDir 的公共前缀的第一级。
+     * 如果 tmpDir 自身有 SKILL.md，取其 name 字段。
      */
     private String detectPackName(Path tmpDir, List<Path> skillRoots, String fallbackName) {
         if (skillRoots.size() <= 1) return null;
@@ -320,6 +313,21 @@ public class SkillServiceImpl implements SkillService {
             Map<String, String> meta = parseSkillMd(topSkillMd);
             String name = meta.get("name");
             if (name != null && !name.isEmpty()) return name;
+        }
+        // 找所有 skill 根目录相对于 tmpDir 的公共前缀第一级
+        Path first = tmpDir.relativize(skillRoots.get(0));
+        if (first.getNameCount() > 0) {
+            String prefix = first.getName(0).toString();
+            for (int i = 1; i < skillRoots.size(); i++) {
+                Path rel = tmpDir.relativize(skillRoots.get(i));
+                if (rel.getNameCount() == 0 || !rel.getName(0).toString().equals(prefix)) {
+                    return fallbackName;
+                }
+            }
+            // skills 是中间层标记，不是包名
+            if (!"skills".equals(prefix) && !prefix.isEmpty()) {
+                return prefix;
+            }
         }
         return fallbackName;
     }
