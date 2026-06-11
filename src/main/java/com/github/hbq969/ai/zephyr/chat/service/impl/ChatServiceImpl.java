@@ -12,12 +12,15 @@ import com.github.hbq969.ai.zephyr.chat.service.ContextBuilder;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.ai.zephyr.memory.service.MemoryService;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
+import com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -48,9 +51,15 @@ public class ChatServiceImpl implements ChatService {
     private MemoryService memoryService;
     @Resource
     private McpConnectionManager mcpConnectionManager;
+    @Resource
+    private WorkspaceDao workspaceDao;
+
+    @Value("${chat.upload.max-file-size:10485760}")
+    private long maxFileSize;
 
     @Override
-    public SseEmitter send(String userName, String conversationId, String workspaceId, String originalMessage) {
+    public SseEmitter send(String userName, String conversationId, String workspaceId,
+                           String originalMessage, List<String> filePaths) {
         SseEmitter emitter = new SseEmitter(300000L);
         String cancelKey = userName;
 
@@ -105,7 +114,18 @@ public class ChatServiceImpl implements ChatService {
                 // 3. 组装上下文
                 ContextBuilder.Context ctx = contextBuilder.build(userName, cid);
                 List<Map<String, Object>> messages = ctx.getMessages();
-                messages.add(Map.of("role", "user", "content", message));
+
+                // 如果有上传文件，拼入用户消息
+                String userContent = message;
+                if (filePaths != null && !filePaths.isEmpty()) {
+                    StringBuilder sb = new StringBuilder("[用户上传的文件:]\n");
+                    for (String p : filePaths) {
+                        sb.append("- ").append(p).append("\n");
+                    }
+                    sb.append("\n用户消息: ").append(message);
+                    userContent = sb.toString();
+                }
+                messages.add(Map.of("role", "user", "content", userContent));
 
                 // 4. 工具调用循环（无轮次限制，模型自行决定何时停止）
                 LlmResult result = null;
@@ -373,6 +393,44 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void cancel(String userName) {
         llmClient.cancelCall(userName);
+    }
+
+    @Override
+    public Map<String, Object> upload(MultipartFile file, String workspaceId, String userName) {
+        if (file.getSize() > maxFileSize) {
+            throw new IllegalArgumentException("文件大小不能超过 " + (maxFileSize / 1024 / 1024) + "MB");
+        }
+        if (workspaceId == null || workspaceId.isBlank()) {
+            throw new IllegalArgumentException("workspaceId 不能为空");
+        }
+        com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity ws =
+                workspaceDao.queryById(workspaceId);
+        if (ws == null) {
+            throw new IllegalArgumentException("工作空间不存在");
+        }
+        if (!ws.getUserName().equals(userName)) {
+            throw new IllegalArgumentException("无权访问该工作空间");
+        }
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()) {
+            originalName = "untitled";
+        }
+        String safeName = originalName.replaceAll("[/\\\\:<>\"|?*]", "_");
+        long ts = System.currentTimeMillis() / 1000;
+        String filename = ts + "_" + safeName;
+        Path uploadsDir = Paths.get(ws.getPath(), ".zephyr-uploads");
+        try {
+            Files.createDirectories(uploadsDir);
+            Path dest = uploadsDir.resolve(filename);
+            file.transferTo(dest.toFile());
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("path", ".zephyr-uploads/" + filename);
+            result.put("name", originalName);
+            result.put("size", file.getSize());
+            return result;
+        } catch (IOException e) {
+            throw new RuntimeException("文件保存失败: " + e.getMessage(), e);
+        }
     }
 
     @Override

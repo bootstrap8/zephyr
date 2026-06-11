@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Slf4j
@@ -38,7 +39,8 @@ public class ChatCtrl {
                 userName(),
                 body.getConversationId(),
                 body.getWorkspaceId(),
-                body.getMessage()
+                body.getMessage(),
+                body.getFilePaths()
         );
     }
 
@@ -68,6 +70,22 @@ public class ChatCtrl {
             put("username", uname);
             put("avatar", uname.substring(0, 1).toUpperCase());
         }});
+    }
+
+    @Operation(summary = "上传聊天附件")
+    @RequestMapping(path = "/upload", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "chat_upload", apiDesc = "聊天接口_上传附件")
+    public ReturnMessage<?> upload(@RequestParam("file") MultipartFile file,
+                                   @RequestParam("workspaceId") String workspaceId) {
+        try {
+            return ReturnMessage.success(chatService.upload(file, workspaceId, userName()));
+        } catch (IllegalArgumentException e) {
+            return ReturnMessage.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("文件上传失败", e);
+            return ReturnMessage.fail("上传失败: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "上下文占比")
