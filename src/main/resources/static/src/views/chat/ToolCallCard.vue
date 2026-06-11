@@ -62,7 +62,7 @@ onMounted(() => { if (isRunning.value) startTimer() })
         <template v-if="isRunning">
           <span class="dot-anim"><i>.</i><i>.</i><i>.</i></span>
         </template>
-        <span v-if="elapsedSeconds > 0" class="elapsed-time">{{ elapsedText }}</span>
+        <span v-if="isRunning && elapsedSeconds > 0" class="elapsed-time">{{ elapsedText }}</span>
       </span>
       <Icon v-if="hasDetails" :icon="collapsed ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="chevron" />
       <span v-if="tool.status !== 'running'" class="tool-status" :class="tool.status">
