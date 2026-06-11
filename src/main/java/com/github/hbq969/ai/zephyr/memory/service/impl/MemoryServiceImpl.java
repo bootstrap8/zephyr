@@ -47,6 +47,7 @@ public class MemoryServiceImpl implements MemoryService {
             vo.setName(fm.get("name"));
             vo.setType(memType);
             vo.setDescription(fm.getOrDefault("description", ""));
+            vo.setEnabled(!"false".equals(fm.get("enabled")));
             vo.setCreatedAt(Long.parseLong(fm.getOrDefault("created_at", "0")));
             vo.setUpdatedAt(Long.parseLong(fm.getOrDefault("updated_at", "0")));
             result.add(vo);
@@ -68,6 +69,7 @@ public class MemoryServiceImpl implements MemoryService {
         vo.setName(fm.get("name"));
         vo.setType(fm.get("type"));
         vo.setDescription(fm.getOrDefault("description", ""));
+        vo.setEnabled(!"false".equals(fm.get("enabled")));
         vo.setContent(body);
         vo.setCreatedAt(Long.parseLong(fm.getOrDefault("created_at", "0")));
         vo.setUpdatedAt(Long.parseLong(fm.getOrDefault("updated_at", "0")));
@@ -79,6 +81,7 @@ public class MemoryServiceImpl implements MemoryService {
         String name = body.get("name");
         String type = body.get("type");
         String content = body.getOrDefault("content", "");
+        boolean enabled = !"false".equals(body.get("enabled"));
 
         if (name == null || name.trim().isEmpty()) throw new IllegalArgumentException("名称不能为空");
         if (!"user".equals(type) && !"project".equals(type)) throw new IllegalArgumentException("类型无效: " + type);
@@ -92,7 +95,7 @@ public class MemoryServiceImpl implements MemoryService {
         long now = System.currentTimeMillis() / 1000;
         String description = content.length() > 60 ? content.substring(0, 60).replace("\n", " ") + "..." : content.replace("\n", " ");
 
-        writeMemoryFile(file, name, type, description, content, now, now);
+        writeMemoryFile(file, name, type, description, content, now, now, enabled);
         appendToIndex(dir, name, description, type);
     }
 
@@ -102,6 +105,7 @@ public class MemoryServiceImpl implements MemoryService {
         String type = body.get("type");
         String content = body.getOrDefault("content", "");
         String oldName = body.get("oldName");
+        boolean enabled = !"false".equals(body.getOrDefault("enabled", "true"));
 
         if (name == null || name.trim().isEmpty()) throw new IllegalArgumentException("名称不能为空");
         if (!"user".equals(type) && !"project".equals(type)) throw new IllegalArgumentException("类型无效: " + type);
@@ -123,7 +127,7 @@ public class MemoryServiceImpl implements MemoryService {
         }
 
         Path newFile = resolveFile(dir, name);
-        writeMemoryFile(newFile, name, type, description, content, createdAt, now);
+        writeMemoryFile(newFile, name, type, description, content, createdAt, now, enabled);
         upsertIndex(dir, name, description, type);
     }
 
@@ -139,6 +143,24 @@ public class MemoryServiceImpl implements MemoryService {
             try { Files.deleteIfExists(file); } catch (IOException e) { log.warn("删除记忆文件失败: {}", file, e); }
             removeFromIndex(dir, name);
         }
+    }
+
+    @Override
+    public void toggleEnabled(String name, boolean enabled, String userName) {
+        Path dir = userDir(userName);
+        Path file = resolveFile(dir, name);
+        if (!Files.exists(file)) throw new RuntimeException("记忆不存在: " + name);
+
+        Map<String, String> fm = parseFrontmatter(file);
+        String body = readBody(file);
+
+        String memName = fm.getOrDefault("name", name);
+        String type = fm.getOrDefault("type", "user");
+        String description = fm.getOrDefault("description", "");
+        long createdAt = Long.parseLong(fm.getOrDefault("created_at", String.valueOf(System.currentTimeMillis() / 1000)));
+        long now = System.currentTimeMillis() / 1000;
+
+        writeMemoryFile(file, memName, type, description, body, createdAt, now, enabled);
     }
 
     // === file helpers ===
@@ -158,12 +180,13 @@ public class MemoryServiceImpl implements MemoryService {
         return dir.resolve(sanitize(name) + ".md");
     }
 
-    private void writeMemoryFile(Path file, String name, String type, String description, String content, long createdAt, long updatedAt) {
+    private void writeMemoryFile(Path file, String name, String type, String description, String content, long createdAt, long updatedAt, boolean enabled) {
         String yaml = "---\n" +
                 "name: " + name + "\n" +
                 "description: " + description + "\n" +
                 "metadata:\n" +
                 "  type: " + type + "\n" +
+                "  enabled: " + enabled + "\n" +
                 "  created_at: " + createdAt + "\n" +
                 "  updated_at: " + updatedAt + "\n" +
                 "---\n\n" + content + "\n";

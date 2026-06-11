@@ -55,6 +55,9 @@ const locale: any = {
         "chatSidebar_delete": "删除",
         "chatSidebar_searchConv": "搜索会话",
         "chatSidebar_historyConv": "历史会话",
+        "chatSidebar_searchPlaceholder": "输入关键词搜索对话...",
+        "chatSidebar_noMatch": "无匹配对话",
+        "chatSidebar_noConversations": "暂无对话",
 
         // 对话区域
         "chatArea_emptySub": "开始一段新的对话",
@@ -71,6 +74,8 @@ const locale: any = {
         "inputArea_stopTooltip": "停止输出",
         "inputArea_sendTooltip": "发送",
         "inputArea_contextUsage": "上下文占比",
+        "inputArea_searchPlaceholder": "输入关键词搜索...",
+        "inputArea_noMatch": "无匹配结果",
 
         // 消息气泡
         "msgBubble_copy": "复制",
@@ -324,6 +329,9 @@ const locale: any = {
         "chatSidebar_delete": "Delete",
         "chatSidebar_searchConv": "Search conversations",
         "chatSidebar_historyConv": "History",
+        "chatSidebar_searchPlaceholder": "Type to search conversations...",
+        "chatSidebar_noMatch": "No matching conversations",
+        "chatSidebar_noConversations": "No conversations",
 
         // Chat area
         "chatArea_emptySub": "Start a new conversation",
@@ -340,6 +348,8 @@ const locale: any = {
         "inputArea_stopTooltip": "Stop output",
         "inputArea_sendTooltip": "Send",
         "inputArea_contextUsage": "Context usage",
+        "inputArea_searchPlaceholder": "Type to search...",
+        "inputArea_noMatch": "No matches",
 
         // Message bubble
         "msgBubble_copy": "Copy",
@@ -593,6 +603,9 @@ const locale: any = {
         "chatSidebar_delete": "削除",
         "chatSidebar_searchConv": "会話を検索",
         "chatSidebar_historyConv": "履歴",
+        "chatSidebar_searchPlaceholder": "キーワードで会話を検索...",
+        "chatSidebar_noMatch": "一致する会話がありません",
+        "chatSidebar_noConversations": "会話がありません",
 
         // Chat area
         "chatArea_emptySub": "新しい会話を始める",
@@ -609,6 +622,8 @@ const locale: any = {
         "inputArea_stopTooltip": "出力停止",
         "inputArea_sendTooltip": "送信",
         "inputArea_contextUsage": "コンテキスト使用率",
+        "inputArea_searchPlaceholder": "キーワード検索...",
+        "inputArea_noMatch": "一致なし",
 
         // Message bubble
         "msgBubble_copy": "コピー",

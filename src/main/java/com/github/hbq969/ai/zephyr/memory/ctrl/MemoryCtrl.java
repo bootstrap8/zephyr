@@ -67,4 +67,15 @@ public class MemoryCtrl {
         memoryService.delete(body.get("names"), userName());
         return ReturnMessage.success("ok");
     }
+
+    @Operation(summary = "启停记忆")
+    @RequestMapping(path = "/toggle", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "memory_toggle", apiDesc = "记忆管理_启停记忆")
+    public ReturnMessage<?> toggle(@RequestBody Map<String, String> body) {
+        String name = body.get("name");
+        boolean enabled = !"false".equals(body.get("enabled"));
+        memoryService.toggleEnabled(name, enabled, userName());
+        return ReturnMessage.success("ok");
+    }
 }

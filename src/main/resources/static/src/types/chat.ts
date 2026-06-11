@@ -109,6 +109,7 @@ export interface MemoryItem {
   type: 'user' | 'project'
   description: string
   content?: string
+  enabled: boolean
   createdAt: number
   updatedAt: number
 }

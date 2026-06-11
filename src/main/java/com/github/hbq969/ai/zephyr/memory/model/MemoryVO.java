@@ -8,6 +8,7 @@ public class MemoryVO {
     private String type;
     private String description;
     private String content;
+    private boolean enabled = true;
     private long createdAt;
     private long updatedAt;
 }

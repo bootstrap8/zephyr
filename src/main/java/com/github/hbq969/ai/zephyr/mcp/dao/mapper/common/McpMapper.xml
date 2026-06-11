@@ -90,4 +90,15 @@
         order by t.source desc, t.tool_name asc
     </select>
 
+    <select id="queryToolsByUserName" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity">
+        select t.id, t.user_name as userName, t.server_id as serverId,
+               t.tool_name as toolName, t.description, t.parameters_json as parametersJson,
+               t.enabled, t.source, t.created_at as createdAt
+        from mcp_tools t
+        inner join mcp_servers s on s.id = t.server_id and s.user_name = t.user_name
+        where t.user_name = #{userName}
+          and s.status = 'connected'
+        order by t.source desc, t.tool_name asc
+    </select>
+
 </mapper>

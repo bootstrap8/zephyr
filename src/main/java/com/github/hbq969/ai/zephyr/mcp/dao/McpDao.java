@@ -31,4 +31,5 @@ public interface McpDao {
 
     int countEnabledTools(@Param("userName") String userName);
     List<McpToolEntity> queryEnabledToolsByUserName(@Param("userName") String userName);
+    List<McpToolEntity> queryToolsByUserName(@Param("userName") String userName);
 }

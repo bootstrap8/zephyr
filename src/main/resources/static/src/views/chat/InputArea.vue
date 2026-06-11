@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useSettingsStore } from '@/store/settings'
 import { useChatStore } from '@/store/chat'
 import { Icon } from '@iconify/vue'
@@ -22,6 +22,73 @@ const mcpLoading = ref(false)
 const mcpLoaded = ref(false)
 const skillLoading = ref(false)
 const skillLoaded = ref(false)
+const mcpFilter = ref('')
+const skillFilter = ref('')
+
+const filteredMcpGroups = computed(() => {
+  const q = mcpFilter.value.toLowerCase().trim()
+  if (!q) return mcpGroups.value
+  return mcpGroups.value
+    .map(g => ({ server: g.server, tools: g.tools.filter(t => t.name.toLowerCase().includes(q)) }))
+    .filter(g => g.tools.length > 0)
+})
+
+const filteredSkills = computed(() => {
+  const q = skillFilter.value.toLowerCase().trim()
+  if (!q) return skillList.value
+  return skillList.value.filter(s => s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
+})
+
+// 键盘导航：扁平化列表 + 选中索引
+interface FlatItem { name: string; desc: string }
+const mcpFlatItems = computed<FlatItem[]>(() => {
+  const items: FlatItem[] = []
+  for (const g of filteredMcpGroups.value) {
+    for (const t of g.tools) items.push({ name: t.name, desc: t.desc })
+  }
+  return items
+})
+const mcpActiveIdx = ref(0)
+const skillActiveIdx = ref(0)
+
+watch(mcpFilter, () => { mcpActiveIdx.value = 0 })
+watch(skillFilter, () => { skillActiveIdx.value = 0 })
+watch(hoveredAbility, () => { mcpActiveIdx.value = 0; skillActiveIdx.value = 0 })
+
+function mcpFlatIdx(groupIdx: number, toolIdx: number): number {
+  let count = 0
+  for (let i = 0; i < groupIdx; i++) {
+    count += filteredMcpGroups.value[i]?.tools.length || 0
+  }
+  return count + toolIdx
+}
+
+function onMcpKeydown(e: KeyboardEvent) {
+  const items = mcpFlatItems.value
+  if (e.key === 'ArrowDown') { e.preventDefault(); mcpActiveIdx.value = Math.min(mcpActiveIdx.value + 1, items.length - 1); scrollActiveMcp() }
+  if (e.key === 'ArrowUp') { e.preventDefault(); mcpActiveIdx.value = Math.max(mcpActiveIdx.value - 1, 0); scrollActiveMcp() }
+  if (e.key === 'Enter' && items.length > 0) { e.preventDefault(); const it = items[mcpActiveIdx.value]; if (it) insertTag('mcp', it.name) }
+}
+
+function onSkillKeydown(e: KeyboardEvent) {
+  const items = filteredSkills.value
+  if (e.key === 'ArrowDown') { e.preventDefault(); skillActiveIdx.value = Math.min(skillActiveIdx.value + 1, items.length - 1); scrollActiveSkill() }
+  if (e.key === 'ArrowUp') { e.preventDefault(); skillActiveIdx.value = Math.max(skillActiveIdx.value - 1, 0); scrollActiveSkill() }
+  if (e.key === 'Enter' && items.length > 0) { e.preventDefault(); const it = items[skillActiveIdx.value]; if (it) insertTag('skill', it.name) }
+}
+
+function scrollActiveMcp() {
+  nextTick(() => {
+    const el = document.querySelector('.sub-dropdown .sub-option.sub-active')
+    el?.scrollIntoView({ block: 'nearest' })
+  })
+}
+function scrollActiveSkill() {
+  nextTick(() => {
+    const el = document.querySelector('.sub-dropdown .sub-option.sub-active')
+    el?.scrollIntoView({ block: 'nearest' })
+  })
+}
 
 const langData = getLangData()
 
@@ -164,10 +231,19 @@ async function selectModel(name: string) {
 
 function closeModelList() { showModelList.value = false }
 
+const mcpFilterRef = ref<HTMLInputElement>()
+const skillFilterRef = ref<HTMLInputElement>()
+
 function onAbilityHover(key: string) {
   hoveredAbility.value = key
+  mcpFilter.value = ''
+  skillFilter.value = ''
   if (key === 'mcp' && !mcpLoaded.value) loadMcpTools()
   if (key === 'skills' && !skillLoaded.value) loadSkills()
+  nextTick(() => {
+    if (key === 'mcp') mcpFilterRef.value?.focus()
+    if (key === 'skills') skillFilterRef.value?.focus()
+  })
 }
 
 async function loadMcpTools() {
@@ -322,24 +398,36 @@ function closeAll() {
                 <!-- 二级子菜单 -->
                 <div v-if="hoveredAbility === it.key" class="sub-dropdown">
                   <template v-if="it.key === 'mcp'">
-                    <template v-if="mcpGroups.length > 0">
-                      <template v-for="g in mcpGroups" :key="g.server">
-                        <div class="sub-group-label">{{ g.server }}</div>
-                        <div v-for="t in g.tools" :key="t.name" class="pick-option sub-option" @click="insertTag('mcp', t.name)">
-                          <span class="cmd-name">{{ t.name }}</span>
-                          <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
-                        </div>
+                    <template v-if="mcpLoaded">
+                      <div class="sub-search">
+                        <input ref="mcpFilterRef" v-model="mcpFilter" class="sub-search-input" :placeholder="langData.inputArea_searchPlaceholder" @click.stop @keydown="onMcpKeydown" />
+                      </div>
+                      <template v-if="filteredMcpGroups.length > 0">
+                        <template v-for="(g, gIdx) in filteredMcpGroups" :key="g.server">
+                          <div class="sub-group-label">{{ g.server }}</div>
+                          <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option" :class="{ 'sub-active': mcpFlatIdx(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
+                            <span class="cmd-name">{{ t.name }}</span>
+                            <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
+                          </div>
+                        </template>
                       </template>
+                      <div v-else class="sub-loading">{{ mcpFilter ? langData.inputArea_noMatch : langData.inputArea_noSkills }}</div>
                     </template>
                     <div v-else-if="mcpLoading" class="sub-loading">{{ langData.inputArea_loading }}</div>
                     <div v-else class="sub-loading">{{ langData.inputArea_noSkills }}</div>
                   </template>
                   <template v-if="it.key === 'skills'">
-                    <template v-if="skillList.length > 0">
-                      <div v-for="s in skillList" :key="s.name" class="pick-option sub-option" @click="insertTag('skill', s.name)">
-                        <span class="cmd-name">{{ s.name }}</span>
-                        <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
+                    <template v-if="skillLoaded">
+                      <div class="sub-search">
+                        <input ref="skillFilterRef" v-model="skillFilter" class="sub-search-input" :placeholder="langData.inputArea_searchPlaceholder" @click.stop @keydown="onSkillKeydown" />
                       </div>
+                      <template v-if="filteredSkills.length > 0">
+                        <div v-for="(s, idx) in filteredSkills" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
+                          <span class="cmd-name">{{ s.name }}</span>
+                          <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
+                        </div>
+                      </template>
+                      <div v-else class="sub-loading">{{ skillFilter ? langData.inputArea_noMatch : langData.inputArea_noSkills }}</div>
                     </template>
                     <div v-else-if="skillLoading" class="sub-loading">{{ langData.inputArea_loading }}</div>
                     <div v-else class="sub-loading">{{ langData.inputArea_noSkills }}</div>
@@ -473,12 +561,24 @@ export default { inheritAttrs: false }
 .sub-option {
   max-width: 400px;
 }
+.sub-option.sub-active { background: var(--el-fill-color-light); }
 .sub-option .cmd-name { min-width: auto; font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
 .sub-option .cmd-desc {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 280px;
 }
 .sub-loading { padding: 20px; text-align: center; font-size: 12px; color: var(--el-text-color-placeholder); }
+
+.sub-search { padding: 6px 8px 2px; }
+.sub-search-input {
+  width: 100%; box-sizing: border-box; padding: 6px 10px;
+  border: 1px solid var(--el-border-color); border-radius: 6px;
+  background: var(--el-fill-color-light); color: var(--el-text-color-primary);
+  font-size: 12px; outline: none; font-family: inherit;
+  transition: border-color 0.15s;
+}
+.sub-search-input:focus { border-color: var(--el-color-primary); }
+.sub-search-input::placeholder { color: var(--el-text-color-placeholder); }
 
 .model-overlay { position: fixed; inset: 0; z-index: 99; }
 

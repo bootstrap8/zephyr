@@ -18,11 +18,13 @@ import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.Resource;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 @Component
+@Slf4j
 public class ContextBuilder {
 
     private static final Gson gson = new Gson();
@@ -114,6 +116,21 @@ public class ContextBuilder {
 
     private List<ToolDef> buildMcpToolDefs(String userName) {
         List<ToolDef> defs = new ArrayList<>();
+        List<McpToolEntity> allTools = mcpDao.queryToolsByUserName(userName);
+        List<String> enabledTools = new ArrayList<>();
+        List<String> disabledTools = new ArrayList<>();
+        for (McpToolEntity t : allTools) {
+            if (t.getEnabled() != null && t.getEnabled() == 1) {
+                enabledTools.add(t.getToolName());
+            } else {
+                disabledTools.add(t.getToolName());
+            }
+        }
+        log.info("[MCP工具] 用户={} | 已启用({}): {} | 已停用({}): {}",
+                userName,
+                enabledTools.size(), enabledTools,
+                disabledTools.size(), disabledTools);
+
         List<McpToolEntity> tools = mcpDao.queryEnabledToolsByUserName(userName);
         for (McpToolEntity t : tools) {
             Map<String, Object> params;
@@ -141,6 +158,21 @@ public class ContextBuilder {
 
     private String buildSkillIndex(String userName) {
         StringBuilder sb = new StringBuilder();
+        List<SkillConfigEntity> allSkills = skillDao.queryByUserName(userName);
+        List<String> enabledSkills = new ArrayList<>();
+        List<String> disabledSkills = new ArrayList<>();
+        for (SkillConfigEntity s : allSkills) {
+            if (s.getEnabled() != null && s.getEnabled() == 1) {
+                enabledSkills.add(s.getSkillName());
+            } else {
+                disabledSkills.add(s.getSkillName());
+            }
+        }
+        log.info("[Skill] 用户={} | 已启用({}): {} | 已停用({}): {}",
+                userName,
+                enabledSkills.size(), enabledSkills,
+                disabledSkills.size(), disabledSkills);
+
         List<SkillConfigEntity> skills = skillDao.queryEnabledByUserName(userName);
         Set<String> seen = new HashSet<>();
         for (SkillConfigEntity s : skills) {
@@ -159,10 +191,21 @@ public class ContextBuilder {
     private String buildMemoryIndex(String userName) {
         StringBuilder sb = new StringBuilder();
         List<MemoryVO> memories = memoryService.list(null, userName);
+        List<String> included = new ArrayList<>();
+        List<String> excluded = new ArrayList<>();
         for (MemoryVO m : memories) {
+            if (!m.isEnabled()) {
+                excluded.add(m.getName());
+                continue;
+            }
+            included.add(m.getName());
             sb.append("- ").append(m.getName()).append(" (").append(m.getType()).append("): ")
                     .append(m.getDescription()).append("\n");
         }
+        log.info("[记忆启停] 用户={} | 已启用({}): {} | 已停用({}): {}",
+                userName,
+                included.size(), included,
+                excluded.size(), excluded);
         return sb.toString();
     }
 

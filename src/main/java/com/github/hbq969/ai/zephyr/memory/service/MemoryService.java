@@ -14,4 +14,6 @@ public interface MemoryService {
     void update(Map<String, String> body, String userName);
 
     void delete(String namesStr, String userName);
+
+    void toggleEnabled(String name, boolean enabled, String userName);
 }

@@ -139,6 +139,10 @@ async function setFilter(type: string) {
   await store.loadMemories(type === 'all' ? undefined : type)
 }
 
+function toggleMemory(name: string, val: boolean) {
+  store.toggleMemory(name, val)
+}
+
 onMounted(() => { store.loadMemories() })
 </script>
 
@@ -197,6 +201,11 @@ onMounted(() => { store.loadMemories() })
               </div>
             </div>
             <div class="card-actions">
+              <el-switch
+                :model-value="m.enabled !== false"
+                size="small"
+                @change="toggleMemory(m.name, $event)"
+              />
               <el-tooltip :content="langData.btnEdit">
                 <el-button circle size="small" @click="openEdit(m)">
                   <Icon icon="lucide:edit-3" />

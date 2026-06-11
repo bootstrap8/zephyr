@@ -70,7 +70,7 @@ function selectAndCloseSidebar(id: string) { convStore.selectConversation(id) }
     </div>
 
     <div class="new-chat-btn" @click="$emit('newChat')">
-      <Icon icon="lucide:square-pen" />
+      <Icon icon="lucide:plus-circle" />
       <span>{{ langData.chatSidebar_newChat }}</span>
     </div>
 

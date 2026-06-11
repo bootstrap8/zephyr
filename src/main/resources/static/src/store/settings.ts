@@ -257,6 +257,7 @@ export const useSettingsStore = defineStore('settings', () => {
           name: m.name,
           type: m.type,
           description: m.description,
+          enabled: m.enabled !== false,
           createdAt: m.createdAt,
           updatedAt: m.updatedAt
         }))
@@ -269,7 +270,7 @@ export const useSettingsStore = defineStore('settings', () => {
       const res = await axios({ url: '/memory/detail', method: 'get', params: { name } })
       if (res.data.state === 'OK') {
         const m = res.data.body
-        return { name: m.name, type: m.type, description: m.description, content: m.content, createdAt: m.createdAt, updatedAt: m.updatedAt }
+        return { name: m.name, type: m.type, description: m.description, content: m.content, enabled: m.enabled !== false, createdAt: m.createdAt, updatedAt: m.updatedAt }
       }
     } catch (_) {}
     return null
@@ -293,6 +294,16 @@ export const useSettingsStore = defineStore('settings', () => {
     return false
   }
 
+  async function toggleMemory(name: string, enabled: boolean) {
+    const res = await axios({ url: '/memory/toggle', method: 'post', data: { name, enabled: String(enabled) } })
+    if (res.data.state === 'OK') {
+      const m = memories.value.find((x: any) => x.name === name)
+      if (m) m.enabled = enabled
+      return true
+    }
+    return false
+  }
+
   return {
     currentModel, models, mcpServers, mcpToolCount, skills, memories,
     contextUsed, contextLoaded, contextTotal, contextPercent, contextDetail,
@@ -304,6 +315,6 @@ export const useSettingsStore = defineStore('settings', () => {
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, loadMcpToolCount,
     loadSkills, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
     syncScanSkills, syncInstallSkills,
-    loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories
+    loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory
   }
 })

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed, nextTick } from 'vue'
 import { useConversationsStore } from '@/store/conversations'
 import { useChatStore } from '@/store/chat'
 import { useSettingsStore } from '@/store/settings'
@@ -18,6 +18,55 @@ const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 const showSettings = ref(false)
 const langData = getLangData()
+
+// 搜索弹窗
+const showSearchDialog = ref(false)
+const searchQuery = ref('')
+const searchActiveIdx = ref(0)
+const searchInputRef = ref<HTMLInputElement>()
+
+const filteredConversations = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return convStore.conversations
+  return convStore.conversations.filter(c => c.title.toLowerCase().includes(q))
+})
+
+watch(searchQuery, () => { searchActiveIdx.value = 0 })
+
+function openSearch() {
+  searchQuery.value = ''
+  searchActiveIdx.value = 0
+  showSearchDialog.value = true
+  nextTick(() => searchInputRef.value?.focus())
+}
+
+function closeSearch() {
+  showSearchDialog.value = false
+  searchQuery.value = ''
+}
+
+function onSearchKeydown(e: KeyboardEvent) {
+  const items = filteredConversations.value
+  if (e.key === 'ArrowDown') { e.preventDefault(); searchActiveIdx.value = Math.min(searchActiveIdx.value + 1, items.length - 1) }
+  if (e.key === 'ArrowUp') { e.preventDefault(); searchActiveIdx.value = Math.max(searchActiveIdx.value - 1, 0) }
+  if (e.key === 'Enter' && items.length > 0) { e.preventDefault(); const c = items[searchActiveIdx.value]; if (c) { convStore.selectConversation(c.id); closeSearch() } }
+  if (e.key === 'Escape') { closeSearch() }
+}
+
+function selectSearchResult(id: string) {
+  convStore.selectConversation(id)
+  closeSearch()
+}
+
+function formatSearchTime(ts: number) {
+  const d = new Date(ts * 1000)
+  const now = new Date()
+  const diff = now.getTime() / 1000 - ts
+  if (diff < 86400) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  if (diff < 7 * 86400) return Math.floor(diff / 86400) + '天前'
+  return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
+
 let abortController: AbortController | null = null
 let msgIdCounter = 0
 function nextMsgId() { return 'm' + (++msgIdCounter) }
@@ -161,7 +210,11 @@ function restoreConversation(id: string) {
 }
 
 watch(() => convStore.currentId, (newId) => {
-  if (newId && !chatStore.streaming) restoreConversation(newId)
+  if (newId && !chatStore.streaming) {
+    restoreConversation(newId)
+  } else if (!newId) {
+    chatStore.clearMessages()
+  }
 })
 
 onMounted(() => {
@@ -185,15 +238,35 @@ onMounted(() => {
         <span class="tb-logo" @click="convStore.toggleSidebar()">zephyr</span>
         <span class="tb-divider"></span>
         <button class="tb-btn" :title="langData.chatSidebar_newChat" @click="newChat">
-          <Icon icon="lucide:square-pen" />
+          <Icon icon="lucide:plus-circle" />
         </button>
-        <button class="tb-btn" :title="langData.chatSidebar_searchConv">
+        <button class="tb-btn" :title="langData.chatSidebar_searchConv" @click="openSearch">
           <Icon icon="lucide:search" />
         </button>
-        <button class="tb-btn" :title="langData.chatSidebar_historyConv">
-          <Icon icon="lucide:history" />
-        </button>
       </div>
+      <!-- 搜索弹窗 -->
+      <Teleport to="body">
+        <div v-if="showSearchDialog" class="search-overlay" @click="closeSearch"></div>
+        <div v-if="showSearchDialog" class="search-dialog">
+          <div class="search-input-wrap">
+            <Icon icon="lucide:search" class="search-input-icon" />
+            <input ref="searchInputRef" v-model="searchQuery" class="search-input" :placeholder="langData.chatSidebar_searchPlaceholder" @keydown="onSearchKeydown" />
+          </div>
+          <div v-if="filteredConversations.length > 0" class="search-results">
+            <div v-for="(c, idx) in filteredConversations" :key="c.id"
+                 class="search-item"
+                 :class="{ active: idx === searchActiveIdx }"
+                 @click="selectSearchResult(c.id)"
+                 @mouseenter="searchActiveIdx = idx">
+              <Icon icon="lucide:message-square" class="search-item-icon" />
+              <span class="search-item-title">{{ c.title }}</span>
+              <span class="search-item-time">{{ formatSearchTime(c.updatedAt) }}</span>
+            </div>
+          </div>
+          <div v-else class="search-empty">{{ searchQuery ? langData.chatSidebar_noMatch : langData.chatSidebar_noConversations }}</div>
+        </div>
+      </Teleport>
+
       <ChatArea />
       <CommandPalette />
       <InputArea @send="onSend" @stop="onStop" />
@@ -213,4 +286,24 @@ onMounted(() => {
 .tb-btn:hover { background: var(--el-fill-color-light); color: var(--el-text-color-primary); }
 .tb-logo { font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: var(--el-text-color-primary); letter-spacing: -0.3px; margin-right: 10px; cursor: pointer; white-space: nowrap; }
 .tb-divider { width: 14px; height: 1px; background: var(--el-border-color); margin: 0 6px; transform: rotate(90deg); flex-shrink: 0; }
+
+/* 搜索弹窗 */
+.search-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.2); backdrop-filter: blur(2px); }
+.search-dialog { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); width: 480px; max-width: 90vw; max-height: 60vh; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0,0.12); z-index: 1001; display: flex; flex-direction: column; overflow: hidden; }
+
+.search-input-wrap { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--el-border-color); }
+.search-input-icon { color: var(--el-text-color-placeholder); font-size: 18px; flex-shrink: 0; }
+.search-input { flex: 1; border: none; background: transparent; color: var(--el-text-color-primary); font-size: 15px; outline: none; font-family: inherit; }
+.search-input::placeholder { color: var(--el-text-color-placeholder); }
+
+.search-results { flex: 1; overflow-y: auto; padding: 8px; }
+.search-results::-webkit-scrollbar { width: 1px; }
+.search-results::-webkit-scrollbar-thumb { background: transparent; }
+.search-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.1s; }
+.search-item:hover, .search-item.active { background: var(--el-fill-color-light); }
+.search-item-icon { color: var(--el-text-color-placeholder); font-size: 16px; flex-shrink: 0; }
+.search-item-title { flex: 1; font-size: 14px; color: var(--el-text-color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-item-time { font-size: 12px; color: var(--el-text-color-placeholder); flex-shrink: 0; }
+
+.search-empty { padding: 32px; text-align: center; font-size: 13px; color: var(--el-text-color-placeholder); }
 </style>
