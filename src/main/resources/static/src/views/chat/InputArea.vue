@@ -8,7 +8,7 @@ import { Icon } from '@iconify/vue'
 import axios from '@/network'
 import { getLangData } from '@/i18n/locale'
 
-const emit = defineEmits<{ send: [text: string]; stop: [] }>()
+const emit = defineEmits<{ send: [text: string, filePaths?: string[]]; stop: [] }>()
 const chatStore = useChatStore()
 const inputRef = ref<HTMLDivElement>()
 const settingsStore = useSettingsStore()
@@ -25,6 +25,8 @@ const skillLoading = ref(false)
 const skillLoaded = ref(false)
 const mcpFilter = ref('')
 const skillFilter = ref('')
+const fileList = ref<{ path: string; name: string; size: number; status: 'uploading' | 'done' | 'error' }[]>([])
+const fileInputRef = ref<HTMLInputElement>()
 
 const filteredMcpGroups = computed(() => {
   const q = mcpFilter.value.toLowerCase().trim()
@@ -240,7 +242,10 @@ function doSend() {
   const msg = parts.join('').replace(/ /g, ' ').trim()
   if (!msg) return
 
-  emit('send', msg)
+  const doneFiles = fileList.value.filter(f => f.status === 'done')
+  const filePaths = doneFiles.length > 0 ? doneFiles.map(f => f.path) : undefined
+  emit('send', msg, filePaths)
+  fileList.value = []
   el.innerHTML = ''
   hasInput.value = false
   undoStack.length = 0
@@ -387,6 +392,48 @@ function insertTag(type: 'mcp' | 'skill', name: string) {
   closeAll()
 }
 
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+async function onFilesSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (!files || files.length === 0) return
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i]
+    const item: { path: string; name: string; size: number; status: 'uploading' | 'done' | 'error' } = { path: '', name: f.name, size: f.size, status: 'uploading' }
+    fileList.value.push(item)
+
+    const formData = new FormData()
+    formData.append('file', f)
+    const wsId = workspaceStore.currentId
+    if (!wsId) {
+      item.status = 'error'
+      continue
+    }
+    formData.append('workspaceId', wsId)
+
+    try {
+      const res = await axios({ url: '/chat/upload', method: 'post', data: formData, headers: { 'Content-Type': 'multipart/form-data' } })
+      if (res.data.state === 'OK') {
+        item.path = res.data.body.path
+        item.status = 'done'
+      } else {
+        item.status = 'error'
+      }
+    } catch (err: any) {
+      item.status = 'error'
+    }
+  }
+  input.value = ''
+}
+
+function removeFile(idx: number) {
+  fileList.value.splice(idx, 1)
+}
+
 function closeAll() {
   showModelList.value = false
   showAbility.value = false
@@ -408,6 +455,22 @@ function closeAll() {
         @paste="onPaste"
         :data-placeholder="langData.inputArea_placeholder"
       ></div>
+      <div v-if="fileList.length > 0" class="file-chips">
+        <span v-for="(f, idx) in fileList" :key="idx"
+              class="file-chip"
+              :class="{ 'file-chip--error': f.status === 'error', 'file-chip--uploading': f.status === 'uploading' }"
+              :title="f.status === 'done' ? f.path : ''">
+          <span class="file-chip__icon">
+            <Icon v-if="f.status === 'uploading'" icon="lucide:loader-2" class="spin-icon" />
+            <Icon v-else-if="f.status === 'error'" icon="lucide:alert-circle" />
+            <Icon v-else icon="lucide:file" />
+          </span>
+          <span class="file-chip__name">{{ f.name }}</span>
+          <button class="file-chip__remove" @click="removeFile(idx)" :disabled="f.status === 'uploading'">
+            <Icon icon="lucide:x" />
+          </button>
+        </span>
+      </div>
       <div class="input-toolbar">
         <div class="input-left">
           <!-- 工作空间选择 -->
@@ -523,7 +586,8 @@ function closeAll() {
         </div>
 
         <div class="input-right">
-          <button class="action-btn" :title="langData.inputArea_uploadTooltip">
+          <input ref="fileInputRef" type="file" multiple style="display:none" @change="onFilesSelected" />
+          <button class="action-btn" :title="langData.inputArea_uploadTooltip" @click="triggerFileInput">
             <Icon icon="lucide:paperclip" />
           </button>
           <button
@@ -675,6 +739,26 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 .ws-name { font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .ws-path { color: var(--el-text-color-placeholder); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .pick-divider { height: 1px; background: var(--el-border-color); margin: 4px 0; }
+.file-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px 0; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 6px;
+  background: var(--el-fill-color-light); color: var(--el-text-color-primary);
+  font-size: 12px; max-width: 220px;
+}
+.file-chip--error { background: var(--el-color-danger-light-9); color: var(--el-color-danger); }
+.file-chip--uploading { opacity: 0.7; }
+.file-chip__icon { font-size: 14px; display: flex; align-items: center; flex-shrink: 0; }
+.file-chip__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip__remove {
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%; border: none;
+  background: transparent; color: var(--el-text-color-secondary);
+  cursor: pointer; font-size: 12px; flex-shrink: 0; padding: 0;
+}
+.file-chip__remove:hover { background: var(--el-fill-color); color: var(--el-text-color-primary); }
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 
 <!-- 非 scoped：动态创建的 tag 元素需要全局样式 -->
