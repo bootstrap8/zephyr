@@ -227,6 +227,14 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     @Transactional
+    public void batchUninstall(List<String> ids, String userName) {
+        for (String id : ids) {
+            uninstall(id, userName);
+        }
+    }
+
+    @Override
+    @Transactional
     public void uninstall(String id, String userName) {
         SkillConfigEntity entity = skillDao.queryById(id);
         if (entity == null || !entity.getUserName().equals(userName)) {

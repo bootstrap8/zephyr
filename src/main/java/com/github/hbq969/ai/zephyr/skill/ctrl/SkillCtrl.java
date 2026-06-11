@@ -10,6 +10,7 @@ import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "Skill管理")
@@ -80,6 +81,17 @@ public class SkillCtrl {
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "skill_uninstall", apiDesc = "Skill管理_卸载Skill")
     public ReturnMessage<?> uninstall(@RequestBody Map<String, String> body) {
         skillService.uninstall(body.get("id"), userName());
+        return ReturnMessage.success("ok");
+    }
+
+    @Operation(summary = "批量卸载Skill")
+    @RequestMapping(path = "/batch-uninstall", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "skill_batchUninstall", apiDesc = "Skill管理_批量卸载Skill")
+    public ReturnMessage<?> batchUninstall(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        skillService.batchUninstall(ids, userName());
         return ReturnMessage.success("ok");
     }
 }

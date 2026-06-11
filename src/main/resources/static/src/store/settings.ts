@@ -221,6 +221,11 @@ export const useSettingsStore = defineStore('settings', () => {
     await loadSkills()
   }
 
+  async function batchUninstallSkills(ids: string[]) {
+    await axios({ url: '/skill/batch-uninstall', method: 'post', data: { ids } })
+    await loadSkills()
+  }
+
   async function toggleSkill(id: string, enabled: boolean) {
     await axios({ url: '/skill/toggle', method: 'post', data: { id, enabled: enabled ? 1 : 0 } })
     await loadSkills()
@@ -297,7 +302,7 @@ export const useSettingsStore = defineStore('settings', () => {
     loadMcpServers, createMcpServer, updateMcpServer, deleteMcpServer,
     connectMcpServer, disconnectMcpServer,
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, loadMcpToolCount,
-    loadSkills, installSkill, uploadSkill, uninstallSkill, toggleSkill,
+    loadSkills, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
     syncScanSkills, syncInstallSkills,
     loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories
   }

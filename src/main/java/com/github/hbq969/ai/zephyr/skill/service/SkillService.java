@@ -21,4 +21,6 @@ public interface SkillService {
     void toggle(String id, Integer enabled, String userName);
 
     void uninstall(String id, String userName);
+
+    void batchUninstall(List<String> ids, String userName);
 }

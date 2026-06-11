@@ -30,6 +30,32 @@ const showUninstallConfirm = ref(false)
 const detailSkill = ref<SkillConfig | null>(null)
 const showDetail = ref(false)
 
+const selectedIds = ref<Set<string>>(new Set())
+const batchDeleting = ref(false)
+
+function toggleSelect(id: string) {
+  const next = new Set(selectedIds.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  selectedIds.value = next
+}
+function toggleBatchSelectAll() {
+  if (selectedIds.value.size === filteredSkills.value.length) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(filteredSkills.value.map(s => s.id!).filter(Boolean))
+  }
+}
+async function doBatchUninstall() {
+  const count = selectedIds.value.size
+  if (count === 0) return
+  batchDeleting.value = true
+  try {
+    await store.batchUninstallSkills([...selectedIds.value])
+    selectedIds.value = new Set()
+    ElMessage.success(`已卸载 ${count} 个 Skill`)
+  } catch (_) {} finally { batchDeleting.value = false }
+}
+
 onMounted(async () => { await store.loadSkills() })
 
 // 搜索过滤
@@ -233,8 +259,27 @@ function goBack() { window.history.back() }
       </button>
     </div>
 
+    <!-- 批量操作栏 -->
+    <div v-if="store.skills.length > 0 && filteredSkills.length > 0" class="batch-bar">
+      <label class="batch-check" @click.stop>
+        <input type="checkbox" :checked="selectedIds.size === filteredSkills.length && filteredSkills.length > 0" @change="toggleBatchSelectAll" />
+        <span class="batch-label">{{ langData.skillMgmt_selectAll || '全选' }} ({{ selectedIds.size }})</span>
+      </label>
+      <button
+        v-if="selectedIds.size > 0"
+        class="btn-danger btn-sm"
+        :disabled="batchDeleting"
+        @click="doBatchUninstall"
+      >
+        <Icon icon="lucide:trash-2" width="14" /> {{ langData.skillMgmt_batchUninstall || '批量删除' }}
+      </button>
+    </div>
+
     <div v-else class="skill-list">
       <div v-for="s in filteredSkills" :key="s.id ?? s.skillName" class="skill-card" @click="showSkillDetail(s)">
+        <label class="card-check" @click.stop>
+          <input type="checkbox" :checked="s.id ? selectedIds.has(s.id) : false" @change="s.id && toggleSelect(s.id)" />
+        </label>
         <div class="skill-icon" :class="s.source">
           <Icon :icon="s.source === 'builtin' ? 'lucide:star' : s.source === 'git' ? 'lucide:git-branch' : s.source === 'sync' ? 'lucide:refresh-cw' : s.source === 'upload' ? 'lucide:package' : 'lucide:puzzle'" width="18" />
         </div>
@@ -525,6 +570,18 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 .empty-result .empty-icon { font-size: 40px; color: var(--el-text-color-placeholder); }
 .empty-result .empty-title { font-family: Georgia, serif; font-size: 20px; color: var(--el-text-color-primary); margin: 12px 0 6px; font-weight: 400; }
 .empty-result .empty-desc { font-size: 13px; color: var(--el-text-color-secondary); }
+
+/* Batch bar */
+.batch-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 8px 14px; background: var(--el-fill-color-lighter); border-radius: 10px; }
+.batch-check { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--el-text-color-secondary); }
+.batch-check input { accent-color: var(--el-color-primary); }
+.batch-label { user-select: none; }
+.btn-sm { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-sm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Card checkbox */
+.card-check { display: flex; align-items: center; flex-shrink: 0; cursor: pointer; }
+.card-check input { accent-color: var(--el-color-primary); width: 15px; height: 15px; }
 
 .back-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--el-border-color); background: var(--el-bg-color); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--el-text-color-secondary); flex-shrink: 0; }
 .back-btn:hover { background: var(--el-fill-color-light); }
