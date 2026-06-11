@@ -10,9 +10,9 @@ public interface SkillService {
 
     List<SkillVO> list(String userName);
 
-    SkillVO install(Map<String, String> body, String userName);
+    List<SkillVO> install(Map<String, String> body, String userName);
 
-    SkillVO upload(MultipartFile file, String userName);
+    List<SkillVO> upload(MultipartFile file, String userName);
 
     List<SkillVO> syncScan(String userName);
 

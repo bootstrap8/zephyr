@@ -46,20 +46,18 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     @Transactional
-    public SkillVO install(Map<String, String> body, String userName) {
+    public List<SkillVO> install(Map<String, String> body, String userName) {
         String source = body.get("source");
         String url = body.getOrDefault("url", "");
         String path = body.getOrDefault("path", "");
         String branch = body.getOrDefault("branch", "main");
 
-        Path srcDir;
         Path tmpDir = null;
         try {
             switch (source) {
                 case "git":
                     tmpDir = Files.createTempDirectory("skill-git-");
                     runGitClone(url, branch, tmpDir);
-                    srcDir = findSkillRoot(tmpDir);
                     break;
                 case "url":
                     tmpDir = Files.createTempDirectory("skill-url-");
@@ -68,41 +66,38 @@ public class SkillServiceImpl implements SkillService {
                     } else {
                         downloadAndExtract(url, tmpDir);
                     }
-                    srcDir = findSkillRoot(tmpDir);
                     break;
                 case "local":
                     if (path.endsWith(".md")) {
                         tmpDir = Files.createTempDirectory("skill-local-md-");
                         Path srcFile = Paths.get(path);
                         if (!Files.isRegularFile(srcFile)) {
-                            throw new IllegalArgumentException("SKILL.md 文件不存在: " + path);
+                            throw new IllegalArgumentException("文件不存在: " + path);
                         }
                         Files.copy(srcFile, tmpDir.resolve("SKILL.md"));
-                        srcDir = tmpDir;
                     } else if (path.endsWith(".zip") || path.endsWith(".tar.gz")
                             || path.endsWith(".tgz") || path.endsWith(".tar")) {
                         tmpDir = Files.createTempDirectory("skill-local-archive-");
                         extractArchive(Paths.get(path).toFile(), tmpDir);
-                        srcDir = findSkillRoot(tmpDir);
                     } else {
-                        srcDir = findSkillRoot(Paths.get(path));
+                        Path srcPath = Paths.get(path);
+                        if (!Files.isDirectory(srcPath)) {
+                            throw new IllegalArgumentException("路径不存在或不是目录: " + path);
+                        }
+                        tmpDir = Files.createTempDirectory("skill-local-dir-");
+                        deleteAndCopyDir(srcPath, tmpDir);
                     }
                     break;
                 default:
                     throw new IllegalArgumentException("不支持的安装方式: " + source);
             }
 
-            String skillName = detectSkillName(srcDir);
-            Path destDir = Paths.get(SKILLS_HOME, skillName);
-
-            // DB 查重必须在文件复制之前，避免已安装时留下孤儿文件
-            SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
-            if (existing != null) {
-                throw new RuntimeException("Skill " + skillName + " 已安装");
+            List<Path> skillRoots = findSkillRoots(tmpDir);
+            if (skillRoots.isEmpty()) {
+                throw new RuntimeException("未找到任何 SKILL.md，请确认包内包含有效 Skill");
             }
-
-            deleteAndCopyDir(srcDir, destDir);
-            return insertSkillConfig(destDir, skillName, source, url, userName);
+            String packName = detectPackName(tmpDir, skillRoots);
+            return installSkills(tmpDir, skillRoots, packName, source, url, userName);
         } catch (IOException e) {
             throw new RuntimeException("安装失败: " + e.getMessage(), e);
         } finally {
@@ -112,7 +107,7 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     @Transactional
-    public SkillVO upload(MultipartFile file, String userName) {
+    public List<SkillVO> upload(MultipartFile file, String userName) {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
             throw new IllegalArgumentException("文件名为空");
@@ -128,58 +123,23 @@ public class SkillServiceImpl implements SkillService {
             throw new IllegalArgumentException("文件大小不能超过 10MB");
         }
 
-        if (isSkillMd) {
-            return uploadSkillMd(file, originalFilename, userName);
-        }
-
         Path tmpDir = null;
         try {
             tmpDir = Files.createTempDirectory("skill-upload-");
-            File tmpFile = tmpDir.resolve(originalFilename).toFile();
-            file.transferTo(tmpFile);
-
-            extractArchive(tmpFile, tmpDir);
-            Path skillRoot = findSkillRoot(tmpDir);
-            String skillName = detectSkillName(skillRoot);
-
-            SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
-            if (existing != null) {
-                throw new RuntimeException("Skill " + skillName + " 已安装");
+            if (isSkillMd) {
+                file.transferTo(tmpDir.resolve("SKILL.md").toFile());
+            } else {
+                File tmpFile = tmpDir.resolve(originalFilename).toFile();
+                file.transferTo(tmpFile);
+                extractArchive(tmpFile, tmpDir);
             }
 
-            Path destDir = Paths.get(SKILLS_HOME, skillName);
-            deleteAndCopyDir(skillRoot, destDir);
-
-            return insertSkillConfig(destDir, skillName, "upload", originalFilename, userName);
-        } catch (IOException e) {
-            throw new RuntimeException("上传失败: " + e.getMessage(), e);
-        } finally {
-            if (tmpDir != null) FileUtil.del(tmpDir.toFile());
-        }
-    }
-
-    private SkillVO uploadSkillMd(MultipartFile file, String originalFilename, String userName) {
-        Path tmpDir = null;
-        try {
-            tmpDir = Files.createTempDirectory("skill-md-");
-            Path tmpFile = tmpDir.resolve("SKILL.md");
-            file.transferTo(tmpFile.toFile());
-
-            Map<String, String> meta = parseSkillMd(tmpFile);
-            String skillName = meta.get("name");
-            if (skillName == null || skillName.isEmpty()) {
-                throw new IllegalArgumentException("SKILL.md 的 frontmatter 中缺少 name 字段");
+            List<Path> skillRoots = findSkillRoots(tmpDir);
+            if (skillRoots.isEmpty()) {
+                throw new RuntimeException("未找到任何 SKILL.md，请确认包内包含有效 Skill");
             }
-
-            SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
-            if (existing != null) {
-                throw new RuntimeException("Skill " + skillName + " 已安装");
-            }
-
-            Path destDir = Paths.get(SKILLS_HOME, skillName);
-            deleteAndCopyDir(tmpDir, destDir);
-
-            return insertSkillConfig(destDir, skillName, "upload", originalFilename, userName);
+            String packName = detectPackName(tmpDir, skillRoots);
+            return installSkills(tmpDir, skillRoots, packName, "upload", originalFilename, userName);
         } catch (IOException e) {
             throw new RuntimeException("上传失败: " + e.getMessage(), e);
         } finally {
@@ -272,6 +232,18 @@ public class SkillServiceImpl implements SkillService {
         if (Files.exists(skillDir)) {
             FileUtil.del(skillDir.toFile());
         }
+        // 如果 skillName 包含 pack: 前缀，检查 pack 目录是否为空，空则删除
+        String skillName = entity.getSkillName();
+        int colonIdx = skillName.indexOf(':');
+        if (colonIdx > 0) {
+            Path packDir = Paths.get(SKILLS_HOME, skillName.substring(0, colonIdx));
+            if (Files.isDirectory(packDir)) {
+                String[] remaining = packDir.toFile().list();
+                if (remaining == null || remaining.length == 0) {
+                    FileUtil.del(packDir.toFile());
+                }
+            }
+        }
         skillDao.delete(id, userName);
     }
 
@@ -298,22 +270,73 @@ public class SkillServiceImpl implements SkillService {
     }
 
     /**
-     * 在解压/克隆后的目录中定位真正的 skill 根目录（直接包含 SKILL.md 的目录）。
-     * 处理 zip 包内包含顶层文件夹的常见情况（右击文件夹压缩）。
+     * 递归查找所有包含 SKILL.md 的目录，返回每个 skill 的根目录列表。
+     * 跳过名为 skills 的中间层目录。
      */
-    private Path findSkillRoot(Path dir) {
-        if (Files.exists(dir.resolve("SKILL.md"))) {
-            return dir;
-        }
-        File[] subDirs = dir.toFile().listFiles(File::isDirectory);
-        if (subDirs != null) {
-            for (File subDir : subDirs) {
-                if (Files.exists(subDir.toPath().resolve("SKILL.md"))) {
-                    return subDir.toPath();
+    private List<Path> findSkillRoots(Path dir) {
+        List<Path> result = new ArrayList<>();
+        File[] children = dir.toFile().listFiles();
+        if (children == null) return result;
+        // 顶层自身有 SKILL.md → 记录但不作为 skill（仅在 detectPackName 中用于取包名）
+        boolean topHasSkillMd = Files.exists(dir.resolve("SKILL.md"));
+        for (File child : children) {
+            if (!child.isDirectory()) continue;
+            Path childPath = child.toPath();
+            if ("skills".equals(child.getName())) {
+                File[] inner = child.listFiles(File::isDirectory);
+                if (inner != null) {
+                    for (File innerDir : inner) {
+                        if (Files.exists(innerDir.toPath().resolve("SKILL.md"))) {
+                            result.add(innerDir.toPath());
+                        }
+                    }
                 }
+            } else if (Files.exists(childPath.resolve("SKILL.md"))) {
+                result.add(childPath);
             }
         }
-        return dir;
+        // 无子目录 skill 但顶层有 SKILL.md → 单 skill
+        if (result.isEmpty() && topHasSkillMd) {
+            result.add(dir);
+        }
+        return result;
+    }
+
+    /**
+     * 判定是否组合包并返回包名。只有 1 个 skill 返回 null（无包）。
+     */
+    private String detectPackName(Path tmpDir, List<Path> skillRoots) {
+        if (skillRoots.size() <= 1) return null;
+        Path topSkillMd = tmpDir.resolve("SKILL.md");
+        if (Files.exists(topSkillMd)) {
+            Map<String, String> meta = parseSkillMd(topSkillMd);
+            String name = meta.get("name");
+            if (name != null && !name.isEmpty()) return name;
+        }
+        return tmpDir.getFileName().toString();
+    }
+
+    private List<SkillVO> installSkills(Path tmpDir, List<Path> skillRoots, String packName,
+                                         String source, String sourceUrl, String userName) {
+        List<SkillVO> installed = new ArrayList<>();
+        for (Path skillRoot : skillRoots) {
+            String skillName = detectSkillName(skillRoot);
+            String fullName = packName != null ? packName + ":" + skillName : skillName;
+
+            SkillConfigEntity existing = skillDao.queryBySkillName(fullName, userName);
+            if (existing != null) {
+                log.warn("Skill {} 已安装，跳过", fullName);
+                continue;
+            }
+
+            Path destDir = packName != null
+                    ? Paths.get(SKILLS_HOME, packName, skillName)
+                    : Paths.get(SKILLS_HOME, skillName);
+
+            deleteAndCopyDir(skillRoot, destDir);
+            installed.add(insertSkillConfig(destDir, fullName, source, sourceUrl, userName));
+        }
+        return installed;
     }
 
     private String detectSkillName(Path dir) {

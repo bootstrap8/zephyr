@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { getLangData } from '@/i18n/locale'
 import { useSettingsStore } from '@/store/settings'
 import { Icon } from '@iconify/vue'
@@ -90,24 +91,29 @@ function openInstallDialog() {
 async function doInstall() {
   installing.value = true
   try {
+    let result: any
     if (installMethod.value === 'git') {
       if (!gitUrl.value.trim()) return
-      await store.installSkill({ source: 'git', url: gitUrl.value.trim(), branch: gitBranch.value.trim() || 'main' })
+      result = await store.installSkill({ source: 'git', url: gitUrl.value.trim(), branch: gitBranch.value.trim() || 'main' })
     } else if (installMethod.value === 'url') {
       if (!downloadUrl.value.trim()) return
-      await store.installSkill({ source: 'url', url: downloadUrl.value.trim() })
+      result = await store.installSkill({ source: 'url', url: downloadUrl.value.trim() })
     } else if (installMethod.value === 'local') {
       if (!localPath.value.trim()) return
-      await store.installSkill({ source: 'local', path: localPath.value.trim() })
+      result = await store.installSkill({ source: 'local', path: localPath.value.trim() })
     } else if (installMethod.value === 'upload') {
       if (!uploadFile.value) return
-      await store.uploadSkill(uploadFile.value)
+      result = await store.uploadSkill(uploadFile.value)
     } else if (installMethod.value === 'sync') {
       showInstallDialog.value = false
       await openSyncPanel()
       return
     }
     showInstallDialog.value = false
+    const body = result?.body
+    if (Array.isArray(body) && body.length > 0) {
+      ElMessage.success(`成功安装 ${body.length} 个 Skill`)
+    }
   } catch (_) {
   } finally {
     installing.value = false
