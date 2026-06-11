@@ -239,7 +239,7 @@ function goBack() { window.history.back() }
           <Icon :icon="s.source === 'builtin' ? 'lucide:star' : s.source === 'git' ? 'lucide:git-branch' : s.source === 'sync' ? 'lucide:refresh-cw' : s.source === 'upload' ? 'lucide:package' : 'lucide:puzzle'" width="18" />
         </div>
         <div class="skill-info">
-          <div class="skill-name">{{ s.displayName || s.skillName }}</div>
+          <div class="skill-name">{{ s.skillName || s.displayName }}</div>
           <div v-if="s.description" class="skill-desc">{{ s.description }}</div>
           <div class="skill-meta">
             <span class="badge badge-source" :class="'src-' + s.source">{{ sourceTag[s.source] ?? s.source }}</span>
@@ -453,7 +453,7 @@ function goBack() { window.history.back() }
       <div v-if="showDetail && detailSkill" class="modal-overlay" @click.self="closeDetail">
         <div class="modal" style="width: 680px; max-width: calc(100vw - 48px)">
           <div class="modal-header">
-            <h2>{{ detailSkill.displayName || detailSkill.skillName }}</h2>
+            <h2>{{ detailSkill.skillName || detailSkill.displayName }}</h2>
             <button class="btn-icon" @click="closeDetail"><Icon icon="lucide:x" width="18" /></button>
           </div>
           <div class="modal-body">
