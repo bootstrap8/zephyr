@@ -260,7 +260,7 @@ function goBack() { window.history.back() }
     </div>
 
     <!-- 批量操作栏 -->
-    <div v-if="store.skills.length > 0 && filteredSkills.length > 0" class="batch-bar">
+    <div v-if="filteredSkills.length > 0" class="batch-bar">
       <label class="batch-check" @click.stop>
         <input type="checkbox" :checked="selectedIds.size === filteredSkills.length && filteredSkills.length > 0" @change="toggleBatchSelectAll" />
         <span class="batch-label">{{ langData.skillMgmt_selectAll || '全选' }} ({{ selectedIds.size }})</span>
@@ -275,7 +275,7 @@ function goBack() { window.history.back() }
       </button>
     </div>
 
-    <div v-else class="skill-list">
+    <div v-if="filteredSkills.length > 0" class="skill-list">
       <div v-for="s in filteredSkills" :key="s.id ?? s.skillName" class="skill-card" @click="showSkillDetail(s)">
         <label class="card-check" @click.stop>
           <input type="checkbox" :checked="s.id ? selectedIds.has(s.id) : false" @change="s.id && toggleSelect(s.id)" />
