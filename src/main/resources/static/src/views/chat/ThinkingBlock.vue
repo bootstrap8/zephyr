@@ -21,17 +21,42 @@ const preview = computed(() => {
   return lines.slice(-3).join('\n')
 })
 
+const startTime = ref(0)
+const elapsedSeconds = ref(0)
+let timerId: ReturnType<typeof setInterval> | null = null
+
+function startTimer() {
+  stopTimer()
+  startTime.value = Date.now()
+  elapsedSeconds.value = 0
+  timerId = setInterval(() => {
+    elapsedSeconds.value = Math.floor((Date.now() - startTime.value) / 1000)
+  }, 1000)
+}
+
+function stopTimer() {
+  if (timerId) { clearInterval(timerId); timerId = null }
+}
+
+const elapsedText = computed(() => {
+  const s = elapsedSeconds.value
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  const rs = s % 60
+  return `${m}m${rs}s`
+})
+
+watch(() => props.animating, (v) => { if (v) startTimer(); else stopTimer() })
+
+onMounted(() => { if (props.animating) startTimer() })
+onBeforeUnmount(stopTimer)
+
 let rafId = 0
 
 function stopEffect() {
   cancelAnimationFrame(rafId)
   rafId = 0
 }
-
-watch(() => props.animating, (v) => { if (!v) stopEffect() })
-
-onMounted(() => { if (!props.animating) stopEffect() })
-onBeforeUnmount(stopEffect)
 </script>
 
 <template>
@@ -40,6 +65,7 @@ onBeforeUnmount(stopEffect)
       <span class="thinking-text">
         <template v-if="animating">
           {{ langData.thinkingBlock_thinking }}<span class="dot-anim"><i>.</i><i>.</i><i>.</i></span>
+          <span v-if="elapsedSeconds > 0" class="elapsed-time">{{ elapsedText }}</span>
         </template>
         <template v-else>
           <Icon icon="lucide:brain" class="brain-icon" /> {{ langData.thinkingBlock_deepThought }}
@@ -57,7 +83,8 @@ onBeforeUnmount(stopEffect)
 .thinking-header { display: flex; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; font-size: 13px; color: var(--el-text-color-secondary); user-select: none; }
 .thinking-header:hover { color: var(--el-text-color-primary); }
 
-.thinking-text { display: inline-flex; align-items: baseline; }
+.thinking-text { display: inline-flex; align-items: baseline; gap: 6px; }
+.elapsed-time { font-size: 11px; color: var(--el-text-color-placeholder); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .brain-icon { color: var(--el-color-primary); font-size: 16px; flex-shrink: 0; margin-right: 4px; }
 
 .chevron { transition: transform 0.2s; font-size: 14px; color: var(--el-text-color-placeholder); flex-shrink: 0; margin-left: 4px; }

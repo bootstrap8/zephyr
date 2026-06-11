@@ -155,6 +155,11 @@ function onSend(text: string) {
       chatStore.appendToken('\n\n' + langData.context_requestFailed)
     }
     chatStore.streaming = false
+  }).then(() => {
+    if (chatStore.streaming) {
+      chatStore.pruneEmptyAssistant()
+      chatStore.streaming = false
+    }
   })
 }
 

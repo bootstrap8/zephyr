@@ -52,6 +52,16 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public SseEmitter send(String userName, String conversationId, String originalMessage) {
         SseEmitter emitter = new SseEmitter(300000L);
+        String cancelKey = userName;
+
+        emitter.onTimeout(() -> {
+            llmClient.cancelCall(cancelKey);
+            emitter.complete();
+        });
+        emitter.onError(th -> {
+            log.warn("SSE client disconnected: {}", th.getMessage());
+            llmClient.cancelCall(cancelKey);
+        });
 
         executor.execute(() -> {
             try {
@@ -98,8 +108,14 @@ public class ChatServiceImpl implements ChatService {
 
                 // 4. 工具调用循环（无轮次限制，模型自行决定何时停止）
                 LlmResult result = null;
+                int totalInputTokens = 0, totalOutputTokens = 0, rounds = 0;
                 while (true) {
-                    result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter);
+                    result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter, cancelKey);
+                    rounds++;
+                    if (result.getUsage() != null) {
+                        totalInputTokens += result.getUsage().getOrDefault("inputTokens", 0);
+                        totalOutputTokens += result.getUsage().getOrDefault("outputTokens", 0);
+                    }
 
                     if (result.hasToolCalls()) {
                         // 4a. 添加 assistant 消息（含 tool_calls）
@@ -141,6 +157,10 @@ public class ChatServiceImpl implements ChatService {
                         if (isNotBlank(result.getContent()) || result.hasToolCalls()) {
                             persistAssistantMessage(cid, result, msgSeq++);
                         }
+                        if (rounds > 1 || totalInputTokens + totalOutputTokens > 0) {
+                            log.info("对话完成 — 共 {} 轮, 输入: {} tokens, 输出: {} tokens, 合计: {} tokens",
+                                    rounds, totalInputTokens, totalOutputTokens, totalInputTokens + totalOutputTokens);
+                        }
                         emitter.send(SseEmitter.event().name("message")
                                 .data(ChatEvent.builder().type("done").build()));
                         emitter.complete();
@@ -153,12 +173,10 @@ public class ChatServiceImpl implements ChatService {
                     emitter.send(SseEmitter.event().name("message")
                             .data(ChatEvent.builder().type("error").content(e.getMessage()).build()));
                     emitter.complete();
-                } catch (IOException ignored) {}
+                } catch (Exception ignored) {}
             }
         });
 
-        emitter.onTimeout(emitter::complete);
-        emitter.onError(th -> log.error("SSE error", th));
         return emitter;
     }
 
@@ -336,7 +354,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public void cancel(String userName) {
-        // 取消逻辑由前端 SseEmitter 超时/关闭处理
+        llmClient.cancelCall(userName);
     }
 
     @Override

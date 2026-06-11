@@ -143,7 +143,7 @@ onUpdated(setupCodeBlocks)
 .msg-row { padding: 14px 24px; max-width: 820px; margin: 0 auto; }
 .msg-row.user { display: flex; justify-content: flex-end; }
 .msg-bubble { max-width: 88%; border-radius: 12px; padding: 12px 16px; font-size: var(--chat-font-size, 16px); line-height: 1.65; }
-.user-bubble { background: var(--el-fill-color-light); color: var(--el-text-color-primary); border-radius: 12px 12px 4px 12px; }
+.user-bubble { background: var(--el-fill-color-light); color: var(--el-text-color-primary); border-radius: 12px 12px 4px 12px; white-space: pre-wrap; }
 .ai-bubble { background: transparent; border-radius: 12px 12px 12px 4px; color: var(--el-text-color-regular); padding-top: 0; }
 .mb-2 { margin-bottom: 8px; }
 

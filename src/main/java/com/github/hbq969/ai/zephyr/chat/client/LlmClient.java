@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -37,8 +38,18 @@ public class LlmClient {
             .readTimeout(120, TimeUnit.SECONDS)
             .build();
 
+    private final ConcurrentHashMap<String, okhttp3.Call> activeCalls = new ConcurrentHashMap<>();
+
+    public void cancelCall(String key) {
+        okhttp3.Call call = activeCalls.remove(key);
+        if (call != null) {
+            log.info("取消 LLM API 调用: {}", key);
+            call.cancel();
+        }
+    }
+
     public LlmResult chat(ModelConfigEntity model, List<Map<String, Object>> messages,
-                          List<ToolDef> tools, SseEmitter emitter) throws IOException {
+                          List<ToolDef> tools, SseEmitter emitter, String cancelKey) throws IOException {
         String apiKey = AESUtil.decrypt(model.getApiKeyEncrypted(), aesKey, aesIv, StandardCharsets.UTF_8);
         String baseUrl = model.getBaseUrl();
         if (!baseUrl.endsWith("/")) baseUrl += "/";
@@ -85,8 +96,14 @@ public class LlmClient {
         StringBuilder fullThinking = new StringBuilder();
         List<LlmResult.ToolCall> toolCalls = new ArrayList<>();
         JsonArray accumulatedToolCalls = new JsonArray();
+        Map<String, Integer> usageResult = new LinkedHashMap<>();
 
-        try (Response response = client.newCall(request).execute()) {
+        String bodyStr = gson.toJson(bodyJson);
+        log.info("请求模型 {}，消息数: {}，上下文约 {} 字符", model.getName(), messages.size(), bodyStr.length());
+
+        okhttp3.Call call = client.newCall(request);
+        activeCalls.put(cancelKey, call);
+        try (Response response = call.execute()) {
             if (!response.isSuccessful()) {
                 int code = response.code();
                 String errorBody = "";
@@ -182,23 +199,31 @@ public class LlmClient {
                         // usage
                         if (event.has("usage") && !event.get("usage").isJsonNull()) {
                             JsonObject usage = event.getAsJsonObject("usage");
-                            Map<String, Integer> usageMap = new LinkedHashMap<>();
-                            if (usage.has("prompt_tokens")) usageMap.put("inputTokens", usage.get("prompt_tokens").getAsInt());
-                            if (usage.has("completion_tokens")) usageMap.put("outputTokens", usage.get("completion_tokens").getAsInt());
+                            if (usage.has("prompt_tokens")) usageResult.put("inputTokens", usage.get("prompt_tokens").getAsInt());
+                            if (usage.has("completion_tokens")) usageResult.put("outputTokens", usage.get("completion_tokens").getAsInt());
                             emitter.send(SseEmitter.event().name("message")
-                                    .data(ChatEvent.builder().type("usage").usage(usageMap).build()));
+                                    .data(ChatEvent.builder().type("usage").usage(usageResult).build()));
                         }
-                    } catch (Exception e) {
+                    } catch (com.google.gson.JsonSyntaxException e) {
                         log.warn("解析 SSE 事件失败: {}", e.getMessage());
                     }
                 }
             }
+        } finally {
+            activeCalls.remove(cancelKey, call);
+        }
+
+        if (!usageResult.isEmpty()) {
+            log.info("模型 {} 返回 — 输入: {} tokens, 输出: {} tokens", model.getName(), usageResult.getOrDefault("inputTokens", 0), usageResult.getOrDefault("outputTokens", 0));
+        } else {
+            log.info("模型 {} 返回 — 内容长度: {} 字符", model.getName(), fullContent.length());
         }
 
         return LlmResult.builder()
                 .content(fullContent.toString())
                 .thinking(fullThinking.length() > 0 ? fullThinking.toString() : null)
                 .toolCalls(toolCalls.isEmpty() ? null : toolCalls)
+                .usage(usageResult.isEmpty() ? null : usageResult)
                 .build();
     }
 
