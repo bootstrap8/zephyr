@@ -202,13 +202,16 @@ function restoreConversation(id: string) {
             i--
             const thinkingParts: string[] = []
             const contentParts: string[] = []
+            const toolCallsParts: any[] = []
             for (const m of group) {
               if (m.thinking) thinkingParts.push(m.thinking)
               if (m.content) contentParts.push(m.content)
+              if (m.toolCalls && m.toolCalls.length > 0) toolCallsParts.push(...m.toolCalls)
             }
             const last = group[group.length - 1]
             last.thinking = thinkingParts.join('\n')
             last.content = contentParts.join('\n')
+            if (toolCallsParts.length > 0) last.toolCalls = toolCallsParts
             merged.push(last)
           } else {
             merged.push(msgs[i])
