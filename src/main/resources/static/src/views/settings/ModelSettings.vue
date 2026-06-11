@@ -227,7 +227,10 @@ function initParams(loadedParams?: Record<string, any>) {
     if (flat[p.key] != null) p.value = String(flat[p.key])
   }
   for (const [k, v] of Object.entries(flat)) {
-    if (!PRESET_PARAMS.find(p => p.key === k) && !params.value.find(p => p.key === k)) {
+    const existing = params.value.find(p => p.key === k)
+    if (existing) {
+      existing.value = String(v)
+    } else if (!PRESET_PARAMS.find(p => p.key === k)) {
       params.value.push({ key: k, value: String(v), tip: null, isPreset: false })
     }
   }
