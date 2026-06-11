@@ -10,5 +10,5 @@ public interface ConversationService {
     ConversationVO create(Map<String, String> body, String userName);
     void rename(Map<String, String> body, String userName);
     void delete(String id, String userName);
-    List<Map<String, Object>> getMessages(String conversationId, String userName);
+    Map<String, Object> getMessages(String conversationId, String userName);
 }

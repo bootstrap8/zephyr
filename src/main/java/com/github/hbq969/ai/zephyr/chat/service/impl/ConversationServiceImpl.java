@@ -35,6 +35,7 @@ public class ConversationServiceImpl implements ConversationService {
                     .title(e.getTitle())
                     .createdAt(e.getCreatedAt())
                     .updatedAt(e.getUpdatedAt())
+                    .workspaceId(e.getWorkspaceId())
                     .messageCount(chatDao.queryMessages(e.getId()).size())
                     .build());
         }
@@ -50,6 +51,7 @@ public class ConversationServiceImpl implements ConversationService {
         entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
         entity.setUserName(userName);
         entity.setTitle(title);
+        entity.setWorkspaceId(body.get("workspaceId"));
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
         chatDao.insertConversation(entity);
@@ -81,7 +83,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public List<Map<String, Object>> getMessages(String conversationId, String userName) {
+    public Map<String, Object> getMessages(String conversationId, String userName) {
         ConversationEntity conv = chatDao.queryConversationById(conversationId);
         if (conv == null || !conv.getUserName().equals(userName)) {
             throw new RuntimeException("无权限或记录不存在");
@@ -105,6 +107,9 @@ public class ConversationServiceImpl implements ConversationService {
             // toolCalls 传给前端用于展示工具调用卡片
             result.add(msg);
         }
-        return result;
+        Map<String, Object> response = new HashMap<>();
+        response.put("messages", result);
+        response.put("workspaceId", conv.getWorkspaceId());
+        return response;
     }
 }
