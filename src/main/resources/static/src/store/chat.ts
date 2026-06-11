@@ -76,6 +76,10 @@ export const useChatStore = defineStore('chat', () => {
     if (!last.toolCalls) last.toolCalls = []
     const existing = last.toolCalls.find(tc => tc.name === name)
     if (existing) {
+      if (patch.status === 'running') {
+        existing.output = undefined
+        existing.input = {}
+      }
       Object.assign(existing, patch)
     } else {
       last.toolCalls.push({

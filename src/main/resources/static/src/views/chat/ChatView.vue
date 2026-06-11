@@ -211,7 +211,18 @@ function restoreConversation(id: string) {
             const last = group[group.length - 1]
             last.thinking = thinkingParts.join('\n')
             last.content = contentParts.join('\n')
-            if (toolCallsParts.length > 0) last.toolCalls = toolCallsParts
+            if (toolCallsParts.length > 0) {
+              // 去重：同一工具多轮调用，只保留最后一次
+              const seen = new Set<string>()
+              const deduped: any[] = []
+              for (let j = toolCallsParts.length - 1; j >= 0; j--) {
+                if (!seen.has(toolCallsParts[j].name)) {
+                  seen.add(toolCallsParts[j].name)
+                  deduped.unshift(toolCallsParts[j])
+                }
+              }
+              last.toolCalls = deduped
+            }
             merged.push(last)
           } else {
             merged.push(msgs[i])
