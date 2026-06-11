@@ -38,10 +38,17 @@ function onDirClick(item: { name: string; path: string }) {
   if (item.name === '..') {
     loadDirs(item.path)
   } else {
-    path.value = item.path
-    if (!name.value.trim()) name.value = item.name
-    showBrowser.value = false
+    loadDirs(item.path)
   }
+}
+
+function selectCurrentDir() {
+  path.value = browserPath.value
+  if (!name.value.trim()) {
+    const parts = browserPath.value.replace(/\/+$/, '').split('/')
+    name.value = parts[parts.length - 1] || browserPath.value
+  }
+  showBrowser.value = false
 }
 
 function onSubmit() {
@@ -93,6 +100,7 @@ function onSubmit() {
           <div class="ws-browser-head">
             <Icon icon="lucide:folder-open" class="ws-browser-icon" />
             <span class="ws-browser-path">{{ browserPath }}</span>
+            <button class="ws-btn ws-btn-select" @click="selectCurrentDir">选择此目录</button>
           </div>
           <div v-if="browserLoading" class="ws-browser-loading">加载中...</div>
           <div v-else class="ws-browser-list">
@@ -146,6 +154,8 @@ function onSubmit() {
 .ws-btn-cancel:hover { background: var(--el-fill-color-light); }
 .ws-btn-browse { background: var(--el-bg-color); color: var(--el-text-color-regular); padding: 8px 12px; white-space: nowrap; }
 .ws-btn-browse:hover { background: var(--el-fill-color-light); }
+.ws-btn-select { padding: 3px 10px; font-size: 12px; white-space: nowrap; background: var(--el-color-primary); color: #fff; border-color: var(--el-color-primary); }
+.ws-btn-select:hover { background: var(--el-color-primary-dark-2); }
 .ws-btn-confirm { background: var(--el-color-primary); color: #fff; border-color: var(--el-color-primary); }
 .ws-btn-confirm:hover { background: var(--el-color-primary-dark-2); }
 .ws-btn-confirm:disabled { opacity: 0.6; cursor: default; }
