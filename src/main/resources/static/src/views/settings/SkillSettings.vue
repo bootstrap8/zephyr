@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getLangData } from '@/i18n/locale'
 import { useSettingsStore } from '@/store/settings'
 import { Icon } from '@iconify/vue'
@@ -48,8 +48,13 @@ function toggleBatchSelectAll() {
 async function doBatchUninstall() {
   const count = selectedIds.value.size
   if (count === 0) return
-  batchDeleting.value = true
   try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${count} 个 Skill 吗？此操作会同时删除本地文件，不可恢复。`,
+      '确认批量删除',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+    )
+    batchDeleting.value = true
     await store.batchUninstallSkills([...selectedIds.value])
     selectedIds.value = new Set()
     ElMessage.success(`已卸载 ${count} 个 Skill`)

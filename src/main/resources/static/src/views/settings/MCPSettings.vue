@@ -119,6 +119,14 @@ async function addTool(serverId: string) {
   await store.loadMcpToolCount()
 }
 
+function confirmDeleteTool(toolId: string, serverId: string, toolName: string) {
+  ElMessageBox.confirm(
+    `确定要删除工具 "${toolName}" 吗？此操作不可恢复。`,
+    '确认删除',
+    { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+  ).then(() => deleteTool(toolId, serverId)).catch(() => {})
+}
+
 async function deleteTool(toolId: string, serverId: string) {
   await store.deleteMcpTool(toolId)
   if (serverTools.value[serverId])
@@ -233,7 +241,7 @@ function toolsCount(count: number): string {
                 <input type="checkbox" :checked="t.enabled" @change="toggleTool(t.id!, ($event.target as HTMLInputElement).checked, s.id!)" />
                 <span class="toggle-slider"></span>
               </label>
-              <button class="btn-icon-sm" @click="deleteTool(t.id!, s.id!)" :title="langData.btnDelete">
+              <button class="btn-icon-sm" @click="confirmDeleteTool(t.id!, s.id!, t.toolName)" :title="langData.btnDelete">
                 <Icon icon="lucide:x" width="13" />
               </button>
             </div>
