@@ -416,7 +416,7 @@ async function onFilesSelected(e: Event) {
     formData.append('workspaceId', wsId)
 
     try {
-      const res = await axios({ url: '/chat/upload', method: 'post', data: formData, headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await axios({ url: '/chat/upload', method: 'post', data: formData })
       if (res.data.state === 'OK') {
         item.path = res.data.body.path
         item.status = 'done'

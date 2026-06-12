@@ -12,7 +12,7 @@ export default (config: any) => {
   let loadingInstance: any
 
   instance.interceptors.request.use(function(config: any) {
-    if (config.url && !config.url.includes('/chat/send')) {
+    if (config.url && !config.url.includes('/chat/send') && !config.url.includes('/chat/upload')) {
       loadingInstance = ElLoading.service({
         lock: true,
         text: '加载中...',
