@@ -41,6 +41,9 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
     @Resource
     private com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao workspaceDao;
 
+    @Resource
+    private com.github.hbq969.ai.zephyr.knowledge.dao.KnowledgeDao knowledgeDao;
+
     @Override
     protected void tableCreate0() {
         com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_model_configs",
@@ -57,6 +60,12 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
                 () -> chatDao.createMessagesTable());
         com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_workspaces",
                 () -> workspaceDao.createWorkspacesTable());
+        com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_knowledge_base",
+                () -> knowledgeDao.createKnowledgeBaseTable());
+        com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_knowledge_doc",
+                () -> knowledgeDao.createKnowledgeDocTable());
+        com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_conversation_kb",
+                () -> knowledgeDao.createConversationKbTable());
     }
 
     @Override

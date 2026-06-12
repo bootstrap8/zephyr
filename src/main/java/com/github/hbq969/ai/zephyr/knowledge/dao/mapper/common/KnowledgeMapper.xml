@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.github.hbq969.ai.zephyr.knowledge.dao.KnowledgeDao">
+
+  <select id="queryKbByUserName" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
+    select id, user_name as userName, name, description, embed_model_id as embedModelId,
+      created_at as createdAt, updated_at as updatedAt
+    from zephyr_knowledge_base
+    where user_name = #{userName}
+    order by created_at desc
+  </select>
+
+  <select id="queryKbById" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
+    select id, user_name as userName, name, description, embed_model_id as embedModelId,
+      created_at as createdAt, updated_at as updatedAt
+    from zephyr_knowledge_base
+    where id = #{id}
+  </select>
+
+  <select id="queryKbByIds" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
+    select id, user_name as userName, name, description, embed_model_id as embedModelId,
+      created_at as createdAt, updated_at as updatedAt
+    from zephyr_knowledge_base
+    where id in
+    <foreach collection="ids" item="item" open="(" separator="," close=")">
+      #{item}
+    </foreach>
+  </select>
+
+  <insert id="insertKb">
+    insert into zephyr_knowledge_base (id, user_name, name, description, embed_model_id, created_at, updated_at)
+    values (#{id}, #{userName}, #{name}, #{description}, #{embedModelId}, #{createdAt}, #{updatedAt})
+  </insert>
+
+  <update id="updateKb">
+    update zephyr_knowledge_base
+    set name = #{name}, description = #{description}, embed_model_id = #{embedModelId}, updated_at = #{updatedAt}
+    where id = #{id}
+  </update>
+
+  <delete id="deleteKb">
+    delete from zephyr_knowledge_base where id = #{id}
+  </delete>
+
+  <select id="queryDocsByKbId" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeDocEntity">
+    select id, kb_id as kbId, file_name as fileName, file_type as fileType, file_size as fileSize,
+      chunk_count as chunkCount, status, error_msg as errorMsg, created_at as createdAt
+    from zephyr_knowledge_doc
+    where kb_id = #{kbId}
+    order by created_at desc
+  </select>
+
+  <select id="queryDocById" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeDocEntity">
+    select id, kb_id as kbId, file_name as fileName, file_type as fileType, file_size as fileSize,
+      chunk_count as chunkCount, status, error_msg as errorMsg, created_at as createdAt
+    from zephyr_knowledge_doc
+    where id = #{id}
+  </select>
+
+  <insert id="insertDoc">
+    insert into zephyr_knowledge_doc (id, kb_id, file_name, file_type, file_size, chunk_count, status, error_msg, created_at)
+    values (#{id}, #{kbId}, #{fileName}, #{fileType}, #{fileSize}, #{chunkCount}, #{status}, #{errorMsg}, #{createdAt})
+  </insert>
+
+  <update id="updateDocStatus">
+    update zephyr_knowledge_doc
+    set status = #{status}
+      <if test="chunkCount != null">, chunk_count = #{chunkCount}</if>
+      <if test="errorMsg != null and errorMsg != ''">, error_msg = #{errorMsg}</if>
+    where id = #{id}
+  </update>
+
+  <delete id="deleteDoc">
+    delete from zephyr_knowledge_doc where id = #{id}
+  </delete>
+
+  <delete id="deleteDocsByKbId">
+    delete from zephyr_knowledge_doc where kb_id = #{kbId}
+  </delete>
+
+  <select id="queryKbIdsByConversation" resultType="java.lang.String">
+    select kb_id from zephyr_conversation_kb where conversation_id = #{conversationId}
+  </select>
+
+  <insert id="insertConversationKb">
+    insert into zephyr_conversation_kb (conversation_id, kb_id) values (#{conversationId}, #{kbId})
+  </insert>
+
+  <delete id="deleteConversationKb">
+    delete from zephyr_conversation_kb where conversation_id = #{conversationId}
+  </delete>
+
+</mapper>
