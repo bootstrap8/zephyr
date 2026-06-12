@@ -564,7 +564,7 @@ function closeAll() {
           <!-- 知识库选择 -->
           <div class="tool-pick" :class="{ dim: !convStore.currentId }" @click.stop="toggleKbList()">
             <Icon icon="lucide:library" class="pick-icon" />
-            <span>{{ selectedKbIds.length > 0 ? selectedKbIds.length + ' 知识库' : langData.knowledgeMgmt_title }}</span>
+            <span>{{ selectedKbIds.length > 0 ? selectedKbIds.length + ' 知识库' : langData.settingsPanel_kbSelect }}</span>
             <Icon icon="lucide:chevron-down" class="pick-arrow" />
             <div v-if="showKbList" class="pick-dropdown kb-dropdown" @click.stop>
               <div v-if="kbList.length === 0" class="sub-loading">{{ langData.knowledgeMgmt_noKb }}</div>
