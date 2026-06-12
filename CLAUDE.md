@@ -79,6 +79,12 @@ curl -u admin:1 -H "X-SM-Test: 1" \
 open http://localhost:30733/zephyr/zephyr-ui/index.html
 ```
 
+## Git 操作限制
+
+- **禁止自主 push**：`git push` 必须经人工确认后才能执行
+- **禁止自主 tag**：`git tag` 创建或推送标签必须经人工确认后才能执行
+- **禁止自主操作远程**：任何影响远程仓库的操作（push、tag push、force push）都需要先征求确认
+
 ## 架构
 
 ### 包结构
