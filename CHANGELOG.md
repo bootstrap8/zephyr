@@ -2,6 +2,21 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
 
+## [1.0.2] - 2026-06-12
+
+### 新增
+
+- **Skill 用户隔离与共享机制**：支持 `user`/`shared` scope，个人 Skill 仅自己可见，共享 Skill 所有用户可见
+
+### 变更
+
+- 记忆管理页面去掉项目维度过滤和类型选项
+
+### 文档
+
+- 更新 README 访问地址和默认密码
+- Skill 用户隔离 + 共享机制设计文档
+
 ## [1.0.1] - 2026-06-12
 
 ### 新增
