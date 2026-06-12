@@ -69,7 +69,7 @@ function toggleDark() {
         <div class="sp-item" @click="goTo('/settings/memory')">
           <Icon icon="lucide:hard-drive" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_memoryMgmt }}</span>
-          <span class="sp-value">{{ settingsStore.memories.length > 0 ? langData.settingsPanel_memorySummary.replace('{user}', settingsStore.memories.filter((m: any) => m.type === 'user').length).replace('{project}', settingsStore.memories.filter((m: any) => m.type === 'project').length) : langData.settingsPanel_noMemory }}</span>
+          <span class="sp-value">{{ settingsStore.memories.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', settingsStore.memories.length) : langData.settingsPanel_noMemory }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
         <div class="sp-item" @click="goTo('/settings/workspace')">

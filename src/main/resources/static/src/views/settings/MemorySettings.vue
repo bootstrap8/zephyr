@@ -35,7 +35,7 @@ const filteredMemories = computed(() => {
   return store.memories.filter((m: any) => m.type === currentFilter.value)
 })
 
-const typeLabel: Record<string, string> = { user: langData.memoryMgmt_user, project: langData.memoryMgmt_project }
+const typeLabel: Record<string, string> = { user: langData.memoryMgmt_user }
 
 function fmtTime(ts: number) {
   return new Date(ts * 1000).toISOString().slice(0, 10)
@@ -163,9 +163,6 @@ onMounted(() => { store.loadMemories() })
         <button :class="['filter-tab', { active: currentFilter === 'user' }]" @click="setFilter('user')">
           {{ langData.memoryMgmt_user }}
         </button>
-        <button :class="['filter-tab', { active: currentFilter === 'project' }]" @click="setFilter('project')">
-          {{ langData.memoryMgmt_project }}
-        </button>
       </div>
       <el-button type="primary" @click="openCreate">
         <Icon icon="lucide:plus" style="margin-right:4px" /> {{ langData.memoryMgmt_addMemory }}
@@ -238,7 +235,6 @@ onMounted(() => { store.loadMemories() })
         <el-form-item :label="langData.memoryMgmt_typeLabel" required>
           <el-select v-model="form.type" style="width:100%">
             <el-option :label="langData.memoryMgmt_user" value="user" />
-            <el-option :label="langData.memoryMgmt_project" value="project" />
           </el-select>
         </el-form-item>
         <el-form-item :label="langData.memoryMgmt_contentLabel" required>
@@ -308,7 +304,6 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spac
 .card-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--el-text-color-placeholder); }
 .type-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
 .type-badge.user { background: var(--el-color-primary-light-9); color: var(--el-color-primary); }
-.type-badge.project { background: var(--el-color-success-light-9); color: var(--el-color-success); }
 
 .card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
