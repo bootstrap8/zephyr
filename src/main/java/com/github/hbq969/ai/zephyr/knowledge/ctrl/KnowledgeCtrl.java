@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,23 @@ public class KnowledgeCtrl {
         @SuppressWarnings("unchecked")
         List<String> kbIds = (List<String>) body.get("kbIds");
         knowledgeService.saveConversationKbIds(conversationId, kbIds);
+        return ReturnMessage.success("ok");
+    }
+
+    @Operation(summary = "上传文档")
+    @RequestMapping(path = "/doc/upload", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "doc_upload", apiDesc = "知识库管理_上传文档")
+    public ReturnMessage<?> uploadDoc(@RequestParam("file") MultipartFile file, @RequestParam String kbId) {
+        return ReturnMessage.success(Map.of("docId", knowledgeService.uploadDoc(kbId, file, userName())));
+    }
+
+    @Operation(summary = "重新解析文档")
+    @RequestMapping(path = "/doc/re-parse", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "doc_reparse", apiDesc = "知识库管理_重新解析")
+    public ReturnMessage<?> reParseDoc(@RequestBody Map<String, String> body) {
+        knowledgeService.reParseDoc(body.get("id"), body.get("kbId"), userName());
         return ReturnMessage.success("ok");
     }
 }
