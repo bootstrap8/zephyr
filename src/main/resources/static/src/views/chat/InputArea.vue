@@ -3,8 +3,10 @@ import { ref, computed, nextTick, watch } from 'vue'
 import { useSettingsStore } from '@/store/settings'
 import { useChatStore } from '@/store/chat'
 import { useWorkspaceStore } from '@/store/workspace'
+import { useConversationsStore } from '@/store/conversations'
 import WorkspaceDialog from './WorkspaceDialog.vue'
 import { Icon } from '@iconify/vue'
+import { msg } from '@/utils/Utils'
 import axios from '@/network'
 import { getLangData } from '@/i18n/locale'
 
@@ -95,8 +97,12 @@ function scrollActiveSkill() {
 }
 
 const workspaceStore = useWorkspaceStore()
+const convStore = useConversationsStore()
 const showWorkspaceList = ref(false)
 const showNewWorkspace = ref(false)
+const showKbList = ref(false)
+const kbList = ref<any[]>([])
+const selectedKbIds = ref<string[]>([])
 
 const langData = getLangData()
 
@@ -288,6 +294,39 @@ function selectWorkspace(id: string | null) {
   showWorkspaceList.value = false
 }
 
+function loadKbData() {
+  axios({ url: '/knowledge/kb/list', method: 'get' }).then(res => {
+    if (res.data.state === 'OK') kbList.value = res.data.body || []
+  }).catch(() => {})
+  const convId = convStore.currentId
+  if (convId) {
+    axios({ url: '/knowledge/conversation/kb/list', method: 'get', params: { conversationId: convId } })
+      .then(res => { if (res.data.state === 'OK') selectedKbIds.value = res.data.body || [] })
+      .catch(() => {})
+  }
+}
+
+function toggleKb(kbId: string) {
+  const convId = convStore.currentId
+  if (!convId) return
+  const idx = selectedKbIds.value.indexOf(kbId)
+  if (idx >= 0) { selectedKbIds.value.splice(idx, 1) }
+  else { selectedKbIds.value.push(kbId) }
+  axios({ url: '/knowledge/conversation/kb/save', method: 'post', data: { conversationId: convId, kbIds: [...selectedKbIds.value] } })
+    .catch(() => msg(langData.axiosRequestErr, 'error'))
+}
+
+function toggleKbList() {
+  if (!convStore.currentId) return
+  loadKbData()
+  closeAll(); showKbList.value = !showKbList.value
+}
+
+watch(() => convStore.currentId, () => {
+  selectedKbIds.value = []
+  loadKbData()
+})
+
 function toggleModelList() {
   if (chatModels.value.length === 0) return
   closeAll() ; showModelList.value = !showModelList.value
@@ -450,6 +489,7 @@ async function onFilesSelected(e: Event) {
 
 function closeAll() {
   showModelList.value = false
+  showKbList.value = false
   showAbility.value = false
   showCommand.value = false
   hoveredAbility.value = ''
@@ -517,6 +557,25 @@ function closeAll() {
                   </span>
                 </div>
                 <Icon v-if="settingsStore.currentModel === m.name" icon="lucide:check" class="check-icon" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 知识库选择 -->
+          <div class="tool-pick" :class="{ dim: !convStore.currentId }" @click.stop="toggleKbList()">
+            <Icon icon="lucide:library" class="pick-icon" />
+            <span>{{ selectedKbIds.length > 0 ? selectedKbIds.length + ' 知识库' : langData.knowledgeMgmt_title }}</span>
+            <Icon icon="lucide:chevron-down" class="pick-arrow" />
+            <div v-if="showKbList" class="pick-dropdown kb-dropdown" @click.stop>
+              <div v-if="kbList.length === 0" class="sub-loading">{{ langData.knowledgeMgmt_noKb }}</div>
+              <div v-for="kb in kbList" :key="kb.id" class="pick-option kb-option"
+                   :class="{ current: selectedKbIds.includes(kb.id) }"
+                   @click="toggleKb(kb.id)">
+                <span class="kb-check-box" :class="{ checked: selectedKbIds.includes(kb.id) }">
+                  <Icon v-if="selectedKbIds.includes(kb.id)" icon="lucide:check" class="kb-chk-icon" />
+                </span>
+                <span class="kb-opt-name">{{ kb.name }}</span>
+                <span class="kb-opt-count">{{ kb.docCount }} 文档</span>
               </div>
             </div>
           </div>
@@ -611,6 +670,7 @@ function closeAll() {
     <Teleport to="body">
       <div v-if="showWorkspaceList" class="model-overlay" @click="showWorkspaceList = false"></div>
       <div v-if="showModelList" class="model-overlay" @click="closeModelList"></div>
+      <div v-if="showKbList" class="model-overlay" @click="showKbList = false"></div>
       <div v-if="showAbility" class="model-overlay" @click="showAbility = false"></div>
       <div v-if="showCommand" class="model-overlay" @click="showCommand = false"></div>
     </Teleport>
@@ -786,6 +846,16 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 .ws-name { font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .ws-path { color: var(--el-text-color-placeholder); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .pick-divider { height: 1px; background: var(--el-border-color); margin: 4px 0; }
+
+/* KB selector */
+.tool-pick.dim { opacity: 0.5; }
+.kb-option { display: flex; align-items: center; gap: 8px !important; }
+.kb-check-box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--el-border-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.kb-check-box.checked { background: var(--el-color-primary); border-color: var(--el-color-primary); }
+.kb-chk-icon { color: #fff; font-size: 11px; }
+.kb-opt-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-opt-count { font-size: 11px; color: var(--el-text-color-placeholder); flex-shrink: 0; }
+.kb-dropdown { width: 260px; }
 </style>
 
 <!-- 非 scoped：动态创建的 tag 元素需要全局样式 -->

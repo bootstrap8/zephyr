@@ -117,6 +117,7 @@ function toggleDark() {
         <div class="sp-item" @click="goTo('/settings/knowledge')">
           <Icon icon="lucide:library" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_knowledgeMgmt }}</span>
+          <span class="sp-value">{{ kbList.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', kbList.length) : langData.settingsPanel_noMcp }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
         <div class="sp-item" @click="goTo('/settings/workspace')">
@@ -137,8 +138,8 @@ function toggleDark() {
         </div>
         <div v-if="convStore.currentId" class="kb-select-section">
           <div class="kb-section-title">
-            <Icon icon="lucide:library" class="kb-section-icon" />
-            <span>{{ langData.knowledgeMgmt_title }}</span>
+            <Icon icon="lucide:book-open" class="kb-section-icon" />
+            <span>{{ langData.settingsPanel_kbSelect }}</span>
           </div>
           <div v-if="convKbLoading" class="kb-loading">{{ langData.inputArea_loading }}</div>
           <div v-else-if="kbList.length === 0" class="kb-empty">{{ langData.knowledgeMgmt_noKb }}</div>
@@ -161,12 +162,15 @@ function toggleDark() {
 
 <style scoped>
 .sp-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.35); }
-.sp-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; max-height: 70vh; background: var(--el-bg-color); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.12); z-index: 201; display: flex; flex-direction: column; }
+.sp-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; max-height: 80vh; background: var(--el-bg-color); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.12); z-index: 201; display: flex; flex-direction: column; }
 .sp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--el-border-color); }
 .sp-title { font-family: Georgia, serif; font-size: 20px; letter-spacing: -0.3px; color: var(--el-text-color-primary); }
 .sp-close { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: var(--el-text-color-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; }
 .sp-close:hover { background: var(--el-fill-color-light); }
 .sp-body { flex: 1; overflow-y: auto; padding: 8px 20px; }
+.sp-body::-webkit-scrollbar { width: 2px; }
+.sp-body::-webkit-scrollbar-thumb { background: var(--el-text-color-placeholder); border-radius: 1px; opacity: 0.8; }
+html.dark .sp-body::-webkit-scrollbar-thumb { background: var(--el-text-color-placeholder); opacity: 0.8; }
 .sp-item { display: flex; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--el-border-color); cursor: pointer; font-size: 14px; color: var(--el-text-color-primary); transition: color 0.1s; }
 .sp-item:hover { color: var(--el-color-primary); }
 .sp-item-icon { color: var(--el-text-color-secondary); font-size: 16px; flex-shrink: 0; }
