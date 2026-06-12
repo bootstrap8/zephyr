@@ -63,7 +63,7 @@ const locale: any = {
         "chatArea_emptySub": "开始一段新的对话",
 
         // 输入区域
-        "inputArea_placeholder": "Ctrl+Enter 发送 · Enter 换行",
+        "inputArea_placeholder": "Ctrl+Enter 发送 · Shift+Enter 换行",
         "inputArea_noModel": "无",
         "inputArea_abilities": "能力",
         "inputArea_loading": "加载中...",
@@ -356,7 +356,7 @@ const locale: any = {
         "chatArea_emptySub": "Start a new conversation",
 
         // Input area
-        "inputArea_placeholder": "Ctrl+Enter to send · Enter for new line",
+        "inputArea_placeholder": "Ctrl+Enter to send · Shift+Enter for new line",
         "inputArea_noModel": "None",
         "inputArea_abilities": "Abilities",
         "inputArea_loading": "Loading...",
@@ -649,7 +649,7 @@ const locale: any = {
         "chatArea_emptySub": "新しい会話を始める",
 
         // Input area
-        "inputArea_placeholder": "Ctrl+Enter 送信 · Enter 改行",
+        "inputArea_placeholder": "Ctrl+Enter 送信 · Shift+Enter 改行",
         "inputArea_noModel": "なし",
         "inputArea_abilities": "能力",
         "inputArea_loading": "読み込み中...",

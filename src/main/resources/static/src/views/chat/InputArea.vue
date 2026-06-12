@@ -172,7 +172,7 @@ function onKeydown(e: KeyboardEvent) {
     return
   }
   // 保存当前状态用于撤销（排除功能键）
-  if (!e.ctrlKey && !e.metaKey && !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Escape','Tab','Shift','Alt','Control','Meta','CapsLock','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'].includes(e.key)) {
+  if (!e.ctrlKey && !e.metaKey && !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Escape','Tab','Shift','Alt','Control','Meta','CapsLock','Enter','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'].includes(e.key)) {
     pushUndo()
   }
   // Backspace 删除 tag：光标在文本节点开头且前一个兄弟是 tag
@@ -192,7 +192,12 @@ function onKeydown(e: KeyboardEvent) {
       }
     }
   }
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend() }
+  // Ctrl/Cmd+Enter: 发送
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); return }
+  // Shift+Enter: 换行（浏览器自然插入 <br>，只需保存撤销状态）
+  if (e.key === 'Enter' && e.shiftKey) { pushUndo(); return }
+  // 普通 Enter: 不做任何操作
+  if (e.key === 'Enter') { e.preventDefault() }
 }
 
 function onPaste(e: ClipboardEvent) {
@@ -234,6 +239,9 @@ function doSend() {
           parts.push(prefix + '/' + name)
         }
       } else if (elem.tagName === 'BR') {
+        parts.push('\n')
+      } else if (elem.tagName === 'DIV' || elem.tagName === 'P') {
+        parts.push(elem.textContent || '')
         parts.push('\n')
       } else {
         parts.push(elem.textContent || '')
