@@ -403,14 +403,14 @@ async function onFilesSelected(e: Event) {
 
   for (let i = 0; i < files.length; i++) {
     const f = files[i]
-    const item: { path: string; name: string; size: number; status: 'uploading' | 'done' | 'error' } = { path: '', name: f.name, size: f.size, status: 'uploading' }
-    fileList.value.push(item)
+    fileList.value.push({ path: '', name: f.name, size: f.size, status: 'uploading' })
+    const idx = fileList.value.length - 1
 
     const formData = new FormData()
     formData.append('file', f)
     const wsId = workspaceStore.currentId
     if (!wsId) {
-      item.status = 'error'
+      fileList.value[idx].status = 'error'
       continue
     }
     formData.append('workspaceId', wsId)
@@ -418,13 +418,13 @@ async function onFilesSelected(e: Event) {
     try {
       const res = await axios({ url: '/chat/upload', method: 'post', data: formData })
       if (res.data.state === 'OK') {
-        item.path = res.data.body.path
-        item.status = 'done'
+        fileList.value[idx].path = res.data.body.path
+        fileList.value[idx].status = 'done'
       } else {
-        item.status = 'error'
+        fileList.value[idx].status = 'error'
       }
     } catch (err: any) {
-      item.status = 'error'
+      fileList.value[idx].status = 'error'
     }
   }
   input.value = ''
