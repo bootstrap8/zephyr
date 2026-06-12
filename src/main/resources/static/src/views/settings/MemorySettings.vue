@@ -235,13 +235,13 @@ onMounted(() => { store.loadMemories() })
         <el-form-item :label="langData.memoryMgmt_nameLabel || langData.tableHeaderName" required>
           <el-input v-model="form.name" :placeholder="langData.memoryMgmt_namePlaceholder" />
         </el-form-item>
-        <el-form-item :label="langData.memoryMgmt_typeLabel || '类型'" required>
+        <el-form-item :label="langData.memoryMgmt_typeLabel" required>
           <el-select v-model="form.type" style="width:100%">
             <el-option :label="langData.memoryMgmt_user" value="user" />
             <el-option :label="langData.memoryMgmt_project" value="project" />
           </el-select>
         </el-form-item>
-        <el-form-item :label="langData.memoryMgmt_contentLabel || '内容'" required>
+        <el-form-item :label="langData.memoryMgmt_contentLabel" required>
           <el-input v-model="form.content" type="textarea" :rows="6" :placeholder="langData.memoryMgmt_contentPlaceholder" />
         </el-form-item>
       </el-form>

@@ -471,7 +471,7 @@ function closeAll() {
               </div>
               <div v-if="workspaceStore.workspaces.length > 0" class="pick-divider"></div>
               <div class="pick-option" @click="showWorkspaceList = false; showNewWorkspace = true">
-                <Icon icon="lucide:plus" />新建工作空间
+                <Icon icon="lucide:plus" />{{ langData.inputArea_newWorkspace }}
               </div>
             </div>
           </div>

@@ -64,9 +64,9 @@ function formatSearchTime(ts: number) {
   const d = new Date(ts * 1000)
   const now = new Date()
   const diff = now.getTime() / 1000 - ts
-  if (diff < 86400) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  if (diff < 7 * 86400) return Math.floor(diff / 86400) + '天前'
-  return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+  if (diff < 86400) return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  if (diff < 7 * 86400) return langData.chatArea_timeDaysAgo.replace('{n}', String(Math.floor(diff / 86400)))
+  return d.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
 }
 
 let abortController: AbortController | null = null
@@ -107,7 +107,7 @@ function onSend(text: string, filePaths?: string[]) {
   abortController = new AbortController()
 
   const displayText = filePaths && filePaths.length > 0
-    ? '[上传了 ' + filePaths.length + ' 个文件]\n' + text
+    ? langData.chatArea_filesUploaded.replace('{n}', String(filePaths.length)) + '\n' + text
     : text
   chatStore.addMessage({ id: nextMsgId(), role: 'user', content: displayText, timestamp: Date.now() / 1000 })
   chatStore.addMessage({ id: nextMsgId(), role: 'assistant', content: '', timestamp: Date.now() / 1000 })
@@ -136,7 +136,7 @@ function onSend(text: string, filePaths?: string[]) {
           } else if (event.type === 'tool_call') {
             chatStore.upsertToolCall(event.toolName, { status: 'running' })
           } else if (event.type === 'tool_result') {
-            const isError = event.toolOutput && event.toolOutput.startsWith('工具执行错误')
+            const isError = event.toolOutput && event.toolOutput.startsWith(langData.chatArea_toolExecutionError)
             chatStore.upsertToolCall(event.toolName, {
               status: isError ? 'error' : 'success',
               output: event.toolOutput,

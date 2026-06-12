@@ -93,10 +93,10 @@ const _ = (window as any).ResizeObserver;
     <el-divider content-position="left" v-if="!router.currentRoute.value.query.hiddeHeader"></el-divider>
     <el-form :model="form" size="small" label-position="right" inline-message inline>
       <el-form-item label="Search Cond1" prop="cond1">
-        <el-input v-model="form.cond1" placeholder="请输入..." type="text" clearable/>
+        <el-input v-model="form.cond1" :placeholder="langData.formInputPlaceholder + '...'" type="text" clearable/>
       </el-form-item>
       <el-form-item label="Search Cond2" prop="cond2">
-        <el-input v-model="form.cond2" placeholder="请输入..." type="text" clearable/>
+        <el-input v-model="form.cond2" :placeholder="langData.formInputPlaceholder + '...'" type="text" clearable/>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" size="small" @click="query()">Search</el-button>
@@ -108,7 +108,7 @@ const _ = (window as any).ResizeObserver;
         <template #default="scope">
           <el-button link type="primary" size="small" @click="showEditDialog(scope.row)">edit
           </el-button>
-          <el-popconfirm title="你确定要删除本条记录吗?" @confirm="deleteUser(scope.row)"
+          <el-popconfirm :title="langData.confirmDelete" @confirm="deleteUser(scope.row)"
                          icon-color="red"
                          confirm-button-type="danger">
             <template #reference>

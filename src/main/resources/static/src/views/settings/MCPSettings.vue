@@ -121,9 +121,9 @@ async function addTool(serverId: string) {
 
 function confirmDeleteTool(toolId: string, serverId: string, toolName: string) {
   ElMessageBox.confirm(
-    `确定要删除工具 "${toolName}" 吗？此操作不可恢复。`,
-    '确认删除',
-    { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+    langData.mcpMgmt_deleteToolMsg.replace('{name}', toolName),
+    langData.mcpMgmt_confirmDeleteTitle,
+    { confirmButtonText: langData.btnDelete, cancelButtonText: langData.btnCancel, type: 'warning' }
   ).then(() => deleteTool(toolId, serverId)).catch(() => {})
 }
 

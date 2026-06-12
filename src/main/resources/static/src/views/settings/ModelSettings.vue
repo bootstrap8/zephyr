@@ -202,14 +202,26 @@ const visibleParams = computed(() => {
 })
 
 const PRESET_PARAMS = [
-  { key: 'temperature', default: '0.7', tip: '控制输出随机性，值越高回复越多样，越低越确定' },
-  { key: 'top_p', default: '1.0', tip: '核采样，仅从累积概率达 top_p 的 token 中采样' },
-  { key: 'max_tokens', default: '4096', tip: '模型单次回复的最大 token 数' },
-  { key: 'frequency_penalty', default: '0', tip: '降低模型重复相同词的倾向，正值减少重复' },
-  { key: 'presence_penalty', default: '0', tip: '鼓励模型谈论新话题，正值增加话题多样性' },
-  { key: 'reasoning_effort', default: 'medium', tip: '推理模型的思考深度（low / medium / high），仅部分模型支持' },
-  { key: 'request_timeout', default: '120', tip: '请求 LLM API 的超时等待时间（秒）' }
+  { key: 'temperature', default: '0.7' },
+  { key: 'top_p', default: '1.0' },
+  { key: 'max_tokens', default: '4096' },
+  { key: 'frequency_penalty', default: '0' },
+  { key: 'presence_penalty', default: '0' },
+  { key: 'reasoning_effort', default: 'medium' },
+  { key: 'request_timeout', default: '120' }
 ]
+const PARAM_TIP_KEYS: Record<string, string> = {
+  temperature: 'modelConfig_paramTip_temperature',
+  top_p: 'modelConfig_paramTip_topP',
+  max_tokens: 'modelConfig_paramTip_maxTokens',
+  frequency_penalty: 'modelConfig_paramTip_frequencyPenalty',
+  presence_penalty: 'modelConfig_paramTip_presencePenalty',
+  reasoning_effort: 'modelConfig_paramTip_reasoningEffort',
+  request_timeout: 'modelConfig_paramTip_requestTimeout',
+}
+function paramTip(key: string): string {
+  return (langData as any)[PARAM_TIP_KEYS[key]] || ''
+}
 const params = ref<{ key: string; value: string; tip: string | null; isPreset: boolean }[]>([])
 const showAddParam = ref(false)
 const newParamKey = ref('')
@@ -217,7 +229,7 @@ const newParamVal = ref('')
 
 function initParams(loadedParams?: Record<string, any>) {
   params.value = PRESET_PARAMS.map(p => ({
-    key: p.key, value: p.default, tip: p.tip, isPreset: true,
+    key: p.key, value: p.default, tip: paramTip(p.key), isPreset: true,
   }))
   if (!loadedParams) {
     matchedTemplate.value = null
@@ -372,7 +384,7 @@ async function fetchModels() {
   if (models.length > 0) {
     const sel = document.getElementById('modelSelect') as HTMLSelectElement | null
     if (sel) {
-      sel.innerHTML = '<option value="">-- 选择模型 --</option>' + models.map(m => `<option value="${m.id}">${m.id}</option>`).join('')
+      sel.innerHTML = '<option value="">' + langData.modelConfig_selectModel + '</option>' + models.map(m => `<option value="${m.id}">${m.id}</option>`).join('')
       sel.style.display = 'block'
       const input = document.getElementById('modelNameInput') as HTMLInputElement | null
       if (input) input.style.display = 'none'
@@ -458,7 +470,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
                 @blur="onApiKeyBlur()"
                 :placeholder="hasExistingKey ? '' : 'sk-xxxxxxxx'"
               />
-              <button v-if="hasExistingKey" class="fetch-btn" @click="clearApiKey()" title="清除已保存的 Key">
+              <button v-if="hasExistingKey" class="fetch-btn" @click="clearApiKey()" :title="langData.modelConfig_clearKey">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -469,7 +481,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
             <div class="input-row">
               <input class="field-input" type="text" id="modelNameInput" v-model="name" :placeholder="langData.modelConfig_modelName" @input="onModelNameInput()" />
               <select id="modelSelect" class="fetch-select" style="display:none;" @change="onModelSelect(($event.target as HTMLSelectElement).value)">
-                <option value="">-- 选择模型 --</option>
+                <option value="">{{ langData.modelConfig_selectModel }}</option>
               </select>
               <button class="fetch-btn" @click="fetchModels()" :title="langData.modelConfig_fetchModels">
                 <Icon v-if="!fetching" icon="lucide:search" />
@@ -500,7 +512,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
             <label class="field-label">{{ langData.modelConfig_thinkingMode }}</label>
             <div class="toggle-row">
               <span v-if="!matchedTemplate.canDisable" class="toggle-hint">
-                {{ thinkingOn ? langData.modelConfig_thinkingModeOn : langData.modelConfig_thinkingModeOff }}（始终{{ thinkingOn ? '开启' : '关闭' }}）
+                {{ thinkingOn ? langData.modelConfig_thinkingAlwaysOn : langData.modelConfig_thinkingAlwaysOff }}
               </span>
               <label v-else class="toggle-switch">
                 <input type="checkbox" :checked="thinkingOn" @change="onToggleThinking(($event.target as HTMLInputElement).checked)" />
@@ -543,7 +555,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
               <span v-if="p.tip" class="tip-icon" :data-tip="p.tip">?</span>
             </div>
             <input class="field-input param-value" v-model="p.value" spellcheck="false" />
-            <button class="param-delete" @click="removeParam(params.findIndex(x => x.key === p.key))" title="删除">
+            <button class="param-delete" @click="removeParam(params.findIndex(x => x.key === p.key))" :title="langData.modelConfig_deleteParam">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </div>
@@ -551,7 +563,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
           <div v-if="showAddParam" class="add-param-row">
             <input class="field-input param-key" v-model="newParamKey" :placeholder="langData.modelConfig_paramName" />
             <input class="field-input param-val" v-model="newParamVal" :placeholder="langData.modelConfig_paramValue" />
-            <button class="add-param-confirm" @click="addCustomParam()">确认</button>
+            <button class="add-param-confirm" @click="addCustomParam()">{{ langData.modelConfig_confirm }}</button>
             <button class="param-delete" @click="showAddParam = false; newParamKey = ''; newParamVal = ''">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>

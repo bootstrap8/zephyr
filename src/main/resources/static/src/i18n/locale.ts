@@ -61,6 +61,9 @@ const locale: any = {
 
         // 对话区域
         "chatArea_emptySub": "开始一段新的对话",
+        "chatArea_timeDaysAgo": "{n}天前",
+        "chatArea_filesUploaded": "[上传了 {n} 个文件]",
+        "chatArea_toolExecutionError": "工具执行错误",
 
         // 输入区域
         "inputArea_placeholder": "Ctrl+Enter 发送 · Shift+Enter 换行",
@@ -78,6 +81,7 @@ const locale: any = {
         "inputArea_thinking": "推理",
         "inputArea_fileTooLarge": "文件大小不能超过 10MB",
         "inputArea_uploadFailed": "上传失败",
+        "inputArea_newWorkspace": "新建工作空间",
 
         // 消息气泡
         "msgBubble_copy": "复制",
@@ -93,6 +97,8 @@ const locale: any = {
         "toolCard_success": "成功",
         "toolCard_failed": "失败",
         "toolCard_running": "运行中",
+        "toolCard_inputParams": "输入参数",
+        "toolCard_result": "返回结果",
 
         // 设置面板
         "settingsPanel_title": "设置",
@@ -107,6 +113,7 @@ const locale: any = {
         "settingsPanel_noMcp": "无",
         "settingsPanel_noMemory": "无",
         "settingsPanel_memorySummary": "用户 {user}  项目 {project}",
+        "settingsPanel_workspace": "工作空间",
 
         // 模型配置
         "modelConfig_title": "模型配置",
@@ -138,6 +145,19 @@ const locale: any = {
         "modelConfig_templateLabel": "参数模板",
         "modelConfig_templateCustom": "自定义（无模板）",
         "modelConfig_budgetCustom": "自定义 token 数",
+        "modelConfig_selectModel": "-- 选择模型 --",
+        "modelConfig_clearKey": "清除已保存的 Key",
+        "modelConfig_deleteParam": "删除",
+        "modelConfig_confirm": "确认",
+        "modelConfig_thinkingAlwaysOn": "始终开启",
+        "modelConfig_thinkingAlwaysOff": "始终关闭",
+        "modelConfig_paramTip_temperature": "控制输出随机性，值越高回复越多样，越低越确定",
+        "modelConfig_paramTip_topP": "核采样，仅从累积概率达 top_p 的 token 中采样",
+        "modelConfig_paramTip_maxTokens": "模型单次回复的最大 token 数",
+        "modelConfig_paramTip_frequencyPenalty": "降低模型重复相同词的倾向，正值减少重复",
+        "modelConfig_paramTip_presencePenalty": "鼓励模型谈论新话题，正值增加话题多样性",
+        "modelConfig_paramTip_reasoningEffort": "推理模型的思考深度（low / medium / high），仅部分模型支持",
+        "modelConfig_paramTip_requestTimeout": "请求 LLM API 的超时等待时间（秒）",
 
         // 系统命令
         "cmd_clearChat": "清空当前对话",
@@ -174,6 +194,7 @@ const locale: any = {
         "mcpMgmt_addMcpServer": "添加 MCP 服务器",
         "mcpMgmt_confirmDeleteTitle": "确认删除",
         "mcpMgmt_confirmDeleteMsg": "删除服务器 \"{name}\" 及其所有工具？",
+        "mcpMgmt_deleteToolMsg": "确定要删除工具 \"{name}\" 吗？此操作不可恢复。",
         "mcpMgmt_serverName": "服务器名称",
         "mcpMgmt_serverNamePlaceholder": "例如 filesystem、github-api",
         "mcpMgmt_transport": "传输方式",
@@ -251,6 +272,10 @@ const locale: any = {
         "skillMgmt_filterSource": "全部来源",
         "skillMgmt_noMatch": "没有匹配的 Skill",
         "skillMgmt_noMatchDesc": "尝试调整搜索关键词或来源筛选条件。",
+        "skillMgmt_batchUninstallMsg": "确定要删除选中的 {count} 个 Skill 吗？此操作会同时删除本地文件，不可恢复。",
+        "skillMgmt_batchUninstallTitle": "确认批量删除",
+        "skillMgmt_uninstallSuccess": "已卸载 {count} 个 Skill",
+        "skillMgmt_installSuccess": "成功安装 {count} 个 Skill",
 
         // 记忆管理
         "memoryMgmt_title": "记忆管理",
@@ -272,6 +297,8 @@ const locale: any = {
         "memoryMgmt_updated": "更新于 {date}",
         "memoryMgmt_nameRequired": "请输入名称",
         "memoryMgmt_contentRequired": "请输入内容",
+        "memoryMgmt_typeLabel": "类型",
+        "memoryMgmt_contentLabel": "内容",
 
         // 工作空间管理
         "workspaceMgmt_title": "工作空间管理",
@@ -280,6 +307,17 @@ const locale: any = {
         "workspaceMgmt_noWorkspaceDesc": "在对话页面中点击工作区选择器来创建第一个工作空间。",
         "workspaceMgmt_path": "目录路径",
         "workspaceMgmt_confirmDeleteMsg": "确定删除工作空间 \"{name}\" 吗？此操作不可撤销。",
+
+        // 工作空间对话框
+        "workspaceDialog_title": "新建工作空间",
+        "workspaceDialog_name": "名称",
+        "workspaceDialog_namePlaceholder": "选填，默认取目录最后一级名",
+        "workspaceDialog_directory": "目录",
+        "workspaceDialog_browse": "浏览",
+        "workspaceDialog_selectDir": "选择此目录",
+        "workspaceDialog_create": "创建",
+        "workspaceDialog_creating": "创建中...",
+        "workspaceDialog_pathRequired": "请填写目录路径",
 
         // 上下文
         "context_helpTitle": "可用命令:\n\n/clear — 清空当前对话\n/context — 查看上下文占比\n/resume — 恢复之前的对话\n/help — 查看帮助\n\nCtrl+Enter 发送 · Enter 换行",
@@ -354,6 +392,9 @@ const locale: any = {
 
         // Chat area
         "chatArea_emptySub": "Start a new conversation",
+        "chatArea_timeDaysAgo": "{n} days ago",
+        "chatArea_filesUploaded": "[Uploaded {n} file(s)]",
+        "chatArea_toolExecutionError": "Tool execution error",
 
         // Input area
         "inputArea_placeholder": "Ctrl+Enter to send · Shift+Enter for new line",
@@ -371,6 +412,7 @@ const locale: any = {
         "inputArea_thinking": "Reasoning",
         "inputArea_fileTooLarge": "File size cannot exceed 10MB",
         "inputArea_uploadFailed": "Upload failed",
+        "inputArea_newWorkspace": "New Workspace",
 
         // Message bubble
         "msgBubble_copy": "Copy",
@@ -386,6 +428,8 @@ const locale: any = {
         "toolCard_success": "Success",
         "toolCard_failed": "Failed",
         "toolCard_running": "Running",
+        "toolCard_inputParams": "Input Parameters",
+        "toolCard_result": "Result",
 
         // Settings panel
         "settingsPanel_title": "Settings",
@@ -400,6 +444,7 @@ const locale: any = {
         "settingsPanel_noMcp": "None",
         "settingsPanel_noMemory": "None",
         "settingsPanel_memorySummary": "User {user}  Project {project}",
+        "settingsPanel_workspace": "Workspace",
 
         // Model config
         "modelConfig_title": "Model Configuration",
@@ -431,6 +476,19 @@ const locale: any = {
         "modelConfig_templateLabel": "Parameter Template",
         "modelConfig_templateCustom": "Custom (no template)",
         "modelConfig_budgetCustom": "Custom token count",
+        "modelConfig_selectModel": "-- Select Model --",
+        "modelConfig_clearKey": "Clear saved API Key",
+        "modelConfig_deleteParam": "Delete",
+        "modelConfig_confirm": "Confirm",
+        "modelConfig_thinkingAlwaysOn": "Always On",
+        "modelConfig_thinkingAlwaysOff": "Always Off",
+        "modelConfig_paramTip_temperature": "Controls output randomness. Higher = more diverse, lower = more deterministic.",
+        "modelConfig_paramTip_topP": "Nucleus sampling: only sample from tokens comprising the top_p probability mass.",
+        "modelConfig_paramTip_maxTokens": "Maximum tokens the model can generate in a single response.",
+        "modelConfig_paramTip_frequencyPenalty": "Reduces the model's tendency to repeat words. Positive values reduce repetition.",
+        "modelConfig_paramTip_presencePenalty": "Encourages the model to talk about new topics. Positive values increase topic diversity.",
+        "modelConfig_paramTip_reasoningEffort": "Reasoning depth for thinking models (low / medium / high). Only supported by some models.",
+        "modelConfig_paramTip_requestTimeout": "Timeout in seconds when waiting for LLM API response.",
 
         // Commands
         "cmd_clearChat": "Clear current chat",
@@ -482,6 +540,7 @@ const locale: any = {
         "mcpMgmt_customHeadersPlaceholder": "KEY=VALUE\nOne per line (optional)",
         "mcpMgmt_disconnectTooltip": "Disconnect",
         "mcpMgmt_connectTooltip": "Connect",
+        "mcpMgmt_deleteToolMsg": "Delete tool \"{name}\"? This cannot be undone.",
 
         // Skill Management
         "skillMgmt_title": "Skill Management",
@@ -544,6 +603,10 @@ const locale: any = {
         "skillMgmt_filterSource": "All sources",
         "skillMgmt_noMatch": "No matching Skills",
         "skillMgmt_noMatchDesc": "Try adjusting the search keyword or source filter.",
+        "skillMgmt_batchUninstallMsg": "Delete the selected {count} Skill(s)? This will also remove local files and cannot be undone.",
+        "skillMgmt_batchUninstallTitle": "Confirm Batch Delete",
+        "skillMgmt_uninstallSuccess": "{count} Skill(s) uninstalled",
+        "skillMgmt_installSuccess": "{count} Skill(s) installed successfully",
 
         // Memory Management
         "memoryMgmt_title": "Memory Management",
@@ -565,6 +628,8 @@ const locale: any = {
         "memoryMgmt_updated": "Updated on {date}",
         "memoryMgmt_nameRequired": "Please enter a name",
         "memoryMgmt_contentRequired": "Please enter content",
+        "memoryMgmt_typeLabel": "Type",
+        "memoryMgmt_contentLabel": "Content",
 
         // Workspace Management
         "workspaceMgmt_title": "Workspace Management",
@@ -573,6 +638,17 @@ const locale: any = {
         "workspaceMgmt_noWorkspaceDesc": "Create your first workspace from the chat page workspace selector.",
         "workspaceMgmt_path": "Path",
         "workspaceMgmt_confirmDeleteMsg": "Delete workspace \"{name}\"? This cannot be undone.",
+
+        // Workspace Dialog
+        "workspaceDialog_title": "New Workspace",
+        "workspaceDialog_name": "Name",
+        "workspaceDialog_namePlaceholder": "Optional, defaults to last directory name",
+        "workspaceDialog_directory": "Directory",
+        "workspaceDialog_browse": "Browse",
+        "workspaceDialog_selectDir": "Select this directory",
+        "workspaceDialog_create": "Create",
+        "workspaceDialog_creating": "Creating...",
+        "workspaceDialog_pathRequired": "Please fill in the directory path",
 
         // Context
         "context_helpTitle": "Available commands:\n\n/clear — Clear current chat\n/context — View context usage\n/resume — Resume previous conversation\n/help — View help\n\nCtrl+Enter to send · Enter for new line",
@@ -647,6 +723,9 @@ const locale: any = {
 
         // Chat area
         "chatArea_emptySub": "新しい会話を始める",
+        "chatArea_timeDaysAgo": "{n}日前",
+        "chatArea_filesUploaded": "[{n} 個のファイルをアップロード]",
+        "chatArea_toolExecutionError": "ツール実行エラー",
 
         // Input area
         "inputArea_placeholder": "Ctrl+Enter 送信 · Shift+Enter 改行",
@@ -664,6 +743,7 @@ const locale: any = {
         "inputArea_thinking": "推論",
         "inputArea_fileTooLarge": "ファイルサイズは10MBを超えることはできません",
         "inputArea_uploadFailed": "アップロード失敗",
+        "inputArea_newWorkspace": "新規ワークスペース",
 
         // Message bubble
         "msgBubble_copy": "コピー",
@@ -679,6 +759,8 @@ const locale: any = {
         "toolCard_success": "成功",
         "toolCard_failed": "失敗",
         "toolCard_running": "実行中",
+        "toolCard_inputParams": "入力パラメータ",
+        "toolCard_result": "結果",
 
         // Settings panel
         "settingsPanel_title": "設定",
@@ -693,6 +775,7 @@ const locale: any = {
         "settingsPanel_noMcp": "なし",
         "settingsPanel_noMemory": "なし",
         "settingsPanel_memorySummary": "ユーザー {user}  プロジェクト {project}",
+        "settingsPanel_workspace": "ワークスペース",
 
         // Model config
         "modelConfig_title": "モデル設定",
@@ -724,6 +807,19 @@ const locale: any = {
         "modelConfig_templateLabel": "パラメータテンプレート",
         "modelConfig_templateCustom": "カスタム（テンプレートなし）",
         "modelConfig_budgetCustom": "カスタムトークン数",
+        "modelConfig_selectModel": "-- モデルを選択 --",
+        "modelConfig_clearKey": "保存されたAPIキーをクリア",
+        "modelConfig_deleteParam": "削除",
+        "modelConfig_confirm": "確認",
+        "modelConfig_thinkingAlwaysOn": "常にオン",
+        "modelConfig_thinkingAlwaysOff": "常にオフ",
+        "modelConfig_paramTip_temperature": "出力のランダム性を制御します。高いほど多様、低いほど決定的。",
+        "modelConfig_paramTip_topP": "核サンプリング：累積確率がtop_pに達するトークンのみからサンプリング。",
+        "modelConfig_paramTip_maxTokens": "モデルが1回の応答で生成できる最大トークン数。",
+        "modelConfig_paramTip_frequencyPenalty": "同じ単語の繰り返し傾向を減らします。正の値で繰り返しを抑制。",
+        "modelConfig_paramTip_presencePenalty": "新しいトピックについて話すよう促します。正の値でトピックの多様性が増加。",
+        "modelConfig_paramTip_reasoningEffort": "思考モデルの推論深度（low / medium / high）。一部のモデルのみ対応。",
+        "modelConfig_paramTip_requestTimeout": "LLM API応答待ちのタイムアウト時間（秒）。",
 
         // Commands
         "cmd_clearChat": "現在の会話をクリア",
@@ -775,6 +871,7 @@ const locale: any = {
         "mcpMgmt_customHeadersPlaceholder": "KEY=VALUE\n1行に1つ（任意）",
         "mcpMgmt_disconnectTooltip": "切断",
         "mcpMgmt_connectTooltip": "接続",
+        "mcpMgmt_deleteToolMsg": "ツール \"{name}\" を削除しますか？この操作は元に戻せません。",
 
         // Skill Management
         "skillMgmt_title": "Skill 管理",
@@ -837,6 +934,10 @@ const locale: any = {
         "skillMgmt_filterSource": "すべてのソース",
         "skillMgmt_noMatch": "一致する Skill がありません",
         "skillMgmt_noMatchDesc": "検索キーワードまたはソースフィルターを調整してください。",
+        "skillMgmt_batchUninstallMsg": "選択した {count} 個の Skill を削除しますか？ローカルファイルも削除され、元に戻せません。",
+        "skillMgmt_batchUninstallTitle": "一括削除の確認",
+        "skillMgmt_uninstallSuccess": "{count} 個の Skill をアンインストールしました",
+        "skillMgmt_installSuccess": "{count} 個の Skill を正常にインストールしました",
 
         // Memory Management
         "memoryMgmt_title": "メモリ管理",
@@ -858,6 +959,8 @@ const locale: any = {
         "memoryMgmt_updated": "更新日: {date}",
         "memoryMgmt_nameRequired": "名前を入力してください",
         "memoryMgmt_contentRequired": "内容を入力してください",
+        "memoryMgmt_typeLabel": "タイプ",
+        "memoryMgmt_contentLabel": "内容",
 
         // ワークスペース管理
         "workspaceMgmt_title": "ワークスペース管理",
@@ -866,6 +969,17 @@ const locale: any = {
         "workspaceMgmt_noWorkspaceDesc": "チャットページのワークスペースセレクターから最初のワークスペースを作成してください。",
         "workspaceMgmt_path": "パス",
         "workspaceMgmt_confirmDeleteMsg": "ワークスペース \"{name}\" を削除しますか？この操作は元に戻せません。",
+
+        // ワークスペースダイアログ
+        "workspaceDialog_title": "新規ワークスペース",
+        "workspaceDialog_name": "名前",
+        "workspaceDialog_namePlaceholder": "任意、デフォルトは最終ディレクトリ名",
+        "workspaceDialog_directory": "ディレクトリ",
+        "workspaceDialog_browse": "参照",
+        "workspaceDialog_selectDir": "このディレクトリを選択",
+        "workspaceDialog_create": "作成",
+        "workspaceDialog_creating": "作成中...",
+        "workspaceDialog_pathRequired": "ディレクトリパスを入力してください",
 
         // Context
         "context_helpTitle": "使用可能なコマンド:\n\n/clear — 現在の会話をクリア\n/context — コンテキスト使用率を表示\n/resume — 前の会話を復元\n/help — ヘルプを表示\n\nCtrl+Enter 送信 · Enter 改行",

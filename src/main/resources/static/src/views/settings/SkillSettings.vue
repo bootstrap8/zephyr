@@ -50,14 +50,14 @@ async function doBatchUninstall() {
   if (count === 0) return
   try {
     await ElMessageBox.confirm(
-      `确定要删除选中的 ${count} 个 Skill 吗？此操作会同时删除本地文件，不可恢复。`,
-      '确认批量删除',
-      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+      langData.skillMgmt_batchUninstallMsg.replace('{count}', String(count)),
+      langData.skillMgmt_batchUninstallTitle,
+      { confirmButtonText: langData.btnDelete, cancelButtonText: langData.btnCancel, type: 'warning' }
     )
     batchDeleting.value = true
     await store.batchUninstallSkills([...selectedIds.value])
     selectedIds.value = new Set()
-    ElMessage.success(`已卸载 ${count} 个 Skill`)
+    ElMessage.success(langData.skillMgmt_uninstallSuccess.replace('{count}', String(count)))
   } catch (_) {} finally { batchDeleting.value = false }
 }
 
@@ -143,7 +143,7 @@ async function doInstall() {
     showInstallDialog.value = false
     const body = result?.body
     if (Array.isArray(body) && body.length > 0) {
-      ElMessage.success(`成功安装 ${body.length} 个 Skill`)
+      ElMessage.success(langData.skillMgmt_installSuccess.replace('{count}', String(body.length)))
     }
   } catch (_) {
   } finally {
@@ -239,11 +239,11 @@ function goBack() { window.history.back() }
       <el-input
         v-model="filterKeyword"
         class="filter-input"
-        :placeholder="langData.skillMgmt_searchPlaceholder || '搜索名称、描述...'"
+        :placeholder="langData.skillMgmt_searchPlaceholder"
         clearable
       />
-      <el-select v-model="filterSource" class="filter-select" :placeholder="langData.skillMgmt_filterSource || '全部来源'" clearable>
-        <el-option label="全部来源" value="" />
+      <el-select v-model="filterSource" class="filter-select" :placeholder="langData.skillMgmt_filterSource" clearable>
+        <el-option :label="langData.skillMgmt_filterSource" value="" />
         <el-option :label="langData.skillMgmt_source_builtin" value="builtin" />
         <el-option :label="langData.skillMgmt_source_git" value="git" />
         <el-option :label="langData.skillMgmt_source_url" value="url" />
@@ -268,7 +268,7 @@ function goBack() { window.history.back() }
     <div v-if="filteredSkills.length > 0" class="batch-bar">
       <label class="batch-check" @click.stop>
         <input type="checkbox" :checked="selectedIds.size === filteredSkills.length && filteredSkills.length > 0" @change="toggleBatchSelectAll" />
-        <span class="batch-label">{{ langData.skillMgmt_selectAll || '全选' }} ({{ selectedIds.size }})</span>
+        <span class="batch-label">{{ langData.skillMgmt_selectAll }} ({{ selectedIds.size }})</span>
       </label>
       <button
         v-if="selectedIds.size > 0"
@@ -276,7 +276,7 @@ function goBack() { window.history.back() }
         :disabled="batchDeleting"
         @click="doBatchUninstall"
       >
-        <Icon icon="lucide:trash-2" width="14" /> {{ langData.skillMgmt_batchUninstall || '批量删除' }}
+        <Icon icon="lucide:trash-2" width="14" /> {{ langData.skillMgmt_batchUninstall }}
       </button>
     </div>
 
@@ -310,8 +310,8 @@ function goBack() { window.history.back() }
 
     <div v-if="store.skills.length > 0 && filteredSkills.length === 0" class="empty-result">
       <Icon icon="lucide:search" class="empty-icon" />
-      <h3 class="empty-title">{{ langData.skillMgmt_noMatch || '没有匹配的 Skill' }}</h3>
-      <p class="empty-desc">{{ langData.skillMgmt_noMatchDesc || '尝试调整搜索关键词或来源筛选条件。' }}</p>
+      <h3 class="empty-title">{{ langData.skillMgmt_noMatch }}</h3>
+      <p class="empty-desc">{{ langData.skillMgmt_noMatchDesc }}</p>
     </div>
 
     <!-- 安装弹窗 -->

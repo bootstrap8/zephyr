@@ -77,11 +77,11 @@ onMounted(() => { if (isRunning.value) startTimer() })
     <!-- 展开详情 -->
     <div v-if="!collapsed && hasDetails" class="tool-body">
       <div v-if="inputStr" class="tool-section">
-        <div class="tool-section-label">输入参数</div>
+        <div class="tool-section-label">{{ langData.toolCard_inputParams }}</div>
         <pre class="tool-json">{{ inputStr }}</pre>
       </div>
       <div v-if="tool.output" class="tool-section">
-        <div class="tool-section-label">返回结果</div>
+        <div class="tool-section-label">{{ langData.toolCard_result }}</div>
         <pre class="tool-json">{{ tool.output }}</pre>
       </div>
     </div>

@@ -4,7 +4,9 @@ import { useWorkspaceStore } from '@/store/workspace'
 import { Icon } from '@iconify/vue'
 import axios from '@/network'
 import { msg } from '@/utils/Utils'
+import { getLangData } from '@/i18n/locale'
 
+const langData = getLangData()
 const emit = defineEmits<{ close: [] }>()
 const workspaceStore = useWorkspaceStore()
 const name = ref('')
@@ -52,7 +54,7 @@ function selectCurrentDir() {
 }
 
 function onSubmit() {
-  if (!path.value.trim()) { msg('请填写目录路径', 'warning'); return }
+  if (!path.value.trim()) { msg(langData.workspaceDialog_pathRequired, 'warning'); return }
   saving.value = true
   axios({
     url: '/workspace/create',
@@ -77,21 +79,21 @@ function onSubmit() {
     <div class="ws-dialog-overlay" @click="emit('close')"></div>
     <div class="ws-dialog">
       <div class="ws-dialog-header">
-        <span>新建工作空间</span>
+        <span>{{ langData.workspaceDialog_title }}</span>
         <button class="ws-dialog-close" @click="emit('close')">
           <Icon icon="lucide:x" />
         </button>
       </div>
       <div class="ws-dialog-body">
         <label class="ws-field">
-          <span>名称</span>
-          <input v-model="name" class="ws-input" placeholder="选填，默认取目录最后一级名" @keydown.enter="onSubmit" />
+          <span>{{ langData.workspaceDialog_name }}</span>
+          <input v-model="name" class="ws-input" :placeholder="langData.workspaceDialog_namePlaceholder" @keydown.enter="onSubmit" />
         </label>
         <label class="ws-field">
-          <span>目录</span>
+          <span>{{ langData.workspaceDialog_directory }}</span>
           <div class="ws-dir-row">
             <input v-model="path" class="ws-input ws-dir-input" placeholder="/Users/hbq/my-project" @keydown.enter="onSubmit" />
-            <button class="ws-btn ws-btn-browse" @click="openBrowser">浏览</button>
+            <button class="ws-btn ws-btn-browse" @click="openBrowser">{{ langData.workspaceDialog_browse }}</button>
           </div>
         </label>
 
@@ -100,9 +102,9 @@ function onSubmit() {
           <div class="ws-browser-head">
             <Icon icon="lucide:folder-open" class="ws-browser-icon" />
             <span class="ws-browser-path">{{ browserPath }}</span>
-            <button class="ws-btn ws-btn-select" @click="selectCurrentDir">选择此目录</button>
+            <button class="ws-btn ws-btn-select" @click="selectCurrentDir">{{ langData.workspaceDialog_selectDir }}</button>
           </div>
-          <div v-if="browserLoading" class="ws-browser-loading">加载中...</div>
+          <div v-if="browserLoading" class="ws-browser-loading">{{ langData.inputArea_loading }}</div>
           <div v-else class="ws-browser-list">
             <div v-for="d in dirs" :key="d.path" class="ws-browser-item" @click="onDirClick(d)">
               <Icon :icon="d.name === '..' ? 'lucide:corner-up-left' : 'lucide:folder'" class="ws-browser-item-icon" />
@@ -112,9 +114,9 @@ function onSubmit() {
         </div>
       </div>
       <div class="ws-dialog-footer">
-        <button class="ws-btn ws-btn-cancel" @click="emit('close')">取消</button>
+        <button class="ws-btn ws-btn-cancel" @click="emit('close')">{{ langData.btnCancel }}</button>
         <button class="ws-btn ws-btn-confirm" :disabled="saving" @click="onSubmit">
-          {{ saving ? '创建中...' : '创建' }}
+          {{ saving ? langData.workspaceDialog_creating : langData.workspaceDialog_create }}
         </button>
       </div>
     </div>
