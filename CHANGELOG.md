@@ -2,6 +2,17 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
 
+## [1.1.0] - 2026-06-12
+
+### 新增
+
+- **知识库功能**：支持创建知识库、上传文档（PDF/Word/Markdown/TXT 等），自动解析、切分、向量化存储
+- **知识库检索**：`search_knowledge` 内置工具，对话中勾选知识库后模型可主动检索相关文档片段
+- **Embedding 模型支持**：模型配置支持对话模型和 Embedding 模型分类管理
+- **Chroma 向量数据库集成**：本地 embed 模式 + 生产独立部署，OkHttp HTTP 客户端封装
+- **文档处理流水线**：Apache Tika 文本提取 → 递归字符切分 → Embedding 向量化 → Chroma 存储
+- **对话级知识库选择**：对话中可勾选/取消知识库，切换对话自动恢复勾选状态
+
 ## [1.0.2] - 2026-06-12
 
 ### 新增
