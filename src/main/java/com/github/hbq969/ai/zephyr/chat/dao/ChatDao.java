@@ -24,4 +24,5 @@ public interface ChatDao {
     List<MessageEntity> queryMessages(@Param("conversationId") String conversationId);
     void insertMessage(MessageEntity entity);
     void deleteMessagesByConvId(@Param("conversationId") String conversationId);
+    void updateWorkspace(@Param("id") String id, @Param("workspaceId") String workspaceId, @Param("userName") String userName);
 }

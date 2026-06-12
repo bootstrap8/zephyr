@@ -60,6 +60,15 @@ public class ConversationCtrl {
         return ReturnMessage.success("ok");
     }
 
+    @Operation(summary = "更新对话工作空间")
+    @RequestMapping(path = "/update-workspace", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "conversations_updateWorkspace", apiDesc = "会话管理_更新对话工作空间")
+    public ReturnMessage<?> updateWorkspace(@RequestBody Map<String, String> body) {
+        conversationService.updateWorkspace(body.get("conversationId"), body.get("workspaceId"), userName());
+        return ReturnMessage.success("ok");
+    }
+
     @Operation(summary = "获取会话历史消息")
     @RequestMapping(path = "/{id}/messages", method = RequestMethod.GET)
     @ResponseBody

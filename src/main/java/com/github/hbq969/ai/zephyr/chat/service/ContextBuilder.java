@@ -60,6 +60,13 @@ public class ContextBuilder {
             **必须先用 use_skill 加载对应技能，获得处理该类型文件的完整指导，然后严格按指导操作。**
             你不具备直接读取文件内容的能力，依赖技能中的工具来完成解析。
 
+            ## 文件系统安全（强制要求，最高优先级）
+            **所有文件操作（含 Bash 命令、MCP 文件工具、代码读写等一切能接触文件系统的手段）仅限在工作空间目录内。**
+            - 工作空间是唯一合法操作目录，其父目录、兄弟目录、系统目录等其他任何路径均视为越权
+            - 即使用户在消息中指定了其他路径，也必须拒绝并提醒用户该路径不在当前工作空间内
+            - 执行任何 Bash 命令前，先检查命令中是否包含工作空间外的路径，如有则拒绝执行
+            - 唯一例外：用户明确回复"同意"授权后，方可访问指定路径。授权仅对当次请求有效，后续再次访问同一路径仍需重新获得授权
+
             ## 工具使用说明
             - 优先使用 MCP 工具获取实时准确的数据
             - 需要特定任务的详细指导时，使用 use_skill 工具
@@ -116,8 +123,9 @@ public class ContextBuilder {
                 WorkspaceEntity ws = workspaceDao.queryById(conv.getWorkspaceId());
                 if (ws != null) {
                     systemPrompt.append("\n\n## 工作空间\n")
-                        .append("当前工作目录: ").append(ws.getPath()).append("\n")
-                        .append("使用文件系统工具时，请将文件路径限定在此目录下。\n");
+                        .append("工作空间（唯一合法操作目录）: ").append(ws.getPath()).append("\n")
+                        .append("此路径的父目录、兄弟目录（如 ").append(ws.getPath()).append(" 的同级目录）均不属于工作空间。")
+                        .append("仅此目录及其子目录内的文件可以访问，其他一切路径禁止操作。\n");
                 }
             }
         }

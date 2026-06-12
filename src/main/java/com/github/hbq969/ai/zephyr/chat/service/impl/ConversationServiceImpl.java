@@ -83,6 +83,16 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
+    @Transactional
+    public void updateWorkspace(String id, String workspaceId, String userName) {
+        ConversationEntity conv = chatDao.queryConversationById(id);
+        if (conv == null || !conv.getUserName().equals(userName)) {
+            throw new RuntimeException("无权限或记录不存在");
+        }
+        chatDao.updateWorkspace(id, workspaceId, userName);
+    }
+
+    @Override
     public Map<String, Object> getMessages(String conversationId, String userName) {
         ConversationEntity conv = chatDao.queryConversationById(conversationId);
         if (conv == null || !conv.getUserName().equals(userName)) {

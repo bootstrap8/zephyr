@@ -11,4 +11,5 @@ public interface ConversationService {
     void rename(Map<String, String> body, String userName);
     void delete(String id, String userName);
     Map<String, Object> getMessages(String conversationId, String userName);
+    void updateWorkspace(String id, String workspaceId, String userName);
 }

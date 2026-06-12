@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Workspace } from '@/types/chat'
+import axios from '@/network'
+import { useConversationsStore } from './conversations'
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   const workspaces = ref<Workspace[]>([])
@@ -16,6 +18,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   function selectWorkspace(id: string | null) {
     currentId.value = id
+    const convStore = useConversationsStore()
+    if (id && convStore.currentId) {
+      axios({ url: '/conversations/update-workspace', method: 'post',
+        data: { conversationId: convStore.currentId, workspaceId: id } })
+    }
   }
 
   function addWorkspace(ws: Workspace) {

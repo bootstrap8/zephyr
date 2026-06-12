@@ -49,4 +49,9 @@
         delete from zephyr_messages where conversation_id = #{conversationId}
     </delete>
 
+    <update id="updateWorkspace">
+        update zephyr_conversations set workspace_id = #{workspaceId}
+        where id = #{id} and user_name = #{userName}
+    </update>
+
 </mapper>
