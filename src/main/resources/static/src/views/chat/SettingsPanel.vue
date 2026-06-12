@@ -3,9 +3,7 @@ import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/store/settings'
 import { useWorkspaceStore } from '@/store/workspace'
-import { useConversationsStore } from '@/store/conversations'
 import { Icon } from '@iconify/vue'
-import { msg } from '@/utils/Utils'
 import axios from '@/network'
 import { getLangData } from '@/i18n/locale'
 
@@ -15,11 +13,6 @@ const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
-const convStore = useConversationsStore()
-
-const kbList = ref<any[]>([])
-const selectedKbIds = ref<string[]>([])
-const convKbLoading = ref(false)
 
 watch(() => props.visible, (v) => {
   if (v) {
@@ -27,42 +20,8 @@ watch(() => props.visible, (v) => {
     axios({ url: '/workspace/list', method: 'get' }).then(res => {
       if (res.data.state === 'OK') workspaceStore.setWorkspaces(res.data.body || [])
     }).catch(() => {})
-    loadKbData()
   }
 })
-
-function loadKbData() {
-  const convId = convStore.currentId
-  // Load KB list
-  axios({ url: '/knowledge/kb/list', method: 'get' }).then(res => {
-    if (res.data.state === 'OK') kbList.value = res.data.body || []
-  }).catch(() => {})
-  // Load selected KBs for current conversation
-  if (convId) {
-    convKbLoading.value = true
-    axios({ url: '/knowledge/conversation/kb/list', method: 'get', params: { conversationId: convId } })
-      .then(res => {
-        convKbLoading.value = false
-        if (res.data.state === 'OK') selectedKbIds.value = res.data.body || []
-      })
-      .catch(() => { convKbLoading.value = false })
-  } else {
-    selectedKbIds.value = []
-  }
-}
-
-function toggleKb(kbId: string) {
-  const convId = convStore.currentId
-  if (!convId) return
-  const idx = selectedKbIds.value.indexOf(kbId)
-  if (idx >= 0) {
-    selectedKbIds.value.splice(idx, 1)
-  } else {
-    selectedKbIds.value.push(kbId)
-  }
-  axios({ url: '/knowledge/conversation/kb/save', method: 'post', data: { conversationId: convId, kbIds: [...selectedKbIds.value] } })
-    .catch(() => msg(langData.axiosRequestErr, 'error'))
-}
 
 const isDark = ref(false)
 if (typeof document !== 'undefined') isDark.value = document.documentElement.classList.contains('dark')
@@ -117,7 +76,6 @@ function toggleDark() {
         <div class="sp-item" @click="goTo('/settings/knowledge')">
           <Icon icon="lucide:library" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_knowledgeMgmt }}</span>
-          <span class="sp-value">{{ kbList.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', kbList.length) : langData.settingsPanel_noMcp }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
         <div class="sp-item" @click="goTo('/settings/workspace')">
@@ -135,22 +93,6 @@ function toggleDark() {
             :class="{ on: isDark }"
             @click.stop="toggleDark()"
           ></span>
-        </div>
-        <div v-if="convStore.currentId" class="kb-select-section">
-          <div class="kb-section-title">
-            <Icon icon="lucide:book-open" class="kb-section-icon" />
-            <span>{{ langData.settingsPanel_kbSelect }}</span>
-          </div>
-          <div v-if="convKbLoading" class="kb-loading">{{ langData.inputArea_loading }}</div>
-          <div v-else-if="kbList.length === 0" class="kb-empty">{{ langData.knowledgeMgmt_noKb }}</div>
-          <div v-else class="kb-checkbox-list">
-            <div v-for="kb in kbList" :key="kb.id" class="kb-checkbox-item" @click="toggleKb(kb.id)">
-              <span class="kb-checkbox-box" :class="{ checked: selectedKbIds.includes(kb.id) }">
-                <Icon v-if="selectedKbIds.includes(kb.id)" icon="lucide:check" class="kb-check-icon" />
-              </span>
-              <span class="kb-checkbox-label">{{ kb.name }}</span>
-            </div>
-          </div>
         </div>
       </div>
       <div class="sp-footer">
@@ -185,18 +127,4 @@ html.dark .sp-body::-webkit-scrollbar-thumb { background: var(--el-text-color-pl
 .sp-btn { padding: 6px 18px; border-radius: 8px; border: none; background: var(--el-fill-color); color: var(--el-text-color-primary); cursor: pointer; font-size: 14px; font-family: inherit; }
 .sp-btn:hover { background: var(--el-border-color); }
 
-.kb-select-section { padding: 12px 0; border-top: 1px solid var(--el-border-color); margin-top: 4px; }
-.kb-section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--el-text-color-primary); margin-bottom: 10px; }
-.kb-section-icon { color: var(--el-color-primary); font-size: 15px; }
-.kb-loading { font-size: 12px; color: var(--el-text-color-placeholder); padding: 4px 0; }
-.kb-empty { font-size: 12px; color: var(--el-text-color-placeholder); padding: 4px 0; }
-.kb-checkbox-list { display: flex; flex-direction: column; gap: 2px; max-height: 160px; overflow-y: auto; }
-.kb-checkbox-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--el-text-color-primary); transition: background 0.1s; }
-.kb-checkbox-item:hover { background: var(--el-fill-color-light); }
-.kb-checkbox-box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--el-border-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
-.kb-checkbox-box.checked { background: var(--el-color-primary); border-color: var(--el-color-primary); }
-.kb-check-icon { color: #fff; font-size: 12px; }
-.kb-checkbox-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-html.dark .kb-checkbox-item:hover { background: var(--el-fill-color); }
 </style>
