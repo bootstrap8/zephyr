@@ -15,10 +15,14 @@ public interface SkillDao {
 
     List<SkillConfigEntity> queryByUserName(@Param("userName") String userName);
     List<SkillConfigEntity> queryEnabledByUserName(@Param("userName") String userName);
+    List<SkillConfigEntity> queryShared();
     SkillConfigEntity queryById(@Param("id") String id);
     SkillConfigEntity queryBySkillName(@Param("skillName") String skillName, @Param("userName") String userName);
+    SkillConfigEntity queryBySkillNameAndScope(@Param("skillName") String skillName, @Param("scope") String scope);
 
     void insert(SkillConfigEntity entity);
     void delete(@Param("id") String id, @Param("userName") String userName);
+    void deleteById(@Param("id") String id);
     void toggle(@Param("id") String id, @Param("enabled") Integer enabled, @Param("userName") String userName);
+    void toggleById(@Param("id") String id, @Param("enabled") Integer enabled);
 }

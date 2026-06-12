@@ -1,4 +1,6 @@
 ALTER TABLE zephyr_mcp_tools ADD COLUMN IF NOT EXISTS parameters_json text;
+
+ALTER TABLE zephyr_skill_configs ADD COLUMN IF NOT EXISTS scope varchar(16) DEFAULT 'user';
 alter table zephyr_model_configs add column if not exists params text;
 
 alter table zephyr_conversations add column if not exists workspace_id varchar(64);

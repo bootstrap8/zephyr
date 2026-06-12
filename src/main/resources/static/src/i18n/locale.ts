@@ -279,6 +279,13 @@ const locale: any = {
         "skillMgmt_batchUninstallTitle": "确认批量删除",
         "skillMgmt_uninstallSuccess": "已卸载 {count} 个 Skill",
         "skillMgmt_installSuccess": "成功安装 {count} 个 Skill",
+        "skillMgmt_scope": "安装范围",
+        "skillMgmt_scope_user": "个人",
+        "skillMgmt_scope_shared": "共享",
+        "skillMgmt_scope_user_badge": "个人",
+        "skillMgmt_scope_shared_badge": "共享",
+        "skillMgmt_sharedSection": "共享 Skill",
+        "skillMgmt_userSection": "我的 Skill",
 
         // 记忆管理
         "memoryMgmt_title": "记忆管理",
@@ -613,6 +620,13 @@ const locale: any = {
         "skillMgmt_batchUninstallTitle": "Confirm Batch Delete",
         "skillMgmt_uninstallSuccess": "{count} Skill(s) uninstalled",
         "skillMgmt_installSuccess": "{count} Skill(s) installed successfully",
+        "skillMgmt_scope": "Install Scope",
+        "skillMgmt_scope_user": "User",
+        "skillMgmt_scope_shared": "Shared",
+        "skillMgmt_scope_user_badge": "User",
+        "skillMgmt_scope_shared_badge": "Shared",
+        "skillMgmt_sharedSection": "Shared Skills",
+        "skillMgmt_userSection": "My Skills",
 
         // Memory Management
         "memoryMgmt_title": "Memory Management",
@@ -947,6 +961,13 @@ const locale: any = {
         "skillMgmt_batchUninstallTitle": "一括削除の確認",
         "skillMgmt_uninstallSuccess": "{count} 個の Skill をアンインストールしました",
         "skillMgmt_installSuccess": "{count} 個の Skill を正常にインストールしました",
+        "skillMgmt_scope": "インストール範囲",
+        "skillMgmt_scope_user": "個人",
+        "skillMgmt_scope_shared": "共有",
+        "skillMgmt_scope_user_badge": "個人",
+        "skillMgmt_scope_shared_badge": "共有",
+        "skillMgmt_sharedSection": "共有 Skill",
+        "skillMgmt_userSection": "マイ Skill",
 
         // Memory Management
         "memoryMgmt_title": "メモリ管理",

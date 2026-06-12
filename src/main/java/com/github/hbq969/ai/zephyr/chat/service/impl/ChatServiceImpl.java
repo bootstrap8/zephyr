@@ -353,7 +353,7 @@ public class ChatServiceImpl implements ChatService {
             String content;
             try {
                 content = switch (tc.getName()) {
-                    case "use_skill" -> executeUseSkill(tc.getArguments().get("skill_name").toString());
+                    case "use_skill" -> executeUseSkill(tc.getArguments().get("skill_name").toString(), userName);
                     case "use_memory" -> executeUseMemory(tc.getArguments().get("memory_name").toString(), userName);
                     default -> executeMcpTool(tc.getName(), tc.getArguments(), userName);
                 };
@@ -421,10 +421,23 @@ public class ChatServiceImpl implements ChatService {
         return s;
     }
 
-    private String executeUseSkill(String skillName) {
-        // pack:skill 格式 → pack/skill 路径
+    private String executeUseSkill(String skillName, String userName) {
         String relativePath = skillName.replace(':', '/');
-        Path skillMd = Paths.get(cfg.getSkills().getHome(), relativePath, "SKILL.md");
+
+        // 1. 用户私有 skill 优先
+        Path userSkillMd = Paths.get(cfg.getSkills().getHome(), userName, relativePath, "SKILL.md");
+        String result = readSkillFile(userSkillMd);
+        if (result != null) return result;
+
+        // 2. fallback 到共享 skill
+        Path sharedSkillMd = Paths.get(cfg.getSkills().getHome(), "share", relativePath, "SKILL.md");
+        result = readSkillFile(sharedSkillMd);
+        if (result != null) return result;
+
+        return "技能 " + skillName + " 不存在";
+    }
+
+    private String readSkillFile(Path skillMd) {
         if (Files.exists(skillMd)) {
             try {
                 String raw = Files.readString(skillMd);
@@ -433,7 +446,6 @@ public class ChatServiceImpl implements ChatService {
                 return "读取技能失败: " + e.getMessage();
             }
         }
-        // 搜索子目录
         Path parent = skillMd.getParent();
         if (Files.isDirectory(parent)) {
             try {
@@ -449,7 +461,7 @@ public class ChatServiceImpl implements ChatService {
                 }
             } catch (IOException ignored) {}
         }
-        return "技能 " + skillName + " 不存在";
+        return null;
     }
 
     private String executeUseMemory(String memoryName, String userName) {

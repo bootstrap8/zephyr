@@ -55,21 +55,25 @@ public class ChatCtrl {
     }
 
     @Operation(summary = "获取当前用户信息")
+    @SuppressWarnings("serial")
     @RequestMapping(path = "/whoami", method = RequestMethod.GET)
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "chat_whoami", apiDesc = "聊天接口_获取当前用户")
     public ReturnMessage<?> whoami() {
-        UserInfo ui = UserContext.getNoCheck();
+        com.github.hbq969.code.sm.login.model.UserInfo ui = UserContext.getNoCheck();
         if (ui == null) {
-            return ReturnMessage.success(new java.util.HashMap<String, String>() {{
+            return ReturnMessage.success(new java.util.HashMap<String, Object>() {{
                 put("username", "admin");
                 put("avatar", "A");
+                put("isAdmin", false);
             }});
         }
         String uname = ui.getUserName();
-        return ReturnMessage.success(new java.util.HashMap<String, String>() {{
+        boolean admin = ui.isAdmin();
+        return ReturnMessage.success(new java.util.HashMap<String, Object>() {{
             put("username", uname);
             put("avatar", uname.substring(0, 1).toUpperCase());
+            put("isAdmin", admin);
         }});
     }
 

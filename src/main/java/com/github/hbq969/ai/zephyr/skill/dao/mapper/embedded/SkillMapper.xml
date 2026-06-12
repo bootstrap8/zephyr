@@ -10,6 +10,7 @@
       skill_name varchar(128) not null,
       display_name varchar(256),
       description text,
+      scope varchar(16) default 'user',
       source varchar(32) not null,
       source_url varchar(1024),
       version varchar(32),

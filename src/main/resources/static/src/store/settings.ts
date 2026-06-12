@@ -14,6 +14,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const mcpServers = ref<McpServer[]>([])
   const mcpToolCount = ref(0)
   const skills = ref<SkillConfig[]>([])
+  const isAdmin = ref(false)
   const memories = ref<MemoryItem[]>([])
   const contextUsed = ref(0)
   const contextLoaded = ref(false)
@@ -190,7 +191,7 @@ export const useSettingsStore = defineStore('settings', () => {
       if (res.data.state === 'OK' && Array.isArray(res.data.body)) {
         skills.value = res.data.body.map((s: any) => ({
           id: s.id, skillName: s.skillName, displayName: s.displayName,
-          description: s.description, source: s.source, sourceUrl: s.sourceUrl,
+          description: s.description, scope: s.scope || 'user', source: s.source, sourceUrl: s.sourceUrl,
           version: s.version, enabled: s.enabled, installPath: s.installPath,
           createdAt: s.createdAt, updatedAt: s.updatedAt
         }))
@@ -204,9 +205,10 @@ export const useSettingsStore = defineStore('settings', () => {
     return res.data
   }
 
-  async function uploadSkill(file: File) {
+  async function uploadSkill(file: File, scope?: string) {
     const formData = new FormData()
     formData.append('file', file)
+    if (scope) formData.append('scope', scope)
     const res = await axios({
       url: '/skill/upload', method: 'post',
       data: formData,
@@ -237,10 +239,10 @@ export const useSettingsStore = defineStore('settings', () => {
     return []
   }
 
-  async function syncInstallSkills(platform: string, skillNames: string[]) {
+  async function syncInstallSkills(platform: string, skillNames: string[], scope?: string) {
     const res = await axios({
       url: '/skill/sync-install', method: 'post',
-      data: { platform, skillNames: skillNames.join(',') }
+      data: { platform, skillNames: skillNames.join(','), scope: scope || 'user' }
     })
     if (res.data.state === 'OK') await loadSkills()
     return res.data
@@ -304,8 +306,17 @@ export const useSettingsStore = defineStore('settings', () => {
     return false
   }
 
+  async function loadUserInfo() {
+    try {
+      const res = await axios({ url: '/chat/whoami', method: 'get' })
+      if (res.data.state === 'OK' && res.data.body) {
+        isAdmin.value = res.data.body.isAdmin === true
+      }
+    } catch (_) {}
+  }
+
   return {
-    currentModel, models, mcpServers, mcpToolCount, skills, memories,
+    currentModel, models, mcpServers, mcpToolCount, skills, isAdmin, memories,
     contextUsed, contextLoaded, contextTotal, contextPercent, contextDetail,
     setModel, addModel,
     loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote, detectCtxRaw, fetchModels,
@@ -313,7 +324,7 @@ export const useSettingsStore = defineStore('settings', () => {
     loadMcpServers, createMcpServer, updateMcpServer, deleteMcpServer,
     connectMcpServer, disconnectMcpServer,
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, loadMcpToolCount,
-    loadSkills, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
+    loadSkills, loadUserInfo, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
     syncScanSkills, syncInstallSkills,
     loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory
   }

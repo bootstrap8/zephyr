@@ -11,6 +11,7 @@ const langData = getLangData()
 
 const showInstallDialog = ref(false)
 const installMethod = ref<'git' | 'url' | 'local' | 'upload' | 'sync' | 'marketplace'>('git')
+const installScope = ref<'user' | 'shared'>('user')
 const gitUrl = ref('')
 const gitBranch = ref('main')
 const downloadUrl = ref('')
@@ -31,6 +32,7 @@ const detailSkill = ref<SkillConfig | null>(null)
 const showDetail = ref(false)
 
 const selectedIds = ref<Set<string>>(new Set())
+const activeTab = ref('shared')
 const batchDeleting = ref(false)
 
 function toggleSelect(id: string) {
@@ -61,7 +63,7 @@ async function doBatchUninstall() {
   } catch (_) {} finally { batchDeleting.value = false }
 }
 
-onMounted(async () => { await store.loadSkills() })
+onMounted(async () => { await Promise.all([store.loadSkills(), store.loadUserInfo()]) })
 
 // 搜索过滤
 const filterKeyword = ref('')
@@ -83,6 +85,11 @@ const filteredSkills = computed(() => {
   list.sort((a, b) => (a.skillName || '').localeCompare(b.skillName || ''))
   return list
 })
+
+const sharedSkills = computed(() => filteredSkills.value.filter(s => s.scope === 'shared'))
+const userSkills = computed(() => filteredSkills.value.filter(s => s.scope !== 'shared'))
+
+const canManageShared = computed(() => store.isAdmin)
 
 function clearFilters() {
   filterKeyword.value = ''
@@ -125,16 +132,16 @@ async function doInstall() {
     let result: any
     if (installMethod.value === 'git') {
       if (!gitUrl.value.trim()) return
-      result = await store.installSkill({ source: 'git', url: gitUrl.value.trim(), branch: gitBranch.value.trim() || 'main' })
+      result = await store.installSkill({ source: 'git', url: gitUrl.value.trim(), branch: gitBranch.value.trim() || 'main', scope: installScope.value })
     } else if (installMethod.value === 'url') {
       if (!downloadUrl.value.trim()) return
-      result = await store.installSkill({ source: 'url', url: downloadUrl.value.trim() })
+      result = await store.installSkill({ source: 'url', url: downloadUrl.value.trim(), scope: installScope.value })
     } else if (installMethod.value === 'local') {
       if (!localPath.value.trim()) return
-      result = await store.installSkill({ source: 'local', path: localPath.value.trim() })
+      result = await store.installSkill({ source: 'local', path: localPath.value.trim(), scope: installScope.value })
     } else if (installMethod.value === 'upload') {
       if (!uploadFile.value) return
-      result = await store.uploadSkill(uploadFile.value)
+      result = await store.uploadSkill(uploadFile.value, installScope.value)
     } else if (installMethod.value === 'sync') {
       showInstallDialog.value = false
       await openSyncPanel()
@@ -182,7 +189,7 @@ async function doSyncInstall() {
   if (selectedSyncSkills.value.size === 0) return
   syncing.value = true
   try {
-    await store.syncInstallSkills(currentPlatform.value, [...selectedSyncSkills.value])
+    await store.syncInstallSkills(currentPlatform.value, [...selectedSyncSkills.value], installScope.value)
     showSyncPanel.value = false
     showInstallDialog.value = false
   } finally {
@@ -280,33 +287,75 @@ function goBack() { window.history.back() }
       </button>
     </div>
 
-    <div v-if="filteredSkills.length > 0" class="skill-list">
-      <div v-for="s in filteredSkills" :key="s.id ?? s.skillName" class="skill-card" @click="showSkillDetail(s)">
-        <label class="card-check" @click.stop>
-          <input type="checkbox" :checked="s.id ? selectedIds.has(s.id) : false" @change="s.id && toggleSelect(s.id)" />
-        </label>
-        <div class="skill-icon" :class="s.source">
-          <Icon :icon="s.source === 'builtin' ? 'lucide:star' : s.source === 'git' ? 'lucide:git-branch' : s.source === 'sync' ? 'lucide:refresh-cw' : s.source === 'upload' ? 'lucide:package' : 'lucide:puzzle'" width="18" />
-        </div>
-        <div class="skill-info">
-          <div class="skill-name">{{ s.skillName || s.displayName }}</div>
-          <div v-if="s.description" class="skill-desc">{{ s.description }}</div>
-          <div class="skill-meta">
-            <span class="badge badge-source" :class="'src-' + s.source">{{ sourceTag[s.source] ?? s.source }}</span>
-            <span v-if="s.version" class="badge badge-version">{{ 'v' + s.version }}</span>
+    <el-tabs v-if="filteredSkills.length > 0" v-model="activeTab" class="skill-tabs">
+      <el-tab-pane :label="(langData.skillMgmt_sharedSection || '共享 Skill') + ' (' + sharedSkills.length + ')'" name="shared">
+        <div v-if="sharedSkills.length > 0" class="skill-list">
+          <div v-for="s in sharedSkills" :key="s.id ?? s.skillName" class="skill-card" @click="showSkillDetail(s)">
+            <label class="card-check" @click.stop>
+              <input type="checkbox" :checked="s.id ? selectedIds.has(s.id) : false" @change="s.id && toggleSelect(s.id)" :disabled="!canManageShared" />
+            </label>
+            <div class="skill-icon" :class="s.source">
+              <Icon :icon="s.source === 'builtin' ? 'lucide:star' : s.source === 'git' ? 'lucide:git-branch' : s.source === 'sync' ? 'lucide:refresh-cw' : s.source === 'upload' ? 'lucide:package' : 'lucide:puzzle'" width="18" />
+            </div>
+            <div class="skill-info">
+              <div class="skill-name">{{ s.skillName || s.displayName }}</div>
+              <div v-if="s.description" class="skill-desc">{{ s.description }}</div>
+              <div class="skill-meta">
+                <span class="badge badge-scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
+                <span class="badge badge-source" :class="'src-' + s.source">{{ sourceTag[s.source] ?? s.source }}</span>
+                <span v-if="s.version" class="badge badge-version">{{ 'v' + s.version }}</span>
+              </div>
+            </div>
+            <div v-if="canManageShared" class="skill-actions" @click.stop>
+              <label class="toggle-switch" :title="s.enabled ? langData.skillMgmt_disabled : langData.skillMgmt_enabled">
+                <input type="checkbox" :checked="s.enabled" @change="doToggle(s)" />
+                <span class="toggle-slider"></span>
+              </label>
+              <button class="btn-icon" @click="confirmUninstall(s)" :title="langData.skillMgmt_uninstall">
+                <Icon icon="lucide:trash-2" width="15" />
+              </button>
+            </div>
           </div>
         </div>
-        <div class="skill-actions" @click.stop>
-          <label class="toggle-switch" :title="s.enabled ? langData.skillMgmt_disabled : langData.skillMgmt_enabled">
-            <input type="checkbox" :checked="s.enabled" @change="doToggle(s)" />
-            <span class="toggle-slider"></span>
-          </label>
-          <button class="btn-icon" @click="confirmUninstall(s)" :title="langData.skillMgmt_uninstall">
-            <Icon icon="lucide:trash-2" width="15" />
-          </button>
+        <div v-else class="empty-result">
+          <Icon icon="lucide:inbox" class="empty-icon" />
+          <p class="empty-desc">{{ langData.skillMgmt_noShared || '暂无共享 Skill' }}</p>
         </div>
-      </div>
-    </div>
+      </el-tab-pane>
+      <el-tab-pane :label="(langData.skillMgmt_userSection || '我的 Skill') + ' (' + userSkills.length + ')'" name="user">
+        <div v-if="userSkills.length > 0" class="skill-list">
+          <div v-for="s in userSkills" :key="s.id ?? s.skillName" class="skill-card" @click="showSkillDetail(s)">
+            <label class="card-check" @click.stop>
+              <input type="checkbox" :checked="s.id ? selectedIds.has(s.id) : false" @change="s.id && toggleSelect(s.id)" />
+            </label>
+            <div class="skill-icon" :class="s.source">
+              <Icon :icon="s.source === 'builtin' ? 'lucide:star' : s.source === 'git' ? 'lucide:git-branch' : s.source === 'sync' ? 'lucide:refresh-cw' : s.source === 'upload' ? 'lucide:package' : 'lucide:puzzle'" width="18" />
+            </div>
+            <div class="skill-info">
+              <div class="skill-name">{{ s.skillName || s.displayName }}</div>
+              <div v-if="s.description" class="skill-desc">{{ s.description }}</div>
+              <div class="skill-meta">
+                <span class="badge badge-source" :class="'src-' + s.source">{{ sourceTag[s.source] ?? s.source }}</span>
+                <span v-if="s.version" class="badge badge-version">{{ 'v' + s.version }}</span>
+              </div>
+            </div>
+            <div class="skill-actions" @click.stop>
+              <label class="toggle-switch" :title="s.enabled ? langData.skillMgmt_disabled : langData.skillMgmt_enabled">
+                <input type="checkbox" :checked="s.enabled" @change="doToggle(s)" />
+                <span class="toggle-slider"></span>
+              </label>
+              <button class="btn-icon" @click="confirmUninstall(s)" :title="langData.skillMgmt_uninstall">
+                <Icon icon="lucide:trash-2" width="15" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-result">
+          <Icon icon="lucide:inbox" class="empty-icon" />
+          <p class="empty-desc">{{ langData.skillMgmt_noUser || '暂无个人 Skill' }}</p>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
 
     <div v-if="store.skills.length > 0 && filteredSkills.length === 0" class="empty-result">
       <Icon icon="lucide:search" class="empty-icon" />
@@ -333,6 +382,26 @@ function goBack() { window.history.back() }
                 <Icon :icon="m.icon" width="14" />
                 <span>{{ m.label }}</span>
               </button>
+            </div>
+
+            <div v-if="canManageShared" class="scope-toggle">
+              <label class="form-label">{{ langData.skillMgmt_scope || '安装范围' }}</label>
+              <div class="scope-segmented">
+                <button
+                  :class="{ active: installScope === 'user' }"
+                  @click="installScope = 'user'"
+                >
+                  <Icon icon="lucide:user" width="14" />
+                  <span>{{ langData.skillMgmt_scope_user || '个人' }}</span>
+                </button>
+                <button
+                  :class="{ active: installScope === 'shared' }"
+                  @click="installScope = 'shared'"
+                >
+                  <Icon icon="lucide:users" width="14" />
+                  <span>{{ langData.skillMgmt_scope_shared || '共享' }}</span>
+                </button>
+              </div>
             </div>
 
             <template v-if="installMethod === 'git'">
@@ -584,6 +653,8 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 .btn-sm { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .btn-sm:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.skill-tabs { margin-top: 4px; }
+
 /* Card checkbox */
 .card-check { display: flex; align-items: center; flex-shrink: 0; cursor: pointer; }
 .card-check input { accent-color: var(--el-color-primary); width: 15px; height: 15px; }
@@ -628,6 +699,7 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 .badge-source.src-git { background: rgba(232,141,74,0.12); color: #e88d4a; }
 .badge-source.src-sync { background: rgba(99,102,241,0.12); color: #6366f1; }
 .badge-source.src-upload { background: rgba(93,184,114,0.12); color: var(--el-color-success); }
+.badge-scope-shared { background: rgba(204,120,92,0.12); color: var(--el-color-primary); }
 .badge-version { background: var(--el-fill-color); color: var(--el-text-color-placeholder); font-family: monospace; }
 
 .skill-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -638,6 +710,7 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 .toggle-slider::after { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 200ms; }
 .toggle-switch input:checked + .toggle-slider { background: var(--el-color-primary); }
 .toggle-switch input:checked + .toggle-slider::after { transform: translateX(16px); }
+.toggle-slider.disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 9999; }
@@ -652,6 +725,12 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 36px; font-weigh
 .method-tabs button { display: flex; align-items: center; gap: 4px; flex: 1; padding: 7px 6px; border-radius: 6px; border: none; background: transparent; font-size: 12px; color: var(--el-text-color-secondary); cursor: pointer; font-family: inherit; justify-content: center; transition: all 200ms; white-space: nowrap; }
 .method-tabs button.active { background: var(--el-bg-color); color: var(--el-text-color-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 .method-tabs button:hover:not(.active) { color: var(--el-text-color-primary); }
+
+.scope-toggle { margin-bottom: 16px; }
+.scope-segmented { display: flex; gap: 0; padding: 3px; background: var(--el-fill-color-lighter); border-radius: 8px; }
+.scope-segmented button { display: flex; align-items: center; gap: 5px; flex: 1; padding: 8px 12px; border-radius: 6px; border: none; background: transparent; font-size: 13px; color: var(--el-text-color-secondary); cursor: pointer; font-family: inherit; justify-content: center; transition: all 200ms; }
+.scope-segmented button.active { background: var(--el-bg-color); color: var(--el-text-color-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.scope-segmented button:hover:not(.active) { color: var(--el-text-color-primary); }
 
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--el-text-color-primary); margin-bottom: 6px; }

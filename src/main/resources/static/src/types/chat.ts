@@ -93,6 +93,7 @@ export interface SkillConfig {
   skillName: string
   displayName: string
   description: string
+  scope?: 'user' | 'shared'
   source: 'builtin' | 'git' | 'url' | 'local' | 'upload' | 'sync' | 'marketplace'
   sourceUrl?: string
   version?: string

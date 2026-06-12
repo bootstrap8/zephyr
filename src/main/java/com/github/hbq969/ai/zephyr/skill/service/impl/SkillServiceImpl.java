@@ -9,6 +9,9 @@ import com.github.hbq969.ai.zephyr.skill.dao.SkillDao;
 import com.github.hbq969.ai.zephyr.skill.dao.entity.SkillConfigEntity;
 import com.github.hbq969.ai.zephyr.skill.model.SkillVO;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
+import com.github.hbq969.code.sm.login.model.UserInfo;
+import com.github.hbq969.code.sm.login.session.UserContext;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,18 +34,119 @@ public class SkillServiceImpl implements SkillService {
 
     @Resource private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
-
     @Resource
     private SkillDao skillDao;
 
+    private static final String SCOPE_USER = "user";
+    private static final String SCOPE_SHARED = "shared";
+
+    private Path skillDir(String userName) {
+        Path dir = Paths.get(cfg.getSkills().getHome(), userName);
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            throw new RuntimeException("无法创建Skill目录: " + dir, e);
+        }
+        return dir;
+    }
+
+    private Path sharedDir() {
+        Path dir = Paths.get(cfg.getSkills().getHome(), "share");
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            throw new RuntimeException("无法创建共享Skill目录: " + dir, e);
+        }
+        return dir;
+    }
+
+    private boolean isAdmin(String userName) {
+        UserInfo ui = UserContext.getNoCheck();
+        return ui != null && ui.isAdmin();
+    }
+
+    private void checkSharedManage(String userName) {
+        if (!isAdmin(userName)) throw new RuntimeException("仅 admin 可管理共享 Skill");
+    }
+
+    // === 迁移 ===
+
+    @PostConstruct
+    public void migrateOldSkills() {
+        Path home = Paths.get(cfg.getSkills().getHome());
+        Path marker = home.resolve(".migrated-to-isolation");
+        if (Files.exists(marker)) return;
+
+        File[] children = home.toFile().listFiles(File::isDirectory);
+        if (children == null) return;
+
+        Path share = sharedDir();
+        int moved = 0;
+        for (File child : children) {
+            // 跳过 share 目录和用户目录（用户名可能是 admin 等已有账户）
+            String name = child.getName();
+            if ("share".equals(name)) continue;
+
+            Path childPath = child.toPath();
+            Path skillMd = childPath.resolve("SKILL.md");
+            if (!Files.exists(skillMd)) continue;
+
+            Path dest = share.resolve(name);
+            if (Files.exists(dest)) {
+                log.info("迁移跳过（目标已存在）: {} -> {}", childPath, dest);
+                continue;
+            }
+            try {
+                Files.move(childPath, dest);
+                moved++;
+                log.info("迁移旧 Skill: {} -> {}", childPath, dest);
+            } catch (IOException e) {
+                log.warn("迁移失败: {} -> {}: {}", childPath, dest, e.getMessage());
+            }
+        }
+
+        if (moved > 0) {
+            // 更新数据库 install_path
+            List<SkillConfigEntity> all = skillDao.queryByUserName("admin");
+            for (SkillConfigEntity e : all) {
+                String oldBase = cfg.getSkills().getHome();
+                String newPrefix = cfg.getSkills().getHome() + "/share/";
+                String newPath = e.getInstallPath().replace(oldBase + "/", newPrefix);
+                if (!newPath.equals(e.getInstallPath())) {
+                    e.setInstallPath(newPath);
+                    e.setScope(SCOPE_SHARED);
+                    skillDao.toggleById(e.getId(), e.getEnabled());
+                    log.info("迁移 DB install_path: {} -> {}", e.getInstallPath(), newPath);
+                }
+            }
+        }
+
+        try {
+            Files.createFile(marker);
+        } catch (IOException e) {
+            log.warn("创建迁移标记文件失败", e);
+        }
+        log.info("Skill 迁移完成，共移动 {} 个目录", moved);
+    }
+
+    // === API ===
+
     @Override
     public List<SkillVO> list(String userName) {
-        List<SkillConfigEntity> entities = skillDao.queryByUserName(userName);
-        List<SkillVO> vos = new ArrayList<>();
-        for (SkillConfigEntity e : entities) {
-            vos.add(SkillVO.fromEntity(e));
+        List<SkillConfigEntity> own = skillDao.queryByUserName(userName);
+        List<SkillConfigEntity> shared = skillDao.queryShared();
+
+        Map<String, SkillVO> dedup = new LinkedHashMap<>();
+        // 共享 skill 先放进 map
+        for (SkillConfigEntity e : shared) {
+            dedup.put(e.getSkillName(), SkillVO.fromEntity(e));
         }
-        return vos;
+        // 用户私有覆盖同名共享
+        for (SkillConfigEntity e : own) {
+            dedup.put(e.getSkillName(), SkillVO.fromEntity(e));
+        }
+
+        return new ArrayList<>(dedup.values());
     }
 
     @Override
@@ -52,6 +156,8 @@ public class SkillServiceImpl implements SkillService {
         String url = body.getOrDefault("url", "");
         String path = body.getOrDefault("path", "");
         String branch = body.getOrDefault("branch", "main");
+        String scope = body.getOrDefault("scope", SCOPE_USER);
+        if (SCOPE_SHARED.equals(scope)) checkSharedManage(userName);
 
         Path tmpDir = null;
         try {
@@ -99,7 +205,10 @@ public class SkillServiceImpl implements SkillService {
             }
             String fallbackName = extractSourceName(source, url, path);
             String packName = detectPackName(tmpDir, skillRoots, fallbackName);
-            return installSkills(tmpDir, skillRoots, packName, source, url, userName);
+            if ("git".equals(source) && packName == null) {
+                packName = fallbackName;
+            }
+            return installSkills(tmpDir, skillRoots, packName, source, url, scope, userName);
         } catch (IOException e) {
             throw new RuntimeException("安装失败: " + e.getMessage(), e);
         } finally {
@@ -109,7 +218,8 @@ public class SkillServiceImpl implements SkillService {
 
     @Override
     @Transactional
-    public List<SkillVO> upload(MultipartFile file, String userName) {
+    public List<SkillVO> upload(MultipartFile file, String scope, String userName) {
+        if (SCOPE_SHARED.equals(scope)) checkSharedManage(userName);
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
             throw new IllegalArgumentException("文件名为空");
@@ -144,14 +254,13 @@ public class SkillServiceImpl implements SkillService {
                     ? originalFilename.substring(0, originalFilename.lastIndexOf('.'))
                     : originalFilename;
             String packName = detectPackName(tmpDir, skillRoots, fallbackName);
-            return installSkills(tmpDir, skillRoots, packName, "upload", originalFilename, userName);
+            return installSkills(tmpDir, skillRoots, packName, "upload", originalFilename, scope != null ? scope : SCOPE_USER, userName);
         } catch (IOException e) {
             throw new RuntimeException("上传失败: " + e.getMessage(), e);
         } finally {
             if (tmpDir != null) FileUtil.del(tmpDir.toFile());
         }
     }
-
 
     @Override
     public List<SkillVO> syncScan(String userName) {
@@ -181,6 +290,7 @@ public class SkillServiceImpl implements SkillService {
                 vo.setSource("sync");
                 vo.setPlatform(entry.getKey());
                 vo.setPlatformPath(skillDir.getAbsolutePath());
+                vo.setScope(SCOPE_USER);
                 vo.setEnabled(false);
                 result.add(vo);
             }
@@ -193,6 +303,8 @@ public class SkillServiceImpl implements SkillService {
     public List<SkillVO> syncInstall(Map<String, String> body, String userName) {
         String platform = body.get("platform");
         String skillNamesStr = body.getOrDefault("skillNames", "");
+        String scope = body.getOrDefault("scope", SCOPE_USER);
+        if (SCOPE_SHARED.equals(scope)) checkSharedManage(userName);
         if (skillNamesStr.isEmpty()) return Collections.emptyList();
 
         String[] skillNames = skillNamesStr.split(",");
@@ -204,19 +316,24 @@ public class SkillServiceImpl implements SkillService {
         String platformPath = platforms.get(platform);
         if (platformPath == null) throw new IllegalArgumentException("未知平台: " + platform);
 
+        Path destBase = SCOPE_SHARED.equals(scope) ? sharedDir() : skillDir(userName);
         List<SkillVO> installed = new ArrayList<>();
         for (String skillName : skillNames) {
             skillName = skillName.trim();
             Path srcDir = Paths.get(platformPath, skillName);
             if (!Files.isDirectory(srcDir)) continue;
 
-            Path destDir = Paths.get(cfg.getSkills().getHome(), skillName);
-            deleteAndCopyDir(srcDir, destDir);
-
-            SkillConfigEntity existing = skillDao.queryBySkillName(skillName, userName);
-            if (existing == null) {
-                installed.add(insertSkillConfig(destDir, skillName, "sync", srcDir.toString(), userName));
+            SkillConfigEntity existing = SCOPE_SHARED.equals(scope)
+                    ? skillDao.queryBySkillNameAndScope(skillName, SCOPE_SHARED)
+                    : skillDao.queryBySkillName(skillName, userName);
+            if (existing != null) {
+                log.warn("Skill {} 已安装，跳过", skillName);
+                continue;
             }
+
+            Path destDir = destBase.resolve(skillName);
+            deleteAndCopyDir(srcDir, destDir);
+            installed.add(insertSkillConfig(destDir, skillName, scope, "sync", srcDir.toString(), userName));
         }
         return installed;
     }
@@ -224,7 +341,15 @@ public class SkillServiceImpl implements SkillService {
     @Override
     @Transactional
     public void toggle(String id, Integer enabled, String userName) {
-        skillDao.toggle(id, enabled, userName);
+        SkillConfigEntity entity = skillDao.queryById(id);
+        if (entity == null) throw new RuntimeException("记录不存在");
+        if (SCOPE_SHARED.equals(entity.getScope())) {
+            checkSharedManage(userName);
+            skillDao.toggleById(id, enabled);
+        } else {
+            if (!entity.getUserName().equals(userName)) throw new RuntimeException("无权限");
+            skillDao.toggle(id, enabled, userName);
+        }
     }
 
     @Override
@@ -239,29 +364,40 @@ public class SkillServiceImpl implements SkillService {
     @Transactional
     public void uninstall(String id, String userName) {
         SkillConfigEntity entity = skillDao.queryById(id);
-        if (entity == null || !entity.getUserName().equals(userName)) {
-            throw new RuntimeException("无权限或记录不存在");
+        if (entity == null) throw new RuntimeException("记录不存在");
+
+        if (SCOPE_SHARED.equals(entity.getScope())) {
+            checkSharedManage(userName);
+        } else {
+            if (!entity.getUserName().equals(userName)) throw new RuntimeException("无权限");
         }
-        Path skillDir = Paths.get(entity.getInstallPath());
-        if (Files.exists(skillDir)) {
-            FileUtil.del(skillDir.toFile());
+
+        Path skillDirPath = Paths.get(entity.getInstallPath());
+        if (Files.exists(skillDirPath)) {
+            FileUtil.del(skillDirPath.toFile());
         }
         // 如果 skillName 包含 pack: 前缀，检查 pack 目录是否为空，空则删除
         String skillName = entity.getSkillName();
         int colonIdx = skillName.indexOf(':');
         if (colonIdx > 0) {
-            Path packDir = Paths.get(cfg.getSkills().getHome(), skillName.substring(0, colonIdx));
-            if (Files.isDirectory(packDir)) {
-                String[] remaining = packDir.toFile().list();
+            Path parent = skillDirPath.getParent();
+            if (Files.isDirectory(parent)) {
+                String[] remaining = parent.toFile().list();
                 if (remaining == null || remaining.length == 0) {
-                    FileUtil.del(packDir.toFile());
+                    FileUtil.del(parent.toFile());
                 }
             }
         }
-        skillDao.delete(id, userName);
+        if (SCOPE_SHARED.equals(entity.getScope())) {
+            skillDao.deleteById(id);
+        } else {
+            skillDao.delete(id, userName);
+        }
     }
 
-    private SkillVO insertSkillConfig(Path destDir, String skillName, String source, String sourceUrl, String userName) {
+    // === internal helpers ===
+
+    private SkillVO insertSkillConfig(Path destDir, String skillName, String scope, String source, String sourceUrl, String userName) {
         Path skillMd = destDir.resolve("SKILL.md");
         Map<String, String> meta = Files.exists(skillMd) ? parseSkillMd(skillMd) : Collections.emptyMap();
 
@@ -271,6 +407,7 @@ public class SkillServiceImpl implements SkillService {
         entity.setSkillName(skillName);
         entity.setDisplayName(meta.getOrDefault("name", skillName));
         entity.setDescription(meta.getOrDefault("description", ""));
+        entity.setScope(scope);
         entity.setSource(source);
         entity.setSourceUrl(sourceUrl);
         entity.setVersion(meta.getOrDefault("version", ""));
@@ -283,13 +420,9 @@ public class SkillServiceImpl implements SkillService {
         return SkillVO.fromEntity(entity);
     }
 
-    /**
-     * 递归查找所有 SKILL.md 文件，返回每个 skill 根目录（SKILL.md 所在目录）的列表。
-     */
     private List<Path> findSkillRoots(Path dir) {
         List<Path> result = new ArrayList<>();
         collectSkillMdDirs(dir, result);
-        // 如果 dir 自身有 SKILL.md 且没在子目录中找到 → 单 skill
         if (result.isEmpty() && Files.exists(dir.resolve("SKILL.md"))) {
             result.add(dir);
         }
@@ -311,11 +444,6 @@ public class SkillServiceImpl implements SkillService {
         }
     }
 
-    /**
-     * 判定是否组合包并返回包名。只有 1 个 skill 返回 null（无包）。
-     * 包名取所有 skill 根目录相对于 tmpDir 的公共前缀的第一级。
-     * 如果 tmpDir 自身有 SKILL.md，取其 name 字段。
-     */
     private String detectPackName(Path tmpDir, List<Path> skillRoots, String fallbackName) {
         if (skillRoots.size() <= 1) return null;
         Path topSkillMd = tmpDir.resolve("SKILL.md");
@@ -324,7 +452,6 @@ public class SkillServiceImpl implements SkillService {
             String name = meta.get("name");
             if (name != null && !name.isEmpty()) return name;
         }
-        // 找所有 skill 根目录相对于 tmpDir 的公共前缀第一级
         Path first = tmpDir.relativize(skillRoots.get(0));
         if (first.getNameCount() > 0) {
             String prefix = first.getName(0).toString();
@@ -334,7 +461,6 @@ public class SkillServiceImpl implements SkillService {
                     return fallbackName;
                 }
             }
-            // skills 是中间层标记，不是包名
             if (!"skills".equals(prefix) && !prefix.isEmpty()) {
                 return prefix;
             }
@@ -342,16 +468,16 @@ public class SkillServiceImpl implements SkillService {
         return fallbackName;
     }
 
-    /** 从来源 URL/路径中提取项目名，作为组合包名的回退值。 */
     private String extractSourceName(String source, String url, String path) {
         return switch (source) {
             case "git" -> {
                 String name = url.substring(url.lastIndexOf('/') + 1);
                 if (name.endsWith(".git")) name = name.substring(0, name.length() - 4);
-                // GitHub URL 使用 owner/org 作为 pack 名，如 github.com/anthropics/skills.git → anthropics
                 Matcher m = Pattern.compile("github\\.com[:/]([^/]+)/([^/]+)").matcher(url);
                 if (m.find()) {
-                    name = m.group(1);
+                    String repo = m.group(2);
+                    if (repo.endsWith(".git")) repo = repo.substring(0, repo.length() - 4);
+                    name = m.group(1) + "-" + repo;
                 }
                 yield name;
             }
@@ -370,24 +496,27 @@ public class SkillServiceImpl implements SkillService {
     }
 
     private List<SkillVO> installSkills(Path tmpDir, List<Path> skillRoots, String packName,
-                                         String source, String sourceUrl, String userName) {
+                                         String source, String sourceUrl, String scope, String userName) {
+        Path destBase = SCOPE_SHARED.equals(scope) ? sharedDir() : skillDir(userName);
         List<SkillVO> installed = new ArrayList<>();
         for (Path skillRoot : skillRoots) {
             String skillName = detectSkillName(skillRoot);
             String fullName = packName != null ? packName + ":" + skillName : skillName;
 
-            SkillConfigEntity existing = skillDao.queryBySkillName(fullName, userName);
+            SkillConfigEntity existing = SCOPE_SHARED.equals(scope)
+                    ? skillDao.queryBySkillNameAndScope(fullName, SCOPE_SHARED)
+                    : skillDao.queryBySkillName(fullName, userName);
             if (existing != null) {
                 log.warn("Skill {} 已安装，跳过", fullName);
                 continue;
             }
 
             Path destDir = packName != null
-                    ? Paths.get(cfg.getSkills().getHome(), packName, skillName)
-                    : Paths.get(cfg.getSkills().getHome(), skillName);
+                    ? destBase.resolve(packName).resolve(skillName)
+                    : destBase.resolve(skillName);
 
             deleteAndCopyDir(skillRoot, destDir);
-            installed.add(insertSkillConfig(destDir, fullName, source, sourceUrl, userName));
+            installed.add(insertSkillConfig(destDir, fullName, scope, source, sourceUrl, userName));
         }
         return installed;
     }
@@ -447,12 +576,7 @@ public class SkillServiceImpl implements SkillService {
         }
     }
 
-    /**
-     * 先删除目标目录（如果存在），再将源目录的*内容*复制到目标目录。
-     * 完全使用 NIO 实现，确保不会出现嵌套目录问题。
-     */
     private static void deleteAndCopyDir(Path src, Path dest) {
-        // 递归删除目标
         if (Files.exists(dest)) {
             try (Stream<Path> stream = Files.walk(dest)) {
                 stream.sorted(Comparator.reverseOrder())
@@ -463,13 +587,11 @@ public class SkillServiceImpl implements SkillService {
                 throw new RuntimeException("删除目标目录失败: " + dest, e);
             }
         }
-        // 创建目标目录
         try {
             Files.createDirectories(dest);
         } catch (IOException e) {
             throw new RuntimeException("创建目录失败: " + dest, e);
         }
-        // NIO 递归复制源目录内容到目标（不嵌套）
         try (Stream<Path> stream = Files.walk(src)) {
             stream.forEach(source -> {
                 try {

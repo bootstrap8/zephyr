@@ -1,5 +1,7 @@
 ALTER TABLE zephyr_mcp_tools ADD COLUMN IF NOT EXISTS parameters_json text;
 
+ALTER TABLE zephyr_skill_configs ADD COLUMN IF NOT EXISTS scope varchar(16) DEFAULT 'user';
+
 delete from h_sm_info where app='zephyr';
 insert into h_sm_info(app,info_content) values('zephyr','{"title":"Zephyr智能体"}');
 

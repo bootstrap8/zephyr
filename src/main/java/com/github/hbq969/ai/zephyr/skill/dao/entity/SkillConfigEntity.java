@@ -9,6 +9,7 @@ public class SkillConfigEntity {
     private String skillName;
     private String displayName;
     private String description;
+    private String scope = "user";
     private String source;
     private String sourceUrl;
     private String version;

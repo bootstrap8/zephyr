@@ -46,8 +46,9 @@ public class SkillCtrl {
     @RequestMapping(path = "/upload", method = RequestMethod.POST)
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "skill_upload", apiDesc = "Skill管理_上传压缩包安装Skill")
-    public ReturnMessage<?> upload(@RequestParam("file") MultipartFile file) {
-        return ReturnMessage.success(skillService.upload(file, userName()));
+    public ReturnMessage<?> upload(@RequestParam("file") MultipartFile file,
+                                   @RequestParam(value = "scope", defaultValue = "user") String scope) {
+        return ReturnMessage.success(skillService.upload(file, scope, userName()));
     }
 
     @Operation(summary = "扫描本地平台可同步的Skill")

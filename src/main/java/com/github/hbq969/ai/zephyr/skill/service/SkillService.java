@@ -12,7 +12,7 @@ public interface SkillService {
 
     List<SkillVO> install(Map<String, String> body, String userName);
 
-    List<SkillVO> upload(MultipartFile file, String userName);
+    List<SkillVO> upload(MultipartFile file, String scope, String userName);
 
     List<SkillVO> syncScan(String userName);
 

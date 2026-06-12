@@ -9,6 +9,7 @@ public class SkillVO {
     private String skillName;
     private String displayName;
     private String description;
+    private String scope;
     private String source;
     private String sourceUrl;
     private String version;
@@ -25,6 +26,7 @@ public class SkillVO {
         vo.setSkillName(e.getSkillName());
         vo.setDisplayName(e.getDisplayName() != null ? e.getDisplayName() : e.getSkillName());
         vo.setDescription(e.getDescription());
+        vo.setScope(e.getScope());
         vo.setSource(e.getSource());
         vo.setSourceUrl(e.getSourceUrl());
         vo.setVersion(e.getVersion());

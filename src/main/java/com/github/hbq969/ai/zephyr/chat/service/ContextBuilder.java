@@ -236,13 +236,26 @@ public class ContextBuilder {
                 enabledSkills.size(), enabledSkills,
                 disabledSkills.size(), disabledSkills);
 
-        List<SkillConfigEntity> skills = skillDao.queryEnabledByUserName(userName);
+        // 用户私有 + 共享合并，用户私有覆盖同名共享
+        Map<String, SkillConfigEntity> dedup = new LinkedHashMap<>();
+        List<SkillConfigEntity> sharedSkills = skillDao.queryShared();
+        for (SkillConfigEntity s : sharedSkills) {
+            if (s.getEnabled() != null && s.getEnabled() == 1) {
+                dedup.put(s.getSkillName(), s);
+            }
+        }
+        List<SkillConfigEntity> userSkills = skillDao.queryEnabledByUserName(userName);
+        for (SkillConfigEntity s : userSkills) {
+            dedup.put(s.getSkillName(), s);
+        }
+
         Set<String> seen = new HashSet<>();
-        for (SkillConfigEntity s : skills) {
+        for (SkillConfigEntity s : dedup.values()) {
             sb.append("- ").append(s.getSkillName()).append(": ").append(s.getDescription()).append("\n");
             seen.add(s.getSkillName());
         }
-        // Also include synced skills from local directories
+
+        // 补充本地方可同步的 skill（未被 DB 记录覆盖的）
         List<SkillVO> synced = skillService.syncScan(userName);
         for (SkillVO s : synced) {
             if (seen.contains(s.getSkillName())) continue;

@@ -18,7 +18,7 @@ const showCommand = ref(false)
 const hoveredAbility = ref('')
 const hasInput = ref(false)
 const mcpGroups = ref<{ server: string; tools: { name: string; desc: string }[] }[]>([])
-const skillList = ref<{ name: string; desc: string }[]>([])
+const skillList = ref<{ name: string; desc: string; scope: string }[]>([])
 const mcpLoading = ref(false)
 const mcpLoaded = ref(false)
 const skillLoading = ref(false)
@@ -342,7 +342,7 @@ async function loadSkills() {
     const res = await axios({ url: '/skill/list', method: 'get' })
     if (res.data.state === 'OK') {
       skillList.value = (res.data.body as any[]).filter((s: any) => s.enabled === 1 || s.enabled === true)
-        .map((s: any) => ({ name: s.skillName || s.displayName, desc: s.description }))
+        .map((s: any) => ({ name: s.skillName || s.displayName, desc: s.description, scope: s.scope || 'user' }))
         .sort((a, b) => a.name.localeCompare(b.name))
     }
     skillLoaded.value = true
@@ -560,6 +560,8 @@ function closeAll() {
                       <template v-if="filteredSkills.length > 0">
                         <div v-for="(s, idx) in filteredSkills" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
                           <span class="cmd-name">{{ s.name }}</span>
+                          <span v-if="s.scope === 'shared'" class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
+                          <span v-else class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
                           <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
                         </div>
                       </template>
@@ -735,6 +737,16 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 }
 .sub-option.sub-active { background: var(--el-fill-color-light); }
 .sub-option .cmd-name { min-width: auto; font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.sub-option .skill-scope-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 99px;
+  flex-shrink: 0;
+}
+.sub-option .skill-scope-badge.scope-shared {
+  background: rgba(204,120,92,0.12); color: var(--el-color-primary);
+}
+.sub-option .skill-scope-badge.scope-user {
+  background: var(--el-fill-color); color: var(--el-text-color-secondary);
+}
 .sub-option .cmd-desc {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 280px;
