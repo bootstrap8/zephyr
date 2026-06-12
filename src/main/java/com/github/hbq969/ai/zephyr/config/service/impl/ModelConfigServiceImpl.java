@@ -67,6 +67,11 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         }
         String params = body.get("params");
         entity.setParams(params != null && !params.isBlank() ? params : null);
+        entity.setModelType(body.getOrDefault("modelType", "llm"));
+        String dimensions = body.get("dimensions");
+        if (dimensions != null && !dimensions.isBlank()) {
+            entity.setDimensions(Integer.parseInt(dimensions));
+        }
         entity.setIsDefault(0);
         entity.setCreatedAt(System.currentTimeMillis() / 1000);
         entity.setUpdatedAt(System.currentTimeMillis() / 1000);
@@ -118,6 +123,14 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         }
         String params = body.get("params");
         entity.setParams(params != null ? params : null);
+        String modelType = body.get("modelType");
+        if (modelType != null && !modelType.isBlank()) {
+            entity.setModelType(modelType);
+        }
+        String dimensions = body.get("dimensions");
+        if (dimensions != null && !dimensions.isBlank()) {
+            entity.setDimensions(Integer.parseInt(dimensions));
+        }
         entity.setUpdatedAt(System.currentTimeMillis() / 1000);
         modelConfigDao.update(entity);
     }
