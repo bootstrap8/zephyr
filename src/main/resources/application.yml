@@ -163,8 +163,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 200MB
+      max-request-size: 200MB
 
 knife4j:
   enable: true
@@ -240,7 +240,7 @@ zephyr:
   chat:
     max-history-messages: 200  # 单次对话最多携带的历史消息条数，超出截断
     upload:
-      max-file-size: 10485760  # 10MB
+      max-file-size: 209715200  # 200MB
       directory-name: .zephyr-uploads
     sse:
       timeout-millis: 300000  # SSE 连接超时（毫秒），默认 5 分钟
