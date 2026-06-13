@@ -9,8 +9,11 @@ public class KnowledgeDocEntity {
     private String fileName;
     private String fileType;
     private Long fileSize;
+    private String content;
+    private String sourceType;
     private Integer chunkCount;
     private String status;
     private String errorMsg;
     private Long createdAt;
+    private Long updatedAt;
 }
