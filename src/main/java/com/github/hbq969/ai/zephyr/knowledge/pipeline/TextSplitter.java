@@ -102,6 +102,7 @@ public class TextSplitter {
         while (start < text.length()) {
             int end = Math.min(start + chunkSize, text.length());
             chunks.add(text.substring(start, end).trim());
+            if (end >= text.length()) break;
             start = end - overlap;
         }
     }
