@@ -458,7 +458,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
         <div class="row-right">
           <button class="action-icon" @click="startEdit(m)" :title="langData.btnEdit"><Icon icon="lucide:pencil" /></button>
           <button class="action-icon danger" @click="m.id && removeModel(m.id)" :title="langData.btnDelete"><Icon icon="lucide:trash-2" /></button>
-          <button v-if="settingsStore.currentModel !== m.name" class="set-btn" @click="onSetCurrent(m.name)">{{ langData.modelConfig_use }}</button>
+          <button v-if="(!m.modelType || m.modelType === 'llm') && settingsStore.currentModel !== m.name" class="set-btn" @click="onSetCurrent(m.name)">{{ langData.modelConfig_use }}</button>
           <span v-else class="current-badge">{{ langData.modelConfig_current }}</span>
         </div>
       </div>

@@ -179,19 +179,35 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public List<SearchResult> search(String query, List<String> kbIds, int topK) {
         if (kbIds == null || kbIds.isEmpty()) return List.of();
 
-        ModelConfigEntity embedModel = modelConfigDao.queryDefaultByType("embedding");
-        if (embedModel == null) throw new RuntimeException("未配置默认 Embedding 模型");
-
-        List<float[]> embeddings = embeddingClient.embed(List.of(query), embedModel);
-        if (embeddings.isEmpty()) return List.of();
+        // 按 embedModelId 分组知识库，同一模型只做一次 Embedding
+        Map<String, List<String>> kbByModel = new LinkedHashMap<>();
+        for (String kbId : kbIds) {
+            KnowledgeBaseEntity kb = knowledgeDao.queryKbById(kbId);
+            if (kb == null || kb.getEmbedModelId() == null) {
+                log.warn("知识库 {} 未配置 Embedding 模型，跳过", kbId);
+                continue;
+            }
+            kbByModel.computeIfAbsent(kb.getEmbedModelId(), k -> new ArrayList<>()).add(kbId);
+        }
+        if (kbByModel.isEmpty()) throw new RuntimeException("所选知识库均未配置 Embedding 模型");
 
         List<ChromaClient.QueryResult> allResults = new ArrayList<>();
-        for (String kbId : kbIds) {
-            try {
-                String collId = chromaClient.getOrCreateCollection("kb_" + kbId);
-                allResults.addAll(chromaClient.query(collId, embeddings.get(0), topK));
-            } catch (Exception e) {
-                log.warn("知识库 {} 检索失败: {}", kbId, e.getMessage());
+        for (Map.Entry<String, List<String>> entry : kbByModel.entrySet()) {
+            ModelConfigEntity embedModel = modelConfigDao.queryById(entry.getKey());
+            if (embedModel == null) {
+                log.warn("Embedding 模型 {} 不存在，跳过", entry.getKey());
+                continue;
+            }
+            List<float[]> embeddings = embeddingClient.embed(List.of(query), embedModel);
+            if (embeddings.isEmpty()) continue;
+
+            for (String kbId : entry.getValue()) {
+                try {
+                    String collId = chromaClient.getOrCreateCollection("kb_" + kbId);
+                    allResults.addAll(chromaClient.query(collId, embeddings.get(0), topK));
+                } catch (Exception e) {
+                    log.warn("知识库 {} 检索失败: {}", kbId, e.getMessage());
+                }
             }
         }
 
