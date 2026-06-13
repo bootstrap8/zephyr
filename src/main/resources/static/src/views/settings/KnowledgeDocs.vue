@@ -55,11 +55,6 @@ const fetchKbName = () => {
     })
 }
 
-const handleFileChange = (file: File) => {
-  uploadFile.value = file
-  return false // prevent auto upload
-}
-
 const handleUpload = () => {
   if (!uploadFile.value) { msg('请选择文件', 'warning'); return }
   uploading.value = true
@@ -187,7 +182,7 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <el-table-column :label="langData.tableHeaderCreateTime" width="110" align="center">
         <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
       </el-table-column>
-      <el-table-column :label="langData.tableHeaderOp" width="200" align="center" fixed="right">
+      <el-table-column :label="langData.tableHeaderOp" width="200" align="center">
         <template #default="{ row }">
           <el-button link size="small" @click="openEditInline(row)">
             <el-tooltip :content="langData.knowledgeMgmt_editInlineDoc">
@@ -238,7 +233,7 @@ onMounted(() => { fetchDocs(); fetchKbName() })
 </template>
 
 <style scoped>
-.docs-page { max-width: 960px; margin: 0 auto; padding: 24px; }
+.docs-page { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
 .page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
 .back-btn {
