@@ -16,12 +16,11 @@ const workspaceStore = useWorkspaceStore()
 
 function artifactUrl(filePath: string) {
   const wsId = workspaceStore.currentId
-  console.log('[artifact] artifactUrl called:', { filePath, wsId })
   if (!wsId) return '#'
   const encodedPath = filePath.split('/').map(encodeURIComponent).join('/')
-  const url = `./chat/files/${wsId}/${encodedPath}`
-  console.log('[artifact] generated URL:', url)
-  return url
+  // dev 模式走 Vite 代理，prod 走相对路径
+  const prefix = import.meta.env.DEV ? '/dev/zephyr-ui' : '.'
+  return `${prefix}/chat/files/${wsId}/${encodedPath}`
 }
 
 function previewable(contentType: string) {

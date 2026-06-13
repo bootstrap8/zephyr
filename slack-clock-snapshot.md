@@ -1,0 +1,18 @@
+- generic [ref=e2]:
+  - generic [ref=e3]: 20:5632
+  - generic [ref=e4]: 2026年6月13日 星期六
+  - generic [ref=e6]:
+    - generic [ref=e7]: ⏳ 今日工作时间进度
+    - generic [ref=e8]: 100%
+  - generic "点击刷新小贴士" [ref=e11] [cursor=pointer]:
+    - generic [ref=e12]: 🤸
+    - generic [ref=e13]: 转转头，转转肩，转转手腕。微运动也是运动！
+    - generic [ref=e14]: 💡 每小时自动切换 · 点击可手动刷新
+  - generic [ref=e15]:
+    - text: 今日已工作
+    - strong [ref=e25]: 9h 00m
+    - text: · 距离下班还有
+    - strong [ref=e26]: 0h 00m
+    - text: 累计摸鱼时长
+    - strong [ref=e27]: 11h 56m
+    - text: （含睡眠，别太当真 😴）

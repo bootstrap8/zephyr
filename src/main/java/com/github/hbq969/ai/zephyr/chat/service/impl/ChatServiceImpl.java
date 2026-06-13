@@ -422,7 +422,6 @@ public class ChatServiceImpl implements ChatService {
                 if (abs.startsWith(wsDir)) {
                     java.nio.file.Path rel = wsDir.relativize(abs);
                     String relPath = rel.toString().replace('\\', '/');
-                    log.info("[artifact] wsPath={}, relPath={}", ws.getPath(), relPath);
                     String fileName = abs.getFileName().toString();
                     String mimeType = java.nio.file.Files.probeContentType(abs);
                     if (mimeType == null) {
