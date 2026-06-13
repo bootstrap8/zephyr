@@ -182,6 +182,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
         if (doc == null) throw new RuntimeException("文档不存在");
         knowledgeDao.updateDocStatus(docId, "processing", 0, null);
+        keywordIndex.removeDoc(kbId, docId);
         Path dataDir = Paths.get(cfg.getKnowledge().getDataDir(), kbId);
         processDocAsync(docId, kbId, dataDir.resolve(docId + "_" + doc.getFileName()));
     }
@@ -244,7 +245,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             } else {
                 String text = keywordIndex.getChunkText(chunkId);
                 if (text != null) {
-                    results.add(new SearchResult(text, "关键词匹配", 0.0));
+                    double kwScore = kwResults.getOrDefault(chunkId, 0f).doubleValue();
+                    results.add(new SearchResult(text, "关键词匹配", kwScore));
                 }
             }
         }
@@ -254,6 +256,11 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     @Async
     public void processDocAsync(String docId, String kbId, Path filePath) {
         try (InputStream in = Files.newInputStream(filePath)) {
+            KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
+            if (doc == null) {
+                log.warn("文档已被删除，取消处理: docId={}", docId);
+                return;
+            }
             String text = tikaParser.parse(in);
             TextSplitter splitter = new TextSplitter(800, 150);
             List<String> chunks = splitter.split(text);
