@@ -13,16 +13,12 @@ const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
-const kbCount = ref(0)
 
 watch(() => props.visible, (v) => {
   if (v) {
-    settingsStore.loadMcpServers(); settingsStore.loadSkills(); settingsStore.loadMemories()
+    settingsStore.loadMcpServers(); settingsStore.loadSkills(); settingsStore.loadMemories(); settingsStore.loadKnowledgeBases()
     axios({ url: '/workspace/list', method: 'get' }).then(res => {
       if (res.data.state === 'OK') workspaceStore.setWorkspaces(res.data.body || [])
-    }).catch(() => {})
-    axios({ url: '/knowledge/kb/list', method: 'get' }).then(res => {
-      if (res.data.state === 'OK') kbCount.value = (res.data.body || []).length
     }).catch(() => {})
   }
 })
@@ -80,7 +76,7 @@ function toggleDark() {
         <div class="sp-item" @click="goTo('/settings/knowledge')">
           <Icon icon="lucide:library" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_knowledgeMgmt }}</span>
-          <span class="sp-value">{{ kbCount > 0 ? langData.settingsPanel_mcpCount.replace('{count}', kbCount) : langData.settingsPanel_noMcp }}</span>
+          <span class="sp-value">{{ settingsStore.knowledgeBases.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', settingsStore.knowledgeBases.length) : langData.settingsPanel_noMcp }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
         <div class="sp-item" @click="goTo('/settings/workspace')">

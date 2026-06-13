@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { getLangData } from '@/i18n/locale'
 import { msg } from '@/utils/Utils'
 import { Icon } from '@iconify/vue'
@@ -61,10 +62,15 @@ const handleUpload = () => {
 }
 
 const deleteDoc = (doc: any) => {
-  if (!confirm(langData.knowledgeMgmt_deleteDocConfirm + ' ' + doc.fileName)) return
-  axios({ url: '/knowledge/doc/delete', method: 'post', data: { id: doc.id } })
-    .then(res => { if (res.data.state === 'OK') fetchDocs() })
-    .catch(err => msg(err?.response?.data?.errorMessage || '删除失败', 'error'))
+  ElMessageBox.confirm(
+    langData.knowledgeMgmt_deleteDocConfirm + ' ' + doc.fileName,
+    langData.knowledgeMgmt_deleteKb,
+    { confirmButtonText: langData.btnDelete, cancelButtonText: langData.btnCancel, type: 'warning' }
+  ).then(() => {
+    axios({ url: '/knowledge/doc/delete', method: 'post', data: { id: doc.id } })
+      .then(res => { if (res.data.state === 'OK') fetchDocs() })
+      .catch(err => msg(err?.response?.data?.errorMessage || '删除失败', 'error'))
+  }).catch(() => {})
 }
 
 const reParse = (doc: any) => {
@@ -107,17 +113,20 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <h2>{{ kbName || langData.knowledgeMgmt_title }}</h2>
     </div>
 
-    <div class="page-toolbar">
+    <div v-if="docs.length > 0" class="page-toolbar">
       <div style="flex:1"></div>
       <el-button type="primary" @click="uploadVisible = true">
         <Icon icon="lucide:upload" style="margin-right:4px" /> {{ langData.knowledgeMgmt_uploadDoc }}
       </el-button>
     </div>
 
-    <div v-if="docs.length === 0" class="empty-state" style="text-align:center;padding:80px 20px;color:var(--el-text-color-secondary)">
-      <Icon icon="lucide:file" :width="40" />
-      <h3 style="font-family:Georgia,serif;font-size:18px;font-weight:400;color:var(--el-text-color-primary);margin:12px 0 4px">{{ langData.knowledgeMgmt_noDoc }}</h3>
-      <p style="font-size:14px">{{ langData.knowledgeMgmt_noDocHint }}</p>
+    <div v-if="docs.length === 0" class="empty-state">
+      <Icon icon="lucide:file" width="48" style="color: var(--el-text-color-placeholder)" />
+      <h3 class="empty-title">{{ langData.knowledgeMgmt_noDoc }}</h3>
+      <p class="empty-desc">{{ langData.knowledgeMgmt_noDocHint }}</p>
+      <button class="btn-primary" @click="uploadVisible = true">
+        <Icon icon="lucide:upload" /> {{ langData.knowledgeMgmt_uploadDoc }}
+      </button>
     </div>
 
     <el-table v-else :data="docs" style="width:100%" :header-cell-style="headerCellStyle" stripe>
@@ -199,6 +208,13 @@ onMounted(() => { fetchDocs(); fetchKbName() })
 h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spacing: -0.3px; color: var(--el-text-color-primary); margin: 0; }
 
 .page-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+
+.empty-state { text-align: center; padding: 80px 24px; }
+.empty-title { font-family: Georgia, serif; font-size: 22px; color: var(--el-text-color-primary); margin: 16px 0 8px; }
+.empty-desc { font-size: 14px; color: var(--el-text-color-secondary); max-width: 420px; margin: 0 auto 24px; }
+
+.btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: none; background: var(--el-color-primary); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 150ms; }
+.btn-primary:hover { background: var(--el-color-primary-light-3); }
 
 /* dark mode */
 html.dark .back-btn:hover { background: var(--el-fill-color); }

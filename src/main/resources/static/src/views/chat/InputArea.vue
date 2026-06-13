@@ -101,7 +101,6 @@ const convStore = useConversationsStore()
 const showWorkspaceList = ref(false)
 const showNewWorkspace = ref(false)
 const showKbList = ref(false)
-const kbList = ref<any[]>([])
 const selectedKbIds = ref<string[]>([])
 
 const langData = getLangData()
@@ -295,9 +294,7 @@ function selectWorkspace(id: string | null) {
 }
 
 function loadKbData() {
-  axios({ url: '/knowledge/kb/list', method: 'get' }).then(res => {
-    if (res.data.state === 'OK') kbList.value = res.data.body || []
-  }).catch(() => {})
+  settingsStore.loadKnowledgeBases()
   const convId = convStore.currentId
   if (convId) {
     axios({ url: '/knowledge/conversation/kb/list', method: 'get', params: { conversationId: convId } })
@@ -567,8 +564,8 @@ function closeAll() {
             <span>{{ selectedKbIds.length > 0 ? selectedKbIds.length + ' 知识库' : langData.settingsPanel_kbSelect }}</span>
             <Icon icon="lucide:chevron-down" class="pick-arrow" />
             <div v-if="showKbList" class="pick-dropdown kb-dropdown" @click.stop>
-              <div v-if="kbList.length === 0" class="sub-loading">{{ langData.knowledgeMgmt_noKb }}</div>
-              <div v-for="kb in kbList" :key="kb.id" class="pick-option kb-option"
+              <div v-if="settingsStore.knowledgeBases.length === 0" class="sub-loading">{{ langData.knowledgeMgmt_noKb }}</div>
+              <div v-for="kb in settingsStore.knowledgeBases" :key="kb.id" class="pick-option kb-option"
                    :class="{ current: selectedKbIds.includes(kb.id) }"
                    @click="toggleKb(kb.id)">
                 <span class="kb-check-box" :class="{ checked: selectedKbIds.includes(kb.id) }">

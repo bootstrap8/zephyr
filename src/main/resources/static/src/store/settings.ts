@@ -16,6 +16,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const skills = ref<SkillConfig[]>([])
   const isAdmin = ref(false)
   const memories = ref<MemoryItem[]>([])
+  const knowledgeBases = ref<any[]>([])
   const contextUsed = ref(0)
   const contextLoaded = ref(false)
   const contextDetail = ref<Record<string, any> | null>(null)
@@ -308,6 +309,17 @@ export const useSettingsStore = defineStore('settings', () => {
     return false
   }
 
+  // === Knowledge Base API 方法 ===
+
+  async function loadKnowledgeBases() {
+    try {
+      const res = await axios({ url: '/knowledge/kb/list', method: 'get' })
+      if (res.data.state === 'OK' && Array.isArray(res.data.body)) {
+        knowledgeBases.value = res.data.body
+      }
+    } catch (_) {}
+  }
+
   async function loadUserInfo() {
     try {
       const res = await axios({ url: '/chat/whoami', method: 'get' })
@@ -318,7 +330,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   return {
-    currentModel, models, mcpServers, mcpToolCount, skills, isAdmin, memories,
+    currentModel, models, mcpServers, mcpToolCount, skills, isAdmin, memories, knowledgeBases,
     contextUsed, contextLoaded, contextTotal, contextPercent, contextDetail,
     setModel, addModel,
     loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote, detectCtxRaw, fetchModels,
@@ -328,6 +340,7 @@ export const useSettingsStore = defineStore('settings', () => {
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, loadMcpToolCount,
     loadSkills, loadUserInfo, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
     syncScanSkills, syncInstallSkills,
-    loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory
+    loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory,
+    loadKnowledgeBases
   }
 })

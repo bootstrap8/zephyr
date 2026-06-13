@@ -91,4 +91,8 @@
     delete from zephyr_conversation_kb where conversation_id = #{conversationId}
   </delete>
 
+  <delete id="deleteConversationKbByKbId">
+    delete from zephyr_conversation_kb where kb_id = #{kbId}
+  </delete>
+
 </mapper>

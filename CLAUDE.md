@@ -107,6 +107,35 @@ com.github.hbq969.ai.zephyr
 - 表创建：Mapper XML 三方言 DDL + `InitialServiceImpl.tableCreate0()` 注册，不在 `${module}-*.sql` 里写 `CREATE TABLE`
 - 新建表只需要 Mapper XML + InitialServiceImpl 两个位置
 
+### 管理页面 UI 约定
+
+**空状态**：无配置数据时，隐藏页面右上角操作按钮，在页面中间展示空状态（图标 + 标题 + 描述 + 居中操作按钮），参考 `MCPSettings.vue` 实现。
+
+```html
+<!-- 右上角按钮：仅在有数据时显示 -->
+<button v-if="store.xxx.length > 0" class="btn-primary" @click="openAdd">...</button>
+
+<!-- 空状态：居中展示，包含操作按钮 -->
+<div v-if="store.xxx.length === 0" class="empty-state">
+  <Icon icon="lucide:xxx" width="48" />
+  <h3 class="empty-title">暂无数据</h3>
+  <p class="empty-desc">描述文字</p>
+  <button class="btn-primary" @click="openAdd">创建第一个</button>
+</div>
+```
+
+**删除确认**：必须使用 `ElMessageBox.confirm()`，禁止原生 `confirm()`。
+
+```typescript
+import { ElMessageBox } from 'element-plus'
+
+ElMessageBox.confirm(
+  '确认删除消息',
+  '标题',
+  { confirmButtonText: langData.btnDelete, cancelButtonText: langData.btnCancel, type: 'warning' }
+).then(() => { /* 执行删除 */ }).catch(() => {})
+```
+
 ### 已实现功能
 
 | 模块 | Controller 路径 | 状态 |

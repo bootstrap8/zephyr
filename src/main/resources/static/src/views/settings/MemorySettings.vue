@@ -155,7 +155,7 @@ onMounted(() => { store.loadMemories() })
       <h2>{{ langData.memoryMgmt_title }}</h2>
     </div>
 
-    <div class="page-toolbar">
+    <div v-if="store.memories.length > 0" class="page-toolbar">
       <div class="filter-tabs">
         <button :class="['filter-tab', { active: currentFilter === 'all' }]" @click="setFilter('all')">
           {{ langData.memoryMgmt_all }}
@@ -174,10 +174,13 @@ onMounted(() => { store.loadMemories() })
       <el-button type="danger" size="small" @click="confirmDeleteBatch">{{ langData.memoryMgmt_batchDelete }}</el-button>
     </div>
 
-    <div v-if="filteredMemories.length === 0" class="empty-state" style="text-align:center;padding:80px 20px;color:var(--el-text-color-secondary)">
-      <Icon icon="lucide:file-text" :width="40" />
-      <h3 style="font-family:Georgia,serif;font-size:18px;font-weight:400;color:var(--el-text-color-primary);margin:12px 0 4px">{{ langData.memoryMgmt_noMemory }}</h3>
-      <p style="font-size:14px">{{ langData.memoryMgmt_noMemoryHint }}</p>
+    <div v-if="filteredMemories.length === 0" class="empty-state">
+      <Icon icon="lucide:file-text" width="48" style="color: var(--el-text-color-placeholder)" />
+      <h3 class="empty-title">{{ langData.memoryMgmt_noMemory }}</h3>
+      <p class="empty-desc">{{ langData.memoryMgmt_noMemoryHint }}</p>
+      <button class="btn-primary" @click="openCreate">
+        <Icon icon="lucide:plus" /> {{ langData.memoryMgmt_addMemory }}
+      </button>
     </div>
 
     <div v-else class="card-list">
@@ -274,6 +277,13 @@ onMounted(() => { store.loadMemories() })
 h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spacing: -0.3px; color: var(--el-text-color-primary); margin: 0; }
 
 .page-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+
+.empty-state { text-align: center; padding: 80px 24px; }
+.empty-title { font-family: Georgia, serif; font-size: 22px; color: var(--el-text-color-primary); margin: 16px 0 8px; }
+.empty-desc { font-size: 14px; color: var(--el-text-color-secondary); max-width: 420px; margin: 0 auto 24px; }
+
+.btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: none; background: var(--el-color-primary); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 150ms; }
+.btn-primary:hover { background: var(--el-color-primary-light-3); }
 
 .filter-tabs { display: flex; gap: 4px; margin-right: auto; }
 .filter-tab {

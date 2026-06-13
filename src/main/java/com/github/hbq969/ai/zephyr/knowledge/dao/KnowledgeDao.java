@@ -37,4 +37,5 @@ public interface KnowledgeDao {
     List<String> queryKbIdsByConversation(@Param("conversationId") String conversationId);
     void insertConversationKb(@Param("conversationId") String conversationId, @Param("kbId") String kbId);
     void deleteConversationKb(@Param("conversationId") String conversationId);
+    void deleteConversationKbByKbId(@Param("kbId") String kbId);
 }

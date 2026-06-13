@@ -1,26 +1,21 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { getLangData } from '@/i18n/locale'
+import { useSettingsStore } from '@/store/settings'
 import { msg } from '@/utils/Utils'
 import { Icon } from '@iconify/vue'
 import axios from '@/network'
 
 const router = useRouter()
 const langData = getLangData()
-
-const kbs = ref<any[]>([])
+const store = useSettingsStore()
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const editingId = ref('')
 const form = reactive({ name: '', description: '', embedModelId: '' })
 const embedModels = ref<any[]>([])
-
-const fetchKbs = () => {
-  axios({ url: '/knowledge/kb/list', method: 'get' })
-    .then(res => { if (res.data.state === 'OK') kbs.value = res.data.body })
-    .catch(err => msg(err?.response?.data?.errorMessage || '加载失败', 'error'))
-}
 
 const fetchEmbedModels = () => {
   axios({ url: '/model-config/list', method: 'get', params: { modelType: 'embedding' } })
@@ -50,23 +45,28 @@ const saveKb = async () => {
   if (editingId.value) data.id = editingId.value
   try {
     const res = await axios({ url, method: 'post', data })
-    if (res.data.state === 'OK') { dialogVisible.value = false; fetchKbs() }
+    if (res.data.state === 'OK') { dialogVisible.value = false; store.loadKnowledgeBases() }
     else msg(res.data.errorMessage, 'warning')
   } catch (err: any) { msg(err?.response?.data?.errorMessage || '保存失败', 'error') }
 }
 
 const deleteKb = (kb: any) => {
-  if (!confirm(langData.confirmDelete + ' ' + kb.name)) return
-  axios({ url: '/knowledge/kb/delete', method: 'post', data: { id: kb.id } })
-    .then(res => { if (res.data.state === 'OK') fetchKbs() })
-    .catch(err => msg(err?.response?.data?.errorMessage || '删除失败', 'error'))
+  ElMessageBox.confirm(
+    langData.confirmDelete + ' ' + kb.name,
+    langData.knowledgeMgmt_deleteKb,
+    { confirmButtonText: langData.btnDelete, cancelButtonText: langData.btnCancel, type: 'warning' }
+  ).then(() => {
+    axios({ url: '/knowledge/kb/delete', method: 'post', data: { id: kb.id } })
+      .then(res => { if (res.data.state === 'OK') store.loadKnowledgeBases() })
+      .catch(err => msg(err?.response?.data?.errorMessage || '删除失败', 'error'))
+  }).catch(() => {})
 }
 
 function fmtTime(ts: number) {
   return ts ? new Date(ts * 1000).toISOString().slice(0, 10) : '-'
 }
 
-onMounted(() => { fetchKbs() })
+onMounted(() => { store.loadKnowledgeBases() })
 </script>
 
 <template>
@@ -78,21 +78,24 @@ onMounted(() => { fetchKbs() })
       <h2>{{ langData.knowledgeMgmt_title }}</h2>
     </div>
 
-    <div class="page-toolbar">
+    <div v-if="store.knowledgeBases.length > 0" class="page-toolbar">
       <div style="flex:1"></div>
       <el-button type="primary" @click="openCreate">
         <Icon icon="lucide:plus" style="margin-right:4px" /> {{ langData.knowledgeMgmt_createKb }}
       </el-button>
     </div>
 
-    <div v-if="kbs.length === 0" class="empty-state" style="text-align:center;padding:80px 20px;color:var(--el-text-color-secondary)">
-      <Icon icon="lucide:library" :width="40" />
-      <h3 style="font-family:Georgia,serif;font-size:18px;font-weight:400;color:var(--el-text-color-primary);margin:12px 0 4px">{{ langData.knowledgeMgmt_noKb }}</h3>
-      <p style="font-size:14px">{{ langData.knowledgeMgmt_noKbHint }}</p>
+    <div v-if="store.knowledgeBases.length === 0" class="empty-state">
+      <Icon icon="lucide:library" width="48" style="color: var(--el-text-color-placeholder)" />
+      <h3 class="empty-title">{{ langData.knowledgeMgmt_noKb }}</h3>
+      <p class="empty-desc">{{ langData.knowledgeMgmt_noKbHint }}</p>
+      <button class="btn-primary" @click="openCreate">
+        <Icon icon="lucide:plus" /> {{ langData.knowledgeMgmt_createKb }}
+      </button>
     </div>
 
     <div v-else class="card-list">
-      <div v-for="kb in kbs" :key="kb.id" class="kb-card" @click="router.push('/settings/knowledge/' + kb.id + '/docs')">
+      <div v-for="kb in store.knowledgeBases" :key="kb.id" class="kb-card" @click="router.push('/settings/knowledge/' + kb.id + '/docs')">
         <div class="card-inner">
           <div class="card-header">
             <Icon icon="lucide:library" class="card-icon" />
@@ -158,6 +161,13 @@ onMounted(() => { fetchKbs() })
 h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spacing: -0.3px; color: var(--el-text-color-primary); margin: 0; }
 
 .page-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+
+.empty-state { text-align: center; padding: 80px 24px; }
+.empty-title { font-family: Georgia, serif; font-size: 22px; color: var(--el-text-color-primary); margin: 16px 0 8px; }
+.empty-desc { font-size: 14px; color: var(--el-text-color-secondary); max-width: 420px; margin: 0 auto 24px; }
+
+.btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: none; background: var(--el-color-primary); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 150ms; }
+.btn-primary:hover { background: var(--el-color-primary-light-3); }
 
 .card-list { display: flex; flex-direction: column; gap: 1px; background: var(--el-border-color); border-radius: 12px; overflow: hidden; }
 
