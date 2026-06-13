@@ -580,7 +580,7 @@ function closeAll() {
                 <span class="kb-check-box" :class="{ checked: selectedKbIds.includes(kb.id) }">
                   <Icon v-if="selectedKbIds.includes(kb.id)" icon="lucide:check" class="kb-chk-icon" />
                 </span>
-                <span class="kb-opt-name">{{ kb.name }}</span>
+                <span class="kb-opt-name" :title="kb.name">{{ kb.name }}</span>
                 <span class="kb-opt-count">{{ kb.docCount }} 文档</span>
               </div>
             </div>
@@ -864,7 +864,7 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 .kb-chk-icon { color: #fff; font-size: 11px; }
 .kb-opt-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kb-opt-count { font-size: 11px; color: var(--el-text-color-placeholder); flex-shrink: 0; }
-.kb-dropdown { width: 260px; }
+.kb-dropdown { width: 340px; }
 </style>
 
 <!-- 非 scoped：动态创建的 tag 元素需要全局样式 -->
