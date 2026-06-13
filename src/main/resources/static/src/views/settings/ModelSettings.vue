@@ -366,11 +366,17 @@ function cancelForm() { resetForm() }
 function onApiKeyFocus() {
   if (hasExistingKey.value && apiKeyShown.value !== '') {
     apiKeyShown.value = ''
+    apiKey.value = ''
   }
 }
 
+function onApiKeyInput(e: Event) {
+  apiKey.value = (e.target as HTMLInputElement).value
+  hasExistingKey.value = false
+}
+
 function onApiKeyBlur() {
-  if (hasExistingKey.value && apiKeyShown.value === '') {
+  if (hasExistingKey.value && apiKey.value === '') {
     apiKeyShown.value = '••••••••'
   }
 }
@@ -509,8 +515,7 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
               <input
                 class="field-input" type="password"
                 :value="apiKeyDisplayValue()"
-                :style="{ color: hasExistingKey && apiKeyShown !== '' ? 'var(--el-text-color-placeholder)' : 'var(--el-text-color-primary)' }"
-                @input="apiKey = ($event.target as HTMLInputElement).value"
+                @input="onApiKeyInput($event)"
                 @focus="onApiKeyFocus()"
                 @blur="onApiKeyBlur()"
                 :placeholder="hasExistingKey ? '' : 'sk-xxxxxxxx'"

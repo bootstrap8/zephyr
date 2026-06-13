@@ -185,13 +185,19 @@ onUpdated(setupCodeBlocks)
 .markdown-body :deep(td) { border: 1px solid var(--el-border-color); padding: 6px 10px; text-align: left; font-size: 0.95em; }
 .markdown-body :deep(th) { background: var(--el-fill-color-light); font-weight: 600; }
 .markdown-body :deep(code) { background: var(--el-fill-color); padding: 1px 6px; border-radius: 4px; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; color: var(--el-color-primary-dark-2); }
-.markdown-body :deep(pre) { background: #f5f0e8; color: #141413; border-radius: 8px; padding: 16px; margin: 0; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; line-height: 1.55; }
+.markdown-body :deep(pre) { background: #f5f0e8; color: #141413; border-radius: 8px; padding: 16px; margin: 0; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 0.85em; line-height: 1.55; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
+.markdown-body :deep(pre)::-webkit-scrollbar { width: 2px; height: 2px; }
+.markdown-body :deep(pre)::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.20); border-radius: 1px; }
+.markdown-body :deep(pre)::-webkit-scrollbar-track { background: transparent; }
 .markdown-body :deep(pre code) { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
 </style>
 
 <style>
 .code-block-wrapper { position: relative; margin: 8px 0 0; background: #efe9de; border-radius: 8px; overflow: hidden; }
-.code-block-wrapper pre { margin: 0; background: #f5f0e8; color: #141413; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; line-height: 1.6; }
+.code-block-wrapper pre { margin: 0; background: #f5f0e8; color: #141413; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
+.code-block-wrapper pre::-webkit-scrollbar { width: 2px; height: 2px; }
+.code-block-wrapper pre::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.20); border-radius: 1px; }
+.code-block-wrapper pre::-webkit-scrollbar-track { background: transparent; }
 .code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 0; }
 .code-icon { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; color: #8e8b82; transition: color 0.15s; }
 .code-icon:hover { color: #141413; }
