@@ -10,6 +10,32 @@ import { getLangData } from '@/i18n/locale'
 
 const langData = getLangData()
 
+import { useWorkspaceStore } from '@/store/workspace'
+
+const workspaceStore = useWorkspaceStore()
+
+function artifactUrl(filePath: string) {
+  const wsId = workspaceStore.currentId
+  if (!wsId) return '#'
+  const encodedPath = filePath.split('/').map(encodeURIComponent).join('/')
+  return `./chat/files/${wsId}/${encodedPath}`
+}
+
+function previewable(contentType: string) {
+  return contentType.startsWith('text/html')
+    || contentType.startsWith('image/')
+    || contentType === 'application/pdf'
+    || contentType === 'application/javascript'
+    || contentType === 'application/json'
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes === 0) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / 1048576).toFixed(1) + ' MB'
+}
+
 const props = defineProps<{ message: Message; isLast: boolean }>()
 
 const md = new MarkdownIt({
@@ -159,6 +185,19 @@ onUpdated(setupCodeBlocks)
         <ToolCallCard :tool="tc" />
       </div>
       <div v-if="message.content" ref="mdBodyRef" class="markdown-body"></div>
+      <div v-if="message.artifacts?.length" class="artifacts-row">
+        <div v-for="a in message.artifacts" :key="a.path" class="artifact-card">
+          <Icon :icon="previewable(a.contentType) ? 'lucide:eye' : 'lucide:download'" class="artifact-icon" />
+          <span class="artifact-name">{{ a.name }}</span>
+          <span class="artifact-size">{{ formatFileSize(a.size) }}</span>
+          <a v-if="previewable(a.contentType)" :href="artifactUrl(a.path)" target="_blank" class="artifact-btn artifact-preview">
+            <Icon icon="lucide:external-link" /> 打开预览
+          </a>
+          <a :href="artifactUrl(a.path) + '?download=1'" class="artifact-btn artifact-download">
+            <Icon icon="lucide:download" /> 下载
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -214,6 +253,14 @@ onUpdated(setupCodeBlocks)
 .markdown-body :deep(pre)::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.20); border-radius: 1px; }
 .markdown-body :deep(pre)::-webkit-scrollbar-track { background: transparent; }
 .markdown-body :deep(pre code) { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
+
+.artifacts-row { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.artifact-card { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--el-fill-color-light); border: 1px solid var(--el-border-color-light); border-radius: 6px; font-size: 12px; }
+.artifact-icon { color: var(--el-color-primary); font-size: 14px; flex-shrink: 0; }
+.artifact-name { font-weight: 500; color: var(--el-text-color-primary); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.artifact-size { color: var(--el-text-color-placeholder); font-size: 11px; flex-shrink: 0; }
+.artifact-btn { display: inline-flex; align-items: center; gap: 3px; color: var(--el-color-primary); text-decoration: none; font-size: 11px; padding: 2px 6px; border-radius: 4px; transition: background 0.15s; white-space: nowrap; }
+.artifact-btn:hover { background: var(--el-color-primary-light-9); }
 </style>
 
 <style>
@@ -228,4 +275,6 @@ onUpdated(setupCodeBlocks)
 .code-block-wrapper.collapsed pre { max-height: 120px; overflow-y: auto; }
 .code-block-wrapper.collapsed pre::-webkit-scrollbar { width: 0; height: 0; }
 .code-block-wrapper:not(.collapsed) pre { max-height: none; }
+
+html.dark .artifact-card { background: var(--el-fill-color); border-color: var(--el-border-color); }
 </style>
