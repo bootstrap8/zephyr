@@ -225,7 +225,7 @@ onUpdated(setupCodeBlocks)
 .code-actions { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 0; }
 .code-icon { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; color: #8e8b82; transition: color 0.15s; }
 .code-icon:hover { color: #141413; }
-.code-block-wrapper.collapsed pre { max-height: 0; overflow: hidden; padding-top: 0; padding-bottom: 0; }
+.code-block-wrapper.collapsed pre { max-height: 0; overflow: hidden; }
 .code-block-wrapper:not(.collapsed) pre { max-height: none; }
 
 </style>
