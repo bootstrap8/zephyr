@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -188,6 +189,67 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     }
 
     @Override
+    public String createInlineDoc(String kbId, String title, String content, String userName) {
+        KnowledgeBaseEntity kb = knowledgeDao.queryKbById(kbId);
+        if (kb == null) throw new RuntimeException("知识库不存在");
+
+        String docId = UUID.randomUUID().toString();
+        String fileName = title + ".md";
+        Path dataDir = Paths.get(cfg.getKnowledge().getDataDir(), kbId);
+        try {
+            Files.createDirectories(dataDir);
+            Files.writeString(dataDir.resolve(docId + "_" + fileName), content);
+        } catch (IOException e) {
+            throw new RuntimeException("保存文件失败", e);
+        }
+
+        KnowledgeDocEntity doc = new KnowledgeDocEntity();
+        doc.setId(docId);
+        doc.setKbId(kbId);
+        doc.setFileName(fileName);
+        doc.setFileType("md");
+        doc.setFileSize((long) content.getBytes(StandardCharsets.UTF_8).length);
+        doc.setContent(content);
+        doc.setSourceType("inline");
+        doc.setStatus("processing");
+        doc.setChunkCount(0);
+        doc.setCreatedAt(System.currentTimeMillis() / 1000);
+        knowledgeDao.insertDoc(doc);
+
+        processDocContentAsync(docId, kbId, content, fileName);
+        return docId;
+    }
+
+    @Override
+    public void updateInlineDoc(String docId, String title, String content, String userName) {
+        KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
+        if (doc == null) throw new RuntimeException("文档不存在");
+        if (!"inline".equals(doc.getSourceType())) throw new RuntimeException("仅内联文档支持在线编辑");
+
+        String fileName = title + ".md";
+        Path dataDir = Paths.get(cfg.getKnowledge().getDataDir(), doc.getKbId());
+        try {
+            Files.createDirectories(dataDir);
+            Files.writeString(dataDir.resolve(docId + "_" + fileName), content);
+        } catch (IOException e) {
+            throw new RuntimeException("保存文件失败", e);
+        }
+
+        // 删除旧索引
+        keywordIndex.removeDoc(doc.getKbId(), docId);
+
+        doc.setFileName(fileName);
+        doc.setContent(content);
+        doc.setFileSize((long) content.getBytes(StandardCharsets.UTF_8).length);
+        doc.setStatus("processing");
+        doc.setChunkCount(0);
+        doc.setUpdatedAt(System.currentTimeMillis() / 1000);
+        knowledgeDao.updateDoc(doc);
+
+        processDocContentAsync(docId, doc.getKbId(), content, fileName);
+    }
+
+    @Override
     public List<SearchResult> search(String query, List<String> kbIds, int topK) {
         if (kbIds == null || kbIds.isEmpty()) return List.of();
 
@@ -239,14 +301,24 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         for (String chunkId : mergedIds) {
             ChromaClient.QueryResult vr = vecMap.get(chunkId);
             if (vr != null) {
-                results.add(new SearchResult(vr.getDocument(),
+                SearchResult sr = new SearchResult(vr.getDocument(),
                         vr.getMetadata() != null ? vr.getMetadata().getOrDefault("file_name", "") : "",
-                        vr.getScore()));
+                        vr.getScore());
+                sr.setVecScore(vr.getScore());
+                sr.setKwScore(kwResults.getOrDefault(chunkId, 0f).doubleValue());
+                int rank = mergedIds.indexOf(chunkId) + 1;
+                sr.setRrfScore(1.0 / (60 + rank));
+                results.add(sr);
             } else {
                 String text = keywordIndex.getChunkText(chunkId);
                 if (text != null) {
                     double kwScore = kwResults.getOrDefault(chunkId, 0f).doubleValue();
-                    results.add(new SearchResult(text, "关键词匹配", kwScore));
+                    SearchResult sr = new SearchResult(text, "关键词匹配", kwScore);
+                    sr.setVecScore(0);
+                    sr.setKwScore(kwScore);
+                    int rank = mergedIds.indexOf(chunkId) + 1;
+                    sr.setRrfScore(1.0 / (60 + rank));
+                    results.add(sr);
                 }
             }
         }
@@ -257,11 +329,21 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public void processDocAsync(String docId, String kbId, Path filePath) {
         try (InputStream in = Files.newInputStream(filePath)) {
             KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
-            if (doc == null) {
-                log.warn("文档已被删除，取消处理: docId={}", docId);
-                return;
-            }
+            if (doc == null) { log.warn("文档已被删除，取消处理: docId={}", docId); return; }
             String text = tikaParser.parse(in);
+            processDocContentAsync(docId, kbId, text, filePath.getFileName().toString().replace(docId + "_", ""));
+        } catch (Exception e) {
+            log.error("文档处理失败: docId={}", docId, e);
+            knowledgeDao.updateDocStatus(docId, "error", 0, e.getMessage());
+        }
+    }
+
+    @Async
+    public void processDocContentAsync(String docId, String kbId, String text, String displayName) {
+        try {
+            KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
+            if (doc == null) { log.warn("文档已被删除，取消处理: docId={}", docId); return; }
+
             TextSplitter splitter = new TextSplitter(800, 150);
             List<String> chunks = splitter.split(text);
             if (chunks.isEmpty()) {
@@ -279,12 +361,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             String collection = "kb_" + kbId;
             String collId = chromaClient.getOrCreateCollection(collection);
 
-            // 分批 embedding，单批最多 100 条，避免请求体过大
             int batchSize = 100;
-            List<float[]> allEmbeddings = new ArrayList<>();
-            List<String> allIds = new ArrayList<>();
-            List<Map<String, String>> allMetadatas = new ArrayList<>();
-
             for (int batchStart = 0; batchStart < chunks.size(); batchStart += batchSize) {
                 int batchEnd = Math.min(batchStart + batchSize, chunks.size());
                 List<String> batchChunks = chunks.subList(batchStart, batchEnd);
@@ -295,23 +372,17 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                     batchIds.add(docId + "_" + i);
                     Map<String, String> meta = new HashMap<>();
                     meta.put("doc_id", docId);
-                    meta.put("file_name", filePath.getFileName().toString().replace(docId + "_", ""));
+                    meta.put("file_name", displayName);
                     meta.put("chunk_index", String.valueOf(i));
                     batchMetas.add(meta);
                 }
 
                 List<float[]> batchEmbeddings = embeddingClient.embed(batchChunks, embedModel);
                 chromaClient.add(collId, batchIds, batchEmbeddings, batchMetas, batchChunks);
-
-                allEmbeddings.addAll(batchEmbeddings);
-                allIds.addAll(batchIds);
-                allMetadatas.addAll(batchMetas);
-
                 log.info("文档处理进度: docId={}, {}/{} chunks", docId, batchEnd, chunks.size());
             }
 
             keywordIndex.addChunks(kbId, docId, chunks);
-
             knowledgeDao.updateDocStatus(docId, "ready", chunks.size(), null);
             log.info("文档处理完成: docId={}, chunks={}", docId, chunks.size());
         } catch (Exception e) {

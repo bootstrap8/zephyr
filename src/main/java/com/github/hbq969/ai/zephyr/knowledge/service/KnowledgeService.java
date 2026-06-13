@@ -32,10 +32,23 @@ public interface KnowledgeService {
 
     List<SearchResult> search(String query, List<String> kbIds, int topK);
 
+    String createInlineDoc(String kbId, String title, String content, String userName);
+
+    void updateInlineDoc(String docId, String title, String content, String userName);
+
     @Data
     class SearchResult {
-        private final String content;
-        private final String sourceFile;
-        private final double score;
+        private String content;
+        private String sourceFile;
+        private double score;
+        private double vecScore;
+        private double kwScore;
+        private double rrfScore;
+
+        public SearchResult(String content, String sourceFile, double score) {
+            this.content = content;
+            this.sourceFile = sourceFile;
+            this.score = score;
+        }
     }
 }
