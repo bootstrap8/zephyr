@@ -30,10 +30,10 @@ public class TextSplitter {
         List<String> result = new ArrayList<>();
         if (text == null || text.trim().isEmpty()) return result;
 
-        List<Heading> headings = extractHeadings(text);
-
         Map<String, String> placeholders = new HashMap<>();
         text = protectCodeBlocks(text, placeholders);
+
+        List<Heading> headings = extractHeadings(text);
 
         List<String> rawChunks = new ArrayList<>();
         splitRecursive(text, rawChunks);
@@ -63,6 +63,15 @@ public class TextSplitter {
         String[] parts = text.split(Pattern.quote(sep), -1);
         StringBuilder current = new StringBuilder();
         for (String part : parts) {
+            if (part.length() > chunkSize) {
+                // 单个 part 超过 chunkSize：先提交 current，再递归切分大 part
+                if (current.length() >= minChunkSize) {
+                    chunks.add(current.toString().trim());
+                    current = new StringBuilder();
+                }
+                splitRecursive(part, chunks);
+                continue;
+            }
             String candidate = current.length() > 0 ? current + sep + part : part;
             if (candidate.length() > chunkSize && current.length() >= minChunkSize) {
                 chunks.add(current.toString().trim());
