@@ -114,4 +114,33 @@ public class KnowledgeCtrl {
         knowledgeService.reParseDoc(body.get("id"), body.get("kbId"), userName());
         return ReturnMessage.success("ok");
     }
+
+    @Operation(summary = "创建内联文档")
+    @RequestMapping(path = "/doc/create-inline", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "knowledge_doc_create_inline", apiDesc = "知识库管理_创建内联文档")
+    public ReturnMessage<?> createInlineDoc(@RequestBody Map<String, String> body) {
+        String docId = knowledgeService.createInlineDoc(
+                body.get("kbId"), body.get("title"), body.get("content"), userName());
+        return ReturnMessage.success(Map.of("docId", docId));
+    }
+
+    @Operation(summary = "更新内联文档")
+    @RequestMapping(path = "/doc/update-inline", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "knowledge_doc_update_inline", apiDesc = "知识库管理_更新内联文档")
+    public ReturnMessage<?> updateInlineDoc(@RequestBody Map<String, String> body) {
+        knowledgeService.updateInlineDoc(body.get("id"), body.get("title"), body.get("content"), userName());
+        return ReturnMessage.success("ok");
+    }
+
+    @Operation(summary = "召回测试")
+    @RequestMapping(path = "/kb/{kbId}/recall-test", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "knowledge_recall_test", apiDesc = "知识库管理_召回测试")
+    public ReturnMessage<?> recallTest(@PathVariable String kbId, @RequestBody Map<String, Object> body) {
+        String query = (String) body.get("query");
+        int topK = body.containsKey("topK") ? ((Number) body.get("topK")).intValue() : 5;
+        return ReturnMessage.success(knowledgeService.search(query, List.of(kbId), topK));
+    }
 }
