@@ -387,14 +387,9 @@ public class ChatServiceImpl implements ChatService {
     private void detectArtifacts(LlmResult.ToolCall tc, SseEmitter emitter, String userName) {
         String toolName = tc.getName();
         Map<String, Object> args = tc.getArguments();
-        log.info("[artifact] 入口: tool={}, argsKeys={}", toolName,
-                args != null ? args.keySet() : "null");
 
-        Set<String> writeTools = Set.of("Write", "write", "write_to_file", "create_file", "edit_file");
-        if (!writeTools.contains(toolName)) {
-            log.info("[artifact] 跳过: tool={} 不在写工具列表 {}", toolName, writeTools);
-            return;
-        }
+        Set<String> writeTools = Set.of("Write", "write", "write_file", "write_to_file", "create_file", "edit_file");
+        if (!writeTools.contains(toolName)) return;
 
         String filePathStr = null;
         if (args != null) {
@@ -405,18 +400,14 @@ public class ChatServiceImpl implements ChatService {
                     Object v = args.get(key);
                     if (v instanceof String s && !s.isBlank()) {
                         filePathStr = s;
-                        log.info("[artifact] 参数匹配: key={}, path={}", key, filePathStr);
                         break;
                     }
                 }
             }
         }
-        if (filePathStr == null || filePathStr.isBlank()) {
-            log.info("[artifact] 跳过: tool={} 未找到文件路径参数, args={}", toolName, args);
-            return;
-        }
+        if (filePathStr == null || filePathStr.isBlank()) return;
 
-        log.info("[artifact] 检测到写文件: tool={}, path={}", toolName, filePathStr);
+        log.info("[artifact] 检测到产物: tool={}, path={}", toolName, filePathStr);
 
         // 检查路径是否在工作空间内
         java.nio.file.Path target = java.nio.file.Paths.get(filePathStr);
