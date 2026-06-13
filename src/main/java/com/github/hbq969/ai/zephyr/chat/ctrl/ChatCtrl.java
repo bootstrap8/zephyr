@@ -145,19 +145,30 @@ public class ChatCtrl {
             // 5. Content-Type
             String fileName = target.getFileName().toString();
             String lower = fileName.toLowerCase();
-            String contentType = switch (true) {
-                case lower.endsWith(".html") || lower.endsWith(".htm") -> "text/html; charset=utf-8";
-                case lower.endsWith(".css") -> "text/css; charset=utf-8";
-                case lower.endsWith(".js") -> "application/javascript; charset=utf-8";
-                case lower.endsWith(".json") -> "application/json; charset=utf-8";
-                case lower.endsWith(".png") -> "image/png";
-                case lower.endsWith(".jpg") || lower.endsWith(".jpeg") -> "image/jpeg";
-                case lower.endsWith(".gif") -> "image/gif";
-                case lower.endsWith(".svg") -> "image/svg+xml";
-                case lower.endsWith(".webp") -> "image/webp";
-                case lower.endsWith(".pdf") -> "application/pdf";
-                default -> "application/octet-stream";
-            };
+            String contentType;
+            if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+                contentType = "text/html; charset=utf-8";
+            } else if (lower.endsWith(".css")) {
+                contentType = "text/css; charset=utf-8";
+            } else if (lower.endsWith(".js")) {
+                contentType = "application/javascript; charset=utf-8";
+            } else if (lower.endsWith(".json")) {
+                contentType = "application/json; charset=utf-8";
+            } else if (lower.endsWith(".png")) {
+                contentType = "image/png";
+            } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+                contentType = "image/jpeg";
+            } else if (lower.endsWith(".gif")) {
+                contentType = "image/gif";
+            } else if (lower.endsWith(".svg")) {
+                contentType = "image/svg+xml";
+            } else if (lower.endsWith(".webp")) {
+                contentType = "image/webp";
+            } else if (lower.endsWith(".pdf")) {
+                contentType = "application/pdf";
+            } else {
+                contentType = "application/octet-stream";
+            }
 
             // 6. Content-Disposition（?download=1 强制下载）
             boolean forceDownload = "1".equals(request.getParameter("download"));
