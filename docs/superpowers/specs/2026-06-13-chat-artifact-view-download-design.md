@@ -148,7 +148,28 @@ interface Artifact {
 
 ---
 
-## 5. 约束
+## 5. 前端：对话绑定工作空间后不可修改
+
+消息内容可能引用工作空间中的文件，因此对话绑定工作空间后应锁定。
+
+### 规则
+
+| 状态 | 工作空间选择器行为 |
+|------|-------------------|
+| 新建对话（无 conversationId） | 可切换、可新建工作空间 |
+| 已有对话（有 conversationId，有 workspaceId） | 只读，显示当前工作空间名称 |
+| 已有对话（有 conversationId，无 workspaceId） | 只读，显示"无工作空间" |
+
+### InputArea.vue 改动
+
+- 工作空间选择器根据 `convStore.currentId` 判断是否只读
+- 只读时：禁用下拉和新增按钮，仅显示当前工作空间名称
+- tooltip 提示："对话已绑定工作空间，新建对话可切换"
+- 样式与现有工作空间选择器一致，仅交互状态不同
+
+---
+
+## 6. 约束
 
 - **不创建新的 controller 文件**，端点加在现有 `ChatCtrl`
 - **不创建新的 service 文件**，逻辑在 `ChatServiceImpl` 中
@@ -156,10 +177,11 @@ interface Artifact {
 - **不改变现有代码块操作按钮的事件逻辑**
 - **文件服务端点不做目录列表**，仅单文件读取
 - 产物输出目录：工作空间目录的子目录 `outputs/`
+- **对话绑定工作空间后不可修改**，仅新建对话时可切换
 
 ---
 
-## 6. 涉及文件
+## 7. 涉及文件
 
 | 文件 | 改动 |
 |------|------|
@@ -167,6 +189,7 @@ interface Artifact {
 | `ChatEvent.java` | 新增 `artifactName`/`artifactPath`/`artifactType`/`artifactSize` 字段 |
 | `ChatServiceImpl.java` | 工具分发后检查产物并发送 artifact SSE 事件 |
 | `MessageBubble.vue` | 代码块增加下载按钮 + 产物卡片渲染 |
+| `InputArea.vue` | 工作空间选择器根据对话状态切换只读/可编辑模式 |
 | `ChatView.vue` | SSE 事件解析新增 `artifact` 分支 |
 | `chat.ts` (types) | `Message` 新增 `artifacts` 字段，`ChatEvent` 新增可选字段 |
 | `chat.ts` (store) | 新增 `addArtifact` action |
