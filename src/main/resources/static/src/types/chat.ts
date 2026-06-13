@@ -3,13 +3,26 @@ export type ChatMode = 'default' | 'acceptEdits' | 'bypass'
 
 // === SSE Chat Event ===
 export interface ChatEvent {
-  type: 'token' | 'thinking' | 'tool_call' | 'tool_result' | 'usage' | 'compaction' | 'done' | 'error'
+  type: 'token' | 'thinking' | 'tool_call' | 'tool_result' | 'usage' | 'compaction' | 'done' | 'error' | 'artifact' | 'clear'
   content?: string
   toolName?: string
   toolInput?: Record<string, unknown>
   toolOutput?: string
   usage?: { inputTokens: number; outputTokens: number }
   error?: string
+  // artifact 事件字段
+  artifactName?: string
+  artifactPath?: string
+  artifactType?: string
+  artifactSize?: number
+}
+
+// === Artifact (generated file) ===
+export interface Artifact {
+  name: string        // index.html
+  path: string        // outputs/index.html
+  contentType: string // text/html
+  size: number        // 字节
 }
 
 // === Message ===
@@ -19,6 +32,7 @@ export interface Message {
   content: string
   thinking?: string
   toolCalls?: ToolCall[]
+  artifacts?: Artifact[]
   timestamp: number
 }
 

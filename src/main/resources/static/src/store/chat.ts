@@ -98,5 +98,15 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  return { messages, streaming, currentThinking, sessionStartTime, mode, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, startSession, pruneEmptyAssistant, upsertToolCall, cycleMode }
+  function addArtifact(a: import('@/types/chat').Artifact) {
+    flushTokens()
+    const msgs = messages.value
+    if (msgs.length === 0) return
+    const last = msgs[msgs.length - 1]
+    if (last.role !== 'assistant') return
+    if (!last.artifacts) last.artifacts = []
+    last.artifacts.push(a)
+  }
+
+  return { messages, streaming, currentThinking, sessionStartTime, mode, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, startSession, pruneEmptyAssistant, upsertToolCall, addArtifact, cycleMode }
 })
