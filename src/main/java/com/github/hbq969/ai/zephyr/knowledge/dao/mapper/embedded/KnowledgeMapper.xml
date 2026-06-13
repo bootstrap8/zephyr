@@ -18,17 +18,21 @@
 
   <update id="createKnowledgeDocTable">
     create table if not exists zephyr_knowledge_doc (
-      id varchar(36) primary key,
-      kb_id varchar(36) not null,
-      file_name varchar(256),
-      file_type varchar(16),
-      file_size bigint,
-      chunk_count int default 0,
-      status varchar(16) default 'processing',
-      error_msg varchar(512),
-      created_at bigint
+        id varchar(64) not null,
+        kb_id varchar(64) not null,
+        file_name varchar(512),
+        file_type varchar(64),
+        file_size bigint default 0,
+        content clob,
+        source_type varchar(16) default 'upload',
+        chunk_count int default 0,
+        status varchar(32) default 'processing',
+        error_msg varchar(1024),
+        created_at bigint not null,
+        updated_at bigint,
+        primary key (id)
     );
-    create index if not exists idx_zephyr_kd_kb on zephyr_knowledge_doc(kb_id);
+    create index if not exists idx_kb_doc_kb_id on zephyr_knowledge_doc(kb_id);
   </update>
 
   <update id="createConversationKbTable">
