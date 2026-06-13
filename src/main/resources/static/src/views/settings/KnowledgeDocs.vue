@@ -6,6 +6,7 @@ import { getLangData } from '@/i18n/locale'
 import { msg } from '@/utils/Utils'
 import { Icon } from '@iconify/vue'
 import axios from '@/network'
+import MarkdownEditorDialog from './MarkdownEditorDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,9 +19,25 @@ const uploadVisible = ref(false)
 const uploadFile = ref<File | null>(null)
 const uploading = ref(false)
 
+const editorVisible = ref(false)
+const editDoc = ref<any>(null)
+
 const headerCellStyle = () => {
   return { backgroundColor: 'var(--el-fill-color-light)', color: 'var(--el-text-color-primary)', fontWeight: 600, whiteSpace: 'nowrap' }
 }
+
+const openCreateInline = () => {
+  editDoc.value = null
+  editorVisible.value = true
+}
+
+const openEditInline = (doc: any) => {
+  if (doc.sourceType !== 'inline') { msg(langData.knowledgeMgmt_onlyInlineEdit, 'warning'); return }
+  editDoc.value = doc
+  editorVisible.value = true
+}
+
+const onDocSaved = () => { fetchDocs() }
 
 const fetchDocs = () => {
   axios({ url: '/knowledge/doc/list', method: 'get', params: { kbId } })
@@ -115,6 +132,9 @@ onMounted(() => { fetchDocs(); fetchKbName() })
 
     <div v-if="docs.length > 0" class="page-toolbar">
       <div style="flex:1"></div>
+      <el-button @click="openCreateInline">
+        <Icon icon="lucide:edit-3" style="margin-right:4px" /> {{ langData.knowledgeMgmt_createInlineDoc }}
+      </el-button>
       <el-button type="primary" @click="uploadVisible = true">
         <Icon icon="lucide:upload" style="margin-right:4px" /> {{ langData.knowledgeMgmt_uploadDoc }}
       </el-button>
@@ -126,6 +146,9 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <p class="empty-desc">{{ langData.knowledgeMgmt_noDocHint }}</p>
       <button class="btn-primary" @click="uploadVisible = true">
         <Icon icon="lucide:upload" /> {{ langData.knowledgeMgmt_uploadDoc }}
+      </button>
+      <button class="btn-primary" @click="openCreateInline" style="margin-top:12px">
+        <Icon icon="lucide:edit-3" /> {{ langData.knowledgeMgmt_createInlineDoc }}
       </button>
     </div>
 
@@ -143,6 +166,13 @@ onMounted(() => { fetchDocs(); fetchKbName() })
           <el-tag size="small" type="info" effect="plain">{{ row.fileType?.split('/')?.pop() || '-' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="来源" width="90" align="center">
+        <template #default="{ row }">
+          <el-tag size="small" :type="row.sourceType === 'inline' ? 'success' : 'info'" effect="plain">
+            {{ row.sourceType === 'inline' ? langData.knowledgeMgmt_inlineDocBadge : langData.knowledgeMgmt_uploadDocBadge }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="大小" width="90" align="right">
         <template #default="{ row }">{{ fmtSize(row.fileSize) }}</template>
       </el-table-column>
@@ -157,8 +187,14 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <el-table-column :label="langData.tableHeaderCreateTime" width="110" align="center">
         <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
       </el-table-column>
-      <el-table-column :label="langData.tableHeaderOp" width="160" align="center" fixed="right">
+      <el-table-column :label="langData.tableHeaderOp" width="200" align="center" fixed="right">
         <template #default="{ row }">
+          <el-button link size="small" @click="openEditInline(row)">
+            <el-tooltip :content="langData.knowledgeMgmt_editInlineDoc">
+              <Icon icon="lucide:edit-3" style="font-size:15px" />
+            </el-tooltip>
+          </el-button>
+          <el-divider direction="vertical" />
           <el-button link size="small" @click="reParse(row)" :disabled="row.status === 'processing'">
             <el-tooltip :content="langData.knowledgeMgmt_reParse">
               <Icon icon="lucide:refresh-cw" style="font-size:15px" />
@@ -192,6 +228,13 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       </template>
     </el-dialog>
   </div>
+
+  <MarkdownEditorDialog
+    v-model:visible="editorVisible"
+    :kb-id="kbId"
+    :edit-doc="editDoc"
+    @saved="onDocSaved"
+  />
 </template>
 
 <style scoped>
