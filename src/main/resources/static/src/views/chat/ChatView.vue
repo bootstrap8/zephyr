@@ -143,7 +143,9 @@ function onSend(text: string, filePaths?: string[]) {
               output: event.toolOutput,
             })
           } else if (event.type === 'artifact') {
+            console.log('[artifact] SSE event:', event)
             if (event.artifactName && event.artifactPath) {
+              console.log('[artifact] adding to store:', event.artifactName, event.artifactPath)
               chatStore.addArtifact({
                 name: event.artifactName,
                 path: event.artifactPath,

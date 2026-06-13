@@ -16,9 +16,12 @@ const workspaceStore = useWorkspaceStore()
 
 function artifactUrl(filePath: string) {
   const wsId = workspaceStore.currentId
+  console.log('[artifact] artifactUrl called:', { filePath, wsId })
   if (!wsId) return '#'
   const encodedPath = filePath.split('/').map(encodeURIComponent).join('/')
-  return `./chat/files/${wsId}/${encodedPath}`
+  const url = `./chat/files/${wsId}/${encodedPath}`
+  console.log('[artifact] generated URL:', url)
+  return url
 }
 
 function previewable(contentType: string) {
