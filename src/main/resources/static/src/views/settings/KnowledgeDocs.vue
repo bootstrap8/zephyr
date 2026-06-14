@@ -256,7 +256,8 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spac
 .empty-state { text-align: center; padding: 80px 24px; }
 .empty-title { font-family: Georgia, serif; font-size: 22px; color: var(--el-text-color-primary); margin: 16px 0 8px; }
 .empty-desc { font-size: 14px; color: var(--el-text-color-secondary); max-width: 420px; margin: 0 auto 24px; }
-.empty-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.empty-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; }
+.empty-actions .btn-primary + .btn-primary { margin-left: 16px; }
 
 .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: none; background: var(--el-color-primary); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 150ms; }
 .btn-primary:hover { background: var(--el-color-primary-light-3); }
