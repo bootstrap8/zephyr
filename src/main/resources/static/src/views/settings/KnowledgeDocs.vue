@@ -14,6 +14,7 @@ const langData = getLangData()
 
 const kbId = route.params.kbId as string
 const kbName = ref('')
+const kbCanManage = ref(false)
 const docs = ref<any[]>([])
 const uploadVisible = ref(false)
 const uploadFile = ref<File | null>(null)
@@ -50,7 +51,10 @@ const fetchKbName = () => {
     .then(res => {
       if (res.data.state === 'OK') {
         const kb = res.data.body.find((k: any) => k.id === kbId)
-        if (kb) kbName.value = kb.name
+        if (kb) {
+          kbName.value = kb.name
+          kbCanManage.value = kb.canManage === true
+        }
       }
     })
 }
@@ -125,7 +129,7 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <h2>{{ kbName || langData.knowledgeMgmt_title }}</h2>
     </div>
 
-    <div v-if="docs.length > 0" class="page-toolbar">
+    <div v-if="docs.length > 0 && kbCanManage" class="page-toolbar">
       <div style="flex:1"></div>
       <el-button @click="openCreateInline">
         <Icon icon="lucide:edit-3" style="margin-right:4px" /> {{ langData.knowledgeMgmt_createInlineDoc }}
@@ -139,12 +143,14 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <Icon icon="lucide:file" width="48" style="color: var(--el-text-color-placeholder)" />
       <h3 class="empty-title">{{ langData.knowledgeMgmt_noDoc }}</h3>
       <p class="empty-desc">{{ langData.knowledgeMgmt_noDocHint }}</p>
-      <button class="btn-primary" @click="uploadVisible = true">
-        <Icon icon="lucide:upload" /> {{ langData.knowledgeMgmt_uploadDoc }}
-      </button>
-      <button class="btn-primary" @click="openCreateInline" style="margin-top:12px">
-        <Icon icon="lucide:edit-3" /> {{ langData.knowledgeMgmt_createInlineDoc }}
-      </button>
+      <div v-if="kbCanManage" class="empty-actions">
+        <button class="btn-primary" @click="uploadVisible = true">
+          <Icon icon="lucide:upload" /> {{ langData.knowledgeMgmt_uploadDoc }}
+        </button>
+        <button class="btn-primary" @click="openCreateInline">
+          <Icon icon="lucide:edit-3" /> {{ langData.knowledgeMgmt_createInlineDoc }}
+        </button>
+      </div>
     </div>
 
     <el-table v-else :data="docs" style="width:100%" :header-cell-style="headerCellStyle" stripe>
@@ -182,7 +188,7 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <el-table-column :label="langData.tableHeaderCreateTime" width="110" align="center">
         <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
       </el-table-column>
-      <el-table-column :label="langData.tableHeaderOp" width="200" align="center">
+      <el-table-column v-if="kbCanManage" :label="langData.tableHeaderOp" width="200" align="center">
         <template #default="{ row }">
           <el-button link size="small" @click="openEditInline(row)">
             <el-tooltip :content="langData.knowledgeMgmt_editInlineDoc">
@@ -250,6 +256,7 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 22px; letter-spac
 .empty-state { text-align: center; padding: 80px 24px; }
 .empty-title { font-family: Georgia, serif; font-size: 22px; color: var(--el-text-color-primary); margin: 16px 0 8px; }
 .empty-desc { font-size: 14px; color: var(--el-text-color-secondary); max-width: 420px; margin: 0 auto 24px; }
+.empty-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
 .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: none; background: var(--el-color-primary); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 150ms; }
 .btn-primary:hover { background: var(--el-color-primary-light-3); }

@@ -216,6 +216,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public void reParseDoc(String docId, String kbId, String userName) {
         KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
         if (doc == null) throw new RuntimeException("文档不存在");
+        KnowledgeBaseEntity kb = knowledgeDao.queryKbById(kbId);
+        if (kb != null && SCOPE_SHARED.equals(kb.getScope())) checkSharedManage();
         knowledgeDao.updateDocStatus(docId, "processing", 0, null);
         keywordIndex.removeDoc(kbId, docId);
         Path dataDir = Paths.get(cfg.getKnowledge().getDataDir(), kbId);
