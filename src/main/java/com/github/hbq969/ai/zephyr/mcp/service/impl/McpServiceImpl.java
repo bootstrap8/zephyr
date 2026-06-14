@@ -66,6 +66,13 @@ public class McpServiceImpl implements McpService {
         String scope = body.getOrDefault("scope", SCOPE_USER);
         if (SCOPE_SHARED.equals(scope)) checkSharedManage();
 
+        String name = body.get("name");
+        // 检查是否有同名共享 MCP 服务器
+        McpServerEntity dup = mcpDao.queryByNameAndScope(name, SCOPE_SHARED);
+        if (dup != null) {
+            throw new RuntimeException("已存在同名共享 MCP 服务器 \"" + name + "\"，请使用其他名称");
+        }
+
         McpServerEntity entity = new McpServerEntity();
         entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
         entity.setUserName(userName);

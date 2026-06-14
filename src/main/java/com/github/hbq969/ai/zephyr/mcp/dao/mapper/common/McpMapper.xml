@@ -144,4 +144,13 @@
         update zephyr_mcp_servers set scope = #{scope} where id = #{id}
     </update>
 
+    <select id="queryByNameAndScope" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity">
+        select id, user_name as userName, name, transport,
+               command, args, env_vars as envVars,
+               url, headers, status, scope,
+               created_at as createdAt, updated_at as updatedAt
+        from zephyr_mcp_servers
+        where name = #{name} and scope = #{scope}
+    </select>
+
 </mapper>

@@ -323,8 +323,15 @@ public class SkillServiceImpl implements SkillService {
             Path srcDir = Paths.get(platformPath, skillName);
             if (!Files.isDirectory(srcDir)) continue;
 
+            // 检查是否有同名共享 Skill
+            SkillConfigEntity sharedDup = skillDao.queryBySkillNameAndScope(skillName, SCOPE_SHARED);
+            if (sharedDup != null) {
+                log.warn("已存在同名共享 Skill \"{}\"，跳过同步安装", skillName);
+                continue;
+            }
+
             SkillConfigEntity existing = SCOPE_SHARED.equals(scope)
-                    ? skillDao.queryBySkillNameAndScope(skillName, SCOPE_SHARED)
+                    ? sharedDup
                     : skillDao.queryBySkillName(skillName, userName);
             if (existing != null) {
                 log.warn("Skill {} 已安装，跳过", skillName);
@@ -503,8 +510,15 @@ public class SkillServiceImpl implements SkillService {
             String skillName = detectSkillName(skillRoot);
             String fullName = packName != null ? packName + ":" + skillName : skillName;
 
+            // 检查是否有同名共享 Skill
+            SkillConfigEntity sharedDup = skillDao.queryBySkillNameAndScope(fullName, SCOPE_SHARED);
+            if (sharedDup != null) {
+                log.warn("已存在同名共享 Skill \"{}\"，跳过安装", fullName);
+                continue;
+            }
+
             SkillConfigEntity existing = SCOPE_SHARED.equals(scope)
-                    ? skillDao.queryBySkillNameAndScope(fullName, SCOPE_SHARED)
+                    ? sharedDup
                     : skillDao.queryBySkillName(fullName, userName);
             if (existing != null) {
                 log.warn("Skill {} 已安装，跳过", fullName);
