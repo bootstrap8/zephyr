@@ -324,6 +324,9 @@ function toggleKbList() {
   closeAll(); showKbList.value = !showKbList.value
 }
 
+const sharedKbs = computed(() => settingsStore.knowledgeBases.filter((kb: any) => kb.scope === 'shared'))
+const userKbs = computed(() => settingsStore.knowledgeBases.filter((kb: any) => kb.scope !== 'shared'))
+
 watch(() => convStore.currentId, () => {
   selectedKbIds.value = []
   loadKbData()
@@ -575,15 +578,35 @@ function closeAll() {
             <Icon icon="lucide:chevron-down" class="pick-arrow" />
             <div v-if="showKbList" class="pick-dropdown kb-dropdown" @click.stop>
               <div v-if="settingsStore.knowledgeBases.length === 0" class="sub-loading">{{ langData.knowledgeMgmt_noKb }}</div>
-              <div v-for="kb in settingsStore.knowledgeBases" :key="kb.id" class="pick-option kb-option"
-                   :class="{ current: selectedKbIds.includes(kb.id) }"
-                   @click="toggleKb(kb.id)">
-                <span class="kb-check-box" :class="{ checked: selectedKbIds.includes(kb.id) }">
-                  <Icon v-if="selectedKbIds.includes(kb.id)" icon="lucide:check" class="kb-chk-icon" />
-                </span>
-                <span class="kb-opt-name" :title="kb.name">{{ kb.name }}</span>
-                <span class="kb-opt-count">{{ kb.docCount }} 文档</span>
-              </div>
+              <template v-else>
+                <template v-if="sharedKbs.length > 0">
+                  <div class="kb-section-label">{{ langData.knowledgeMgmt_sharedTab || '共享知识库' }}</div>
+                  <div v-for="kb in sharedKbs" :key="kb.id" class="pick-option kb-option"
+                       :class="{ current: selectedKbIds.includes(kb.id) }"
+                       @click="toggleKb(kb.id)">
+                    <span class="kb-check-box" :class="{ checked: selectedKbIds.includes(kb.id) }">
+                      <Icon v-if="selectedKbIds.includes(kb.id)" icon="lucide:check" class="kb-chk-icon" />
+                    </span>
+                    <span class="kb-opt-name" :title="kb.name">{{ kb.name }}</span>
+                    <span class="skill-scope-badge scope-shared">{{ langData.knowledgeMgmt_shared || '共享' }}</span>
+                    <span class="kb-opt-count">{{ kb.docCount }} 文档</span>
+                  </div>
+                </template>
+                <div v-if="sharedKbs.length > 0 && userKbs.length > 0" class="kb-section-divider"></div>
+                <template v-if="userKbs.length > 0">
+                  <div class="kb-section-label">{{ langData.knowledgeMgmt_userTab || '我的知识库' }}</div>
+                  <div v-for="kb in userKbs" :key="kb.id" class="pick-option kb-option"
+                       :class="{ current: selectedKbIds.includes(kb.id) }"
+                       @click="toggleKb(kb.id)">
+                    <span class="kb-check-box" :class="{ checked: selectedKbIds.includes(kb.id) }">
+                      <Icon v-if="selectedKbIds.includes(kb.id)" icon="lucide:check" class="kb-chk-icon" />
+                    </span>
+                    <span class="kb-opt-name" :title="kb.name">{{ kb.name }}</span>
+                    <span class="skill-scope-badge scope-user">{{ langData.knowledgeMgmt_personal || '个人' }}</span>
+                    <span class="kb-opt-count">{{ kb.docCount }} 文档</span>
+                  </div>
+                </template>
+              </template>
             </div>
           </div>
 
@@ -867,6 +890,8 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 .kb-chk-icon { color: #fff; font-size: 11px; }
 .kb-opt-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kb-opt-count { font-size: 11px; color: var(--el-text-color-placeholder); flex-shrink: 0; }
+.kb-section-label { font-size: 11px; color: var(--el-text-color-placeholder); padding: 6px 10px 2px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+.kb-section-divider { height: 1px; background: var(--el-border-color); margin: 4px 0; }
 .kb-dropdown { width: 340px; }
 </style>
 
