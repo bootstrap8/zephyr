@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.stereotype.Component;
 
+import org.springframework.scheduling.annotation.Async;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +58,7 @@ public class LightRagClient {
         }
     }
 
+    @Async
     public void index(String kbId, String docId, String text) {
         if (!enabled()) return;
         try {
