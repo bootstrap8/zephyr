@@ -143,4 +143,13 @@ public class KnowledgeCtrl {
         int topK = body.containsKey("topK") ? ((Number) body.get("topK")).intValue() : 5;
         return ReturnMessage.success(knowledgeService.search(query, List.of(kbId), topK));
     }
+
+    @Operation(summary = "切换知识库共享状态（仅admin）")
+    @RequestMapping(path = "/kb/scope/toggle", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "knowledge_kb_toggleScope", apiDesc = "知识库管理_切换共享状态")
+    public ReturnMessage<?> toggleKbScope(@RequestBody Map<String, String> body) {
+        knowledgeService.toggleKbScope(body.get("id"), body.get("scope"), userName());
+        return ReturnMessage.success("ok");
+    }
 }
