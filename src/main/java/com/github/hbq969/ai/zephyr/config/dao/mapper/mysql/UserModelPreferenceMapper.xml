@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao">
+
+  <update id="createUserModelPrefsTable">
+    create table if not exists zephyr_user_model_prefs (
+      id varchar(64) primary key,
+      user_name varchar(64) not null,
+      model_type varchar(16) not null default 'llm',
+      model_id varchar(64) not null,
+      created_at bigint not null,
+      updated_at bigint not null
+    );
+    create unique index if not exists idx_user_model_prefs on zephyr_user_model_prefs(user_name, model_type);
+  </update>
+
+  <update id="upsert">
+    insert into zephyr_user_model_prefs (id, user_name, model_type, model_id, created_at, updated_at)
+    values (#{id}, #{userName}, #{modelType}, #{modelId}, #{createdAt}, #{updatedAt})
+    on duplicate key update model_id = #{modelId}, updated_at = #{updatedAt}
+  </update>
+
+</mapper>
