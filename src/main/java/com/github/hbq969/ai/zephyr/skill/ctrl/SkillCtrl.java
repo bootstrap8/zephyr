@@ -39,7 +39,11 @@ public class SkillCtrl {
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "skill_install", apiDesc = "Skill管理_安装Skill")
     public ReturnMessage<?> install(@RequestBody Map<String, String> body) {
-        return ReturnMessage.success(skillService.install(body, userName()));
+        try {
+            return ReturnMessage.success(skillService.install(body, userName()));
+        } catch (RuntimeException e) {
+            return ReturnMessage.fail(e.getMessage());
+        }
     }
 
     @Operation(summary = "上传压缩包安装Skill")
@@ -48,7 +52,11 @@ public class SkillCtrl {
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "skill_upload", apiDesc = "Skill管理_上传压缩包安装Skill")
     public ReturnMessage<?> upload(@RequestParam("file") MultipartFile file,
                                    @RequestParam(value = "scope", defaultValue = "user") String scope) {
-        return ReturnMessage.success(skillService.upload(file, scope, userName()));
+        try {
+            return ReturnMessage.success(skillService.upload(file, scope, userName()));
+        } catch (RuntimeException e) {
+            return ReturnMessage.fail(e.getMessage());
+        }
     }
 
     @Operation(summary = "扫描本地平台可同步的Skill")
@@ -64,7 +72,11 @@ public class SkillCtrl {
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "skill_syncInstall", apiDesc = "Skill管理_执行平台同步安装")
     public ReturnMessage<?> syncInstall(@RequestBody Map<String, String> body) {
-        return ReturnMessage.success(skillService.syncInstall(body, userName()));
+        try {
+            return ReturnMessage.success(skillService.syncInstall(body, userName()));
+        } catch (RuntimeException e) {
+            return ReturnMessage.fail(e.getMessage());
+        }
     }
 
     @Operation(summary = "启用/禁用Skill")

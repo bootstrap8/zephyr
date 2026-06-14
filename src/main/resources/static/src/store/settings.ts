@@ -212,7 +212,8 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function installSkill(data: Record<string, string>) {
     const res = await axios({ url: '/skill/install', method: 'post', data })
-    if (res.data.state === 'OK') await loadSkills()
+    if (res.data.state !== 'OK') throw new Error(res.data.errorMessage || '安装失败')
+    await loadSkills()
     return res.data
   }
 
@@ -225,7 +226,8 @@ export const useSettingsStore = defineStore('settings', () => {
       data: formData,
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    if (res.data.state === 'OK') await loadSkills()
+    if (res.data.state !== 'OK') throw new Error(res.data.errorMessage || '上传失败')
+    await loadSkills()
     return res.data
   }
 
@@ -255,7 +257,8 @@ export const useSettingsStore = defineStore('settings', () => {
       url: '/skill/sync-install', method: 'post',
       data: { platform, skillNames: skillNames.join(','), scope: scope || 'user' }
     })
-    if (res.data.state === 'OK') await loadSkills()
+    if (res.data.state !== 'OK') throw new Error(res.data.errorMessage || '操作失败')
+    await loadSkills()
     return res.data
   }
 

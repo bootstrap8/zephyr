@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getLangData } from '@/i18n/locale'
 import { useSettingsStore } from '@/store/settings'
 import { Icon } from '@iconify/vue'
+import { msg } from '@/utils/Utils'
 import type { SkillConfig } from '@/types/chat'
 
 const store = useSettingsStore()
@@ -152,7 +153,8 @@ async function doInstall() {
     if (Array.isArray(body) && body.length > 0) {
       ElMessage.success(langData.skillMgmt_installSuccess.replace('{count}', String(body.length)))
     }
-  } catch (_) {
+  } catch (err: any) {
+    msg(err?.response?.data?.errorMessage || err?.message || '安装失败', 'error')
   } finally {
     installing.value = false
   }
@@ -192,6 +194,8 @@ async function doSyncInstall() {
     await store.syncInstallSkills(currentPlatform.value, [...selectedSyncSkills.value], installScope.value)
     showSyncPanel.value = false
     showInstallDialog.value = false
+  } catch (err: any) {
+    msg(err?.response?.data?.errorMessage || err?.message || '同步安装失败', 'error')
   } finally {
     syncing.value = false
   }
