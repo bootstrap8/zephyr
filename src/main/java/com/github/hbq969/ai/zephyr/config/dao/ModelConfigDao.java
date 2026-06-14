@@ -26,6 +26,10 @@ public interface ModelConfigDao {
 
     void clearDefaultByType(@Param("modelType") String modelType);
 
+    List<ModelConfigEntity> queryShared();
+
+    void toggleScope(@Param("id") String id, @Param("scope") String scope, @Param("updatedAt") Long updatedAt);
+
     @Update("update zephyr_model_configs set max_context_tokens = #{maxTokens}, updated_at = #{updatedAt} where id = #{id} and user_name = #{userName}")
     void updateMaxContextTokens(@Param("id") String id, @Param("maxTokens") Long maxTokens, @Param("updatedAt") Long updatedAt, @Param("userName") String userName);
 }
