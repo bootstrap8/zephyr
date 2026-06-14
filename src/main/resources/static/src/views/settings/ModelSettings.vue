@@ -517,8 +517,8 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
               <el-tooltip v-if="settingsStore.isAdmin" content="设为共享">
                 <button class="action-icon" @click="toggleScope(m)"><Icon icon="lucide:share-2" /></button>
               </el-tooltip>
-              <button v-if="settingsStore.currentModel !== m.name" class="set-btn" @click="onSetCurrent(m.name)">使用</button>
-              <span v-else class="current-badge">当前</span>
+              <button v-if="(m.modelType || 'llm') === 'llm' && settingsStore.currentModel !== m.name" class="set-btn" @click="onSetCurrent(m.name)">使用</button>
+              <span v-else-if="(m.modelType || 'llm') === 'llm'" class="current-badge">当前</span>
             </div>
           </div>
           <div v-if="userModels.length === 0" class="empty-hint"><p>暂无个人模型，请先创建</p></div>
@@ -554,8 +554,8 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
                   <button class="action-icon" @click="toggleScope(m)"><Icon icon="lucide:lock" /></button>
                 </el-tooltip>
               </template>
-              <button v-if="settingsStore.currentModel !== m.name" class="set-btn" @click="onSetCurrent(m.name)">使用</button>
-              <span v-else class="current-badge">当前</span>
+              <button v-if="(m.modelType || 'llm') === 'llm' && settingsStore.currentModel !== m.name" class="set-btn" @click="onSetCurrent(m.name)">使用</button>
+              <span v-else-if="(m.modelType || 'llm') === 'llm'" class="current-badge">当前</span>
             </div>
           </div>
           <div v-if="sharedModels.length === 0" class="empty-hint"><p>暂无共享模型</p></div>
