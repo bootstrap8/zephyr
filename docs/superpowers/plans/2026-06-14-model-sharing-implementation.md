@@ -17,21 +17,15 @@
 - Modify: `src/main/java/com/github/hbq969/ai/zephyr/config/dao/mapper/mysql/ModelConfigMapper.xml`
 - Modify: `src/main/java/com/github/hbq969/ai/zephyr/config/dao/mapper/postgresql/ModelConfigMapper.xml`
 
-- [ ] **Step 1: 在三个方言 Mapper XML 的 `createModelConfigsTable` 中加 scope 列**
+- [ ] **Step 1: 在三个方言 Mapper XML 的 `createModelConfigsTable` 中加 scope 列 + 存量迁移**
 
-在 `dimensions int,` 之前插入：
-```xml
-scope varchar(16) default 'user',
-```
+在 `dimensions int,` 之前插入 scope 列 + 索引。同时在 DDL 前加 ALTER TABLE 语句处理存量数据库：
 
-同时在 DDL 末尾加共享查询索引：
-```xml
-create index if not exists idx_zephyr_mc_scope on zephyr_model_configs(scope);
-```
-
-完整 DDL 示例（embedded）：
+**embedded (H2):**
 ```xml
 <update id="createModelConfigsTable">
+  alter table zephyr_model_configs add column if not exists scope varchar(16) default 'user';
+  update zephyr_model_configs set scope = 'user' where scope is null;
   create table if not exists zephyr_model_configs (
     id varchar(64) primary key,
     user_name varchar(64) not null,
@@ -52,7 +46,57 @@ create index if not exists idx_zephyr_mc_scope on zephyr_model_configs(scope);
 </update>
 ```
 
-mysql 和 postgresql 做同样改动。
+**mysql:**
+```xml
+<update id="createModelConfigsTable">
+  alter table zephyr_model_configs add column if not exists scope varchar(16) default 'user';
+  update zephyr_model_configs set scope = 'user' where scope is null;
+  create table if not exists zephyr_model_configs (
+    id varchar(64) primary key,
+    user_name varchar(64) not null,
+    name varchar(128) not null,
+    base_url varchar(512),
+    api_key_encrypted text,
+    max_context_tokens bigint,
+    is_default smallint default 0,
+    created_at bigint,
+    updated_at bigint,
+    model_type varchar(16) default 'llm',
+    scope varchar(16) default 'user',
+    dimensions int,
+    params text
+  );
+  create index if not exists idx_zephyr_mc_user on zephyr_model_configs(user_name);
+  create index if not exists idx_zephyr_mc_scope on zephyr_model_configs(scope);
+</update>
+```
+
+**postgresql:**
+```xml
+<update id="createModelConfigsTable">
+  alter table zephyr_model_configs add column if not exists scope varchar(16) default 'user';
+  update zephyr_model_configs set scope = 'user' where scope is null;
+  create table if not exists zephyr_model_configs (
+    id varchar(64) primary key,
+    user_name varchar(64) not null,
+    name varchar(128) not null,
+    base_url varchar(512),
+    api_key_encrypted text,
+    max_context_tokens bigint,
+    is_default smallint default 0,
+    created_at bigint,
+    updated_at bigint,
+    model_type varchar(16) default 'llm',
+    scope varchar(16) default 'user',
+    dimensions int,
+    params text
+  );
+  create index if not exists idx_zephyr_mc_user on zephyr_model_configs(user_name);
+  create index if not exists idx_zephyr_mc_scope on zephyr_model_configs(scope);
+</update>
+```
+
+> 注：`ThrowUtils.call` 吞掉异常，即使 ALTER 失败（如 MySQL 不支持 `IF NOT EXISTS`），后续语句会被跳过。但 `CREATE TABLE IF NOT EXISTS` 对存量表也是安全的空操作，所以最坏情况是存量表的 scope 列未自动添加。MySQL 生产环境需手动执行一次 ALTER。
 
 - [ ] **Step 2: Commit**
 
@@ -289,10 +333,11 @@ public interface UserModelPreferenceDao {
     void createUserModelPrefsTable();
     void upsert(UserModelPreferenceEntity entity);
     UserModelPreferenceEntity queryByUserAndType(@Param("userName") String userName, @Param("modelType") String modelType);
+    void deleteByModelId(@Param("modelId") String modelId);
 }
 ```
 
-- [ ] **Step 3: 创建 Common Mapper XML**
+- [ ] **Step 3: 创建 Common Mapper XML（仅跨方言安全的 DML）**
 
 `common/UserModelPreferenceMapper.xml`:
 ```xml
@@ -301,12 +346,6 @@ public interface UserModelPreferenceDao {
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao">
 
-  <update id="upsert">
-    merge into zephyr_user_model_prefs (id, user_name, model_type, model_id, created_at, updated_at)
-    key (user_name, model_type)
-    values (#{id}, #{userName}, #{modelType}, #{modelId}, #{createdAt}, #{updatedAt})
-  </update>
-
   <select id="queryByUserAndType" resultType="com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity">
     select id, user_name as userName, model_type as modelType, model_id as modelId,
            created_at as createdAt, updated_at as updatedAt
@@ -314,12 +353,16 @@ public interface UserModelPreferenceDao {
     where user_name = #{userName} and model_type = #{modelType}
   </select>
 
+  <delete id="deleteByModelId">
+    delete from zephyr_user_model_prefs where model_id = #{modelId}
+  </delete>
+
 </mapper>
 ```
 
-注：H2 用 `MERGE` 语法；mysql 和 postgresql 方言需在对应 Mapper XML 中用各自语法。
+> 注意：`upsert` 是方言特定的，**不放在 common mapper 中**，由各方言 Mapper XML 分别声明。
 
-- [ ] **Step 4: 创建 Embedded DDL Mapper XML**
+- [ ] **Step 4: 创建 Embedded DDL Mapper XML + upsert**
 
 `embedded/UserModelPreferenceMapper.xml`:
 ```xml
@@ -330,14 +373,20 @@ public interface UserModelPreferenceDao {
 
   <update id="createUserModelPrefsTable">
     create table if not exists zephyr_user_model_prefs (
-      id varchar(12) primary key,
+      id varchar(64) primary key,
       user_name varchar(64) not null,
       model_type varchar(16) not null default 'llm',
-      model_id varchar(12) not null,
+      model_id varchar(64) not null,
       created_at bigint not null,
       updated_at bigint not null
     );
     create unique index if not exists idx_user_model_prefs on zephyr_user_model_prefs(user_name, model_type);
+  </update>
+
+  <update id="upsert">
+    merge into zephyr_user_model_prefs (id, user_name, model_type, model_id, created_at, updated_at)
+    key (user_name, model_type)
+    values (#{id}, #{userName}, #{modelType}, #{modelId}, #{createdAt}, #{updatedAt})
   </update>
 
 </mapper>
@@ -347,7 +396,7 @@ mysql 和 postgresql 做同样的 DDL（H2 MERGE 语法替换为 mysql 的 `INSE
 
 - [ ] **Step 5: 创建 MySQL DDL Mapper XML + upsert**
 
-`mysql/UserModelPreferenceMapper.xml` DDL 同上，upsert 用：
+`mysql/UserModelPreferenceMapper.xml` DDL 同上（`varchar(64)`），upsert 用：
 ```xml
 <update id="upsert">
   insert into zephyr_user_model_prefs (id, user_name, model_type, model_id, created_at, updated_at)
@@ -356,9 +405,11 @@ mysql 和 postgresql 做同样的 DDL（H2 MERGE 语法替换为 mysql 的 `INSE
 </update>
 ```
 
+> MySQL 的 `ON DUPLICATE KEY UPDATE` 依赖 `(user_name, model_type)` 上的唯一索引（DDL 中已定义 `create unique index if not exists idx_user_model_prefs`）。
+
 - [ ] **Step 6: 创建 PostgreSQL DDL Mapper XML + upsert**
 
-`postgresql/UserModelPreferenceMapper.xml` DDL 同上，upsert 用：
+`postgresql/UserModelPreferenceMapper.xml` DDL 同上（`varchar(64)`），upsert 用：
 ```xml
 <update id="upsert">
   insert into zephyr_user_model_prefs (id, user_name, model_type, model_id, created_at, updated_at)
@@ -424,7 +475,7 @@ void toggleScope(String id, String scope, String userName);
 private com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao userModelPreferenceDao;
 ```
 
-改写 `list()` 方法：
+改写 `list()` 方法（含偏好注入）：
 ```java
 @Override
 public List<ModelConfigEntity> list(String userName) {
@@ -442,11 +493,24 @@ public List<ModelConfigEntity> list(String userName) {
         dedup.put(e.getName(), e);
     }
 
+    // 查用户偏好，注入 isDefault
+    com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity llmPref =
+            userModelPreferenceDao.queryByUserAndType(userName, "llm");
+    com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity embPref =
+            userModelPreferenceDao.queryByUserAndType(userName, "embedding");
+
     List<ModelConfigEntity> result = new ArrayList<>(dedup.values());
     for (ModelConfigEntity e : result) {
         String key = e.getApiKeyEncrypted();
         if (key != null && !key.isEmpty()) {
             e.setApiKeyEncrypted(maskApiKey(key));
+        }
+        // 偏好表匹配的模型设 isDefault=1（前端 loadModels 依赖此字段）
+        String mt = e.getModelType() != null ? e.getModelType() : "llm";
+        if ("llm".equals(mt) && llmPref != null && llmPref.getModelId().equals(e.getId())) {
+            e.setIsDefault(1);
+        } else if ("embedding".equals(mt) && embPref != null && embPref.getModelId().equals(e.getId())) {
+            e.setIsDefault(1);
         }
     }
     return result;
@@ -470,7 +534,7 @@ public List<ModelConfigEntity> listByType(String modelType, String userName) {
 }
 ```
 
-- [ ] **Step 4: 改写 setDefault()**
+- [ ] **Step 4: 改写 setDefault()（含可见性检查）**
 
 ```java
 @Override
@@ -478,12 +542,17 @@ public List<ModelConfigEntity> listByType(String modelType, String userName) {
 public void setDefault(String id, String userName) {
     ModelConfigEntity entity = modelConfigDao.queryById(id);
     if (entity == null) throw new RuntimeException("模型不存在");
-    // 先清掉用户在此类型的旧默认
+
+    // 可见性检查：只能设自己私有模型或共享模型为默认
+    if (!"shared".equals(entity.getScope()) && !userName.equals(entity.getUserName())) {
+        throw new RuntimeException("无权访问此模型");
+    }
+
     String modelType = entity.getModelType() != null ? entity.getModelType() : "llm";
-    // 清掉用户私有模型中的默认标记
+    // 清掉用户私有模型中的默认标记（兼容过渡期）
     modelConfigDao.clearDefault(userName);
 
-    // 写入用户偏好表（支持跨用户设默认）
+    // 写入用户偏好表
     com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity pref =
             new com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity();
     pref.setId(cn.hutool.core.lang.UUID.fastUUID().toString(true).substring(0, 12));
@@ -496,18 +565,23 @@ public void setDefault(String id, String userName) {
 }
 ```
 
-- [ ] **Step 5: 加 toggleScope()**
+- [ ] **Step 5: 加 toggleScope()（取消共享时清理其他用户偏好）**
 
 ```java
 @Override
 @Transactional
 public void toggleScope(String id, String scope, String userName) {
-    // admin 检查：复用 SKILL 的 isAdmin 逻辑
+    // admin 检查
     com.github.hbq969.code.sm.login.model.UserInfo ui =
             com.github.hbq969.code.sm.login.session.UserContext.getNoCheck();
     if (ui == null || !ui.isAdmin()) throw new RuntimeException("仅 admin 可管理共享模型");
 
     modelConfigDao.toggleScope(id, scope, System.currentTimeMillis() / 1000);
+
+    // 取消共享时，清理其他用户指向该模型的偏好记录（避免悬空引用）
+    if ("user".equals(scope)) {
+        userModelPreferenceDao.deleteByModelId(id);
+    }
 }
 ```
 
@@ -567,30 +641,35 @@ private com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao userModelP
 List<ModelConfigEntity> ownModels = modelConfigDao.queryByUserName(userName);
 List<ModelConfigEntity> sharedModels = modelConfigDao.queryShared();
 
+// 私有优先，共享补充（同名时私有覆盖共享）
 Map<String, ModelConfigEntity> modelMap = new LinkedHashMap<>();
-for (ModelConfigEntity m : sharedModels) {
-    modelMap.put(m.getName(), m);
-}
 for (ModelConfigEntity m : ownModels) {
     modelMap.put(m.getName(), m);
 }
+for (ModelConfigEntity m : sharedModels) {
+    modelMap.putIfAbsent(m.getName(), m);
+}
 List<ModelConfigEntity> allModels = new ArrayList<>(modelMap.values());
 
-// 1.1 优先读用户偏好表
+// 1.1 优先读用户偏好表（偏好 ID 在所有模型中查找，ownModels 优先）
 ModelConfigEntity model = null;
-String modelType = "llm"; // 对话模型
+String modelType = "llm";
 com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity pref =
         userModelPreferenceDao.queryByUserAndType(userName, modelType);
 if (pref != null) {
     String prefId = pref.getModelId();
-    model = allModels.stream().filter(m -> prefId.equals(m.getId())).findFirst().orElse(null);
+    // 先查 ownModels（ID 查找不受去重影响），再查 allModels
+    model = ownModels.stream().filter(m -> prefId.equals(m.getId())).findFirst()
+            .orElseGet(() -> allModels.stream().filter(m -> prefId.equals(m.getId())).findFirst().orElse(null));
 }
-// 1.2 回退：用户私有默认 > 第一个
+// 1.2 回退：用户私有默认 > 共享默认 > 第一个 llm
 if (model == null) {
     model = ownModels.stream()
             .filter(m -> m.getIsDefault() != null && m.getIsDefault() == 1)
             .findFirst()
-            .orElse(null);
+            .orElseGet(() -> allModels.stream()
+                    .filter(m -> m.getIsDefault() != null && m.getIsDefault() == 1)
+                    .findFirst().orElse(null));
 }
 if (model == null) {
     model = allModels.stream()
@@ -968,14 +1047,17 @@ CREATE TABLE IF NOT EXISTS zephyr_user_model_prefs (
 zephyr-zh-CN.sql 末尾追加：
 ```sql
 CREATE TABLE IF NOT EXISTS zephyr_user_model_prefs (
-    id VARCHAR(12) PRIMARY KEY,
+    id VARCHAR(64) PRIMARY KEY,
     user_name VARCHAR(64) NOT NULL,
     model_type VARCHAR(16) NOT NULL DEFAULT 'llm',
-    model_id VARCHAR(12) NOT NULL,
+    model_id VARCHAR(64) NOT NULL,
     created_at BIGINT NOT NULL,
     updated_at BIGINT NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_model_prefs ON zephyr_user_model_prefs(user_name, model_type);
 ```
+
+> 唯一索引是 MySQL `ON DUPLICATE KEY UPDATE` 和 PostgreSQL `ON CONFLICT` 的前置条件，必须在 SQL 迁移中与建表一起执行。
 
 - [ ] **Step 2: 对 en-US 和 ja-JP SQL 做同样改动**
 
