@@ -140,6 +140,14 @@ public class McpServiceImpl implements McpService {
         List<McpToolEntity> discovered = McpClient.discoverTools(server);
         mcpDao.deleteToolsByServerId(id, server.getUserName());
 
+        // 检查发现的工具是否与其他服务器已连接的工具重名
+        for (McpToolEntity t : discovered) {
+            McpToolEntity dup = mcpDao.queryToolByName(t.getToolName());
+            if (dup != null) {
+                throw new RuntimeException("工具名 \"" + t.getToolName() + "\" 已存在（来自其他 MCP 服务器），连接失败");
+            }
+        }
+
         if (discovered.isEmpty()) {
             mcpDao.updateServerStatus(id, "error", userName);
             return;

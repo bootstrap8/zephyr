@@ -40,4 +40,6 @@ public interface McpDao {
     void updateServerScope(@Param("id") String id, @Param("scope") String scope);
 
     McpServerEntity queryByNameAndScope(@Param("name") String name, @Param("scope") String scope);
+
+    McpToolEntity queryToolByName(@Param("toolName") String toolName);
 }
