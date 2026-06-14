@@ -10,6 +10,7 @@
       name varchar(128) not null,
       description varchar(512),
       embed_model_id varchar(36),
+      scope varchar(16) default 'user',
       created_at bigint,
       updated_at bigint
     );
