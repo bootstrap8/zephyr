@@ -42,4 +42,6 @@ public interface McpDao {
     McpServerEntity queryByNameAndScope(@Param("name") String name, @Param("scope") String scope);
 
     McpToolEntity queryToolByName(@Param("toolName") String toolName);
+
+    McpToolEntity queryToolByNameAndUser(@Param("toolName") String toolName, @Param("userName") String userName);
 }

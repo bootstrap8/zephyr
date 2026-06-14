@@ -152,6 +152,16 @@
         where tool_name = #{toolName}
     </select>
 
+    <select id="queryToolByNameAndUser" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity">
+        select t.id, t.user_name as userName, t.server_id as serverId,
+               t.tool_name as toolName, t.description, t.parameters_json as parametersJson,
+               t.enabled, t.source, t.created_at as createdAt
+        from zephyr_mcp_tools t
+        inner join zephyr_mcp_servers s on s.id = t.server_id
+        where t.tool_name = #{toolName}
+          and (s.scope = 'shared' or t.user_name = #{userName})
+    </select>
+
     <select id="queryByNameAndScope" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity">
         select id, user_name as userName, name, transport,
                command, args, env_vars as envVars,
