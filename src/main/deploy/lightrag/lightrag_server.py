@@ -1,4 +1,5 @@
 """LightRAG sidecar for zephyr knowledge module."""
+import asyncio
 import os
 import shutil
 import logging
@@ -28,35 +29,42 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- per-KB RAG instances ---
 _rags: dict[str, LightRAG] = {}
+_initialized: set[str] = set()
+_lock = asyncio.Lock()
 
 
-def _get_rag(kb_id: str) -> LightRAG:
+async def _get_rag(kb_id: str) -> LightRAG:
     if kb_id not in _rags:
-        working_dir = DATA_DIR / kb_id
-        working_dir.mkdir(parents=True, exist_ok=True)
+        async with _lock:
+            if kb_id not in _rags:
+                working_dir = DATA_DIR / kb_id
+                working_dir.mkdir(parents=True, exist_ok=True)
 
-        async def llm_func(prompt, system_prompt=None, history_messages=None, **kwargs):
-            return await openai_complete_if_cache(
-                LLM_MODEL, prompt, system_prompt=system_prompt,
-                history_messages=history_messages or [],
-                base_url=LLM_BASE_URL, api_key=LLM_API_KEY, **kwargs
-            )
+                async def llm_func(prompt, system_prompt=None, history_messages=None, **kwargs):
+                    return await openai_complete_if_cache(
+                        LLM_MODEL, prompt, system_prompt=system_prompt,
+                        history_messages=history_messages or [],
+                        base_url=LLM_BASE_URL, api_key=LLM_API_KEY, **kwargs
+                    )
 
-        async def embed_func(texts: list[str]) -> list[list[float]]:
-            return await openai_embed(
-                texts, model=EMBED_MODEL, base_url=EMBED_BASE_URL,
-                api_key=EMBED_API_KEY
-            )
+                async def embed_func(texts: list[str]) -> list[list[float]]:
+                    return await openai_embed(
+                        texts, model=EMBED_MODEL, base_url=EMBED_BASE_URL,
+                        api_key=EMBED_API_KEY
+                    )
 
-        _rags[kb_id] = LightRAG(
-            working_dir=str(working_dir),
-            llm_model_func=llm_func,
-            embedding_func=EmbeddingFunc(
-                embedding_dim=EMBED_DIM,
-                max_token_size=8192,
-                func=embed_func
-            ),
-        )
+                rag = LightRAG(
+                    working_dir=str(working_dir),
+                    llm_model_func=llm_func,
+                    embedding_func=EmbeddingFunc(
+                        embedding_dim=EMBED_DIM,
+                        max_token_size=8192,
+                        func=embed_func
+                    ),
+                )
+                await rag.initialize_storages()
+                _rags[kb_id] = rag
+                log.info("LightRAG instance initialized for kb=%s", kb_id)
     return _rags[kb_id]
 
 
@@ -94,7 +102,7 @@ def health():
 @app.post("/index/{kb_id}")
 async def index_doc(kb_id: str, req: IndexRequest):
     try:
-        rag = _get_rag(kb_id)
+        rag = await _get_rag(kb_id)
         tagged = f"[doc:{req.doc_id}]\n{req.text}"
         await rag.ainsert(tagged)
         log.info("indexed doc=%s into kb=%s", req.doc_id, kb_id)
@@ -107,7 +115,7 @@ async def index_doc(kb_id: str, req: IndexRequest):
 @app.post("/search/{kb_id}")
 async def search_kb(kb_id: str, req: SearchRequest):
     try:
-        rag = _get_rag(kb_id)
+        rag = await _get_rag(kb_id)
         param = QueryParam(mode=req.mode, top_k=req.top_k)
         result = await rag.aquery(req.query, param=param)
         return [SearchResult(content=result, source="graph", score=1.0)]
