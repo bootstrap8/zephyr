@@ -118,6 +118,7 @@ export interface ModelConfig {
   params?: string
   modelType?: string
   dimensions?: number
+  scope?: 'user' | 'shared'
 }
 
 // === Memory ===
