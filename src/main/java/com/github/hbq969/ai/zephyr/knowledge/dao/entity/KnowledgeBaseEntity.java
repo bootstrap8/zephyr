@@ -9,6 +9,7 @@ public class KnowledgeBaseEntity {
     private String name;
     private String description;
     private String embedModelId;
+    private String scope = "user";
     private Long createdAt;
     private Long updatedAt;
 }

@@ -9,6 +9,8 @@ public class KnowledgeVO {
     private String description;
     private String embedModelId;
     private String embedModelName;
+    private String scope;
+    private boolean canManage;
     private int docCount;
     private Long createdAt;
     private Long updatedAt;
