@@ -608,7 +608,7 @@ function closeAll() {
               <div v-if="settingsStore.knowledgeBases.length === 0" class="sub-loading">{{ langData.knowledgeMgmt_noKb }}</div>
               <template v-else>
                 <template v-if="sharedKbs.length > 0">
-                  <div class="kb-section-label scope-shared">{{ langData.knowledgeMgmt_sharedTab || '共享知识库' }}</div>
+                  <div class="kb-section-label">{{ langData.knowledgeMgmt_sharedTab || '共享知识库' }}</div>
                   <div v-for="kb in sharedKbs" :key="kb.id" class="pick-option kb-option"
                        :class="{ current: selectedKbIds.includes(kb.id) }"
                        @click="toggleKb(kb.id)">
@@ -660,10 +660,10 @@ function closeAll() {
                       <template v-if="filteredMcpGroups.length > 0">
                         <!-- 共享 MCP -->
                         <template v-if="filteredMcpGroupsShared.length > 0">
-                          <div class="kb-section-label scope-shared">{{ langData.mcpMgmt_sharedTab || '共享 MCP' }}</div>
+                          <div class="kb-section-label">{{ langData.mcpMgmt_sharedTab || '共享 MCP' }}</div>
                           <template v-for="(g, gIdx) in filteredMcpGroupsShared" :key="g.server">
-                            <div class="sub-group-label">{{ g.server }}</div>
-                            <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option" :class="{ 'sub-active': mcpFlatIdxShared(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
+                            <div class="sub-group-label ability-server-label">{{ g.server }}</div>
+                            <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option ability-tool-item" :class="{ 'sub-active': mcpFlatIdxShared(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
                               <span class="cmd-name">{{ t.name }}</span>
                               <span class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
                               <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
@@ -675,8 +675,8 @@ function closeAll() {
                         <template v-if="filteredMcpGroupsUser.length > 0">
                           <div class="kb-section-label">{{ langData.mcpMgmt_userTab || '我的 MCP' }}</div>
                           <template v-for="(g, gIdx) in filteredMcpGroupsUser" :key="g.server">
-                            <div class="sub-group-label">{{ g.server }}</div>
-                            <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option" :class="{ 'sub-active': mcpFlatIdxUser(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
+                            <div class="sub-group-label ability-server-label">{{ g.server }}</div>
+                            <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option ability-tool-item" :class="{ 'sub-active': mcpFlatIdxUser(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
                               <span class="cmd-name">{{ t.name }}</span>
                               <span class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
                               <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
@@ -696,8 +696,8 @@ function closeAll() {
                       </div>
                       <template v-if="filteredSkills.length > 0">
                         <template v-if="filteredSkillsShared.length > 0">
-                          <div class="kb-section-label scope-shared">{{ langData.mcpMgmt_sharedTab || '共享 Skill' }}</div>
-                          <div v-for="(s, idx) in filteredSkillsShared" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
+                          <div class="kb-section-label">{{ langData.mcpMgmt_sharedTab || '共享 Skill' }}</div>
+                          <div v-for="(s, idx) in filteredSkillsShared" :key="s.name" class="pick-option sub-option skill-item" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
                             <span class="cmd-name">{{ s.name }}</span>
                             <span class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
                             <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
@@ -706,7 +706,7 @@ function closeAll() {
                         <div v-if="filteredSkillsShared.length > 0 && filteredSkillsUser.length > 0" class="kb-section-divider"></div>
                         <template v-if="filteredSkillsUser.length > 0">
                           <div class="kb-section-label">{{ langData.mcpMgmt_userTab || '我的 Skill' }}</div>
-                          <div v-for="(s, idx) in filteredSkillsUser" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': (idx + filteredSkillsShared.length) === skillActiveIdx }" @click="insertTag('skill', s.name)">
+                          <div v-for="(s, idx) in filteredSkillsUser" :key="s.name" class="pick-option sub-option skill-item" :class="{ 'sub-active': (idx + filteredSkillsShared.length) === skillActiveIdx }" @click="insertTag('skill', s.name)">
                             <span class="cmd-name">{{ s.name }}</span>
                             <span class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
                             <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
@@ -884,6 +884,12 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 .sub-option {
   max-width: 400px;
 }
+/* 分栏标题颜色区分 */
+.kb-section-label { color: var(--el-color-primary); font-weight: 600; }
+/* MCP/Skill 一二缩进 */
+.ability-server-label { padding-left: 12px; }
+.ability-tool-item { padding-left: 24px; }
+.skill-item { padding-left: 12px; }
 .sub-option.sub-active { background: var(--el-fill-color-light); }
 .sub-option .cmd-name { min-width: auto; font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
 .sub-option .skill-scope-badge {
@@ -945,8 +951,7 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 .kb-chk-icon { color: #fff; font-size: 11px; }
 .kb-opt-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kb-opt-count { font-size: 11px; color: var(--el-text-color-placeholder); flex-shrink: 0; }
-.kb-section-label { font-size: 11px; color: var(--el-text-color-secondary); padding: 6px 10px 2px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
-.kb-section-label.scope-shared { color: var(--el-color-primary); }
+.kb-section-label { font-size: 11px; color: var(--el-text-color-placeholder); padding: 6px 10px 2px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
 .kb-section-divider { height: 1px; background: var(--el-border-color); margin: 4px 0; }
 .kb-dropdown { width: 340px; }
 </style>
