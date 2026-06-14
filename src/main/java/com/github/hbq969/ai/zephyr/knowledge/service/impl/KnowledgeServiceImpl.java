@@ -58,6 +58,9 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private KeywordIndex keywordIndex;
 
     @Resource
+    private KnowledgeServiceImpl self;
+
+    @Resource
     private LightRagClient lightRagClient;
 
     private static final String SCOPE_SHARED = "shared";
@@ -219,7 +222,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         doc.setCreatedAt(System.currentTimeMillis() / 1000);
         knowledgeDao.insertDoc(doc);
 
-        processDocAsync(docId, kbId, dataDir.resolve(docId + "_" + file.getOriginalFilename()));
+        self.processDocAsync(docId, kbId, dataDir.resolve(docId + "_" + file.getOriginalFilename()));
         return docId;
     }
 
@@ -233,7 +236,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         keywordIndex.removeDoc(kbId, docId);
         lightRagClient.deleteDoc(kbId, docId);
         Path dataDir = Paths.get(cfg.getKnowledge().getDataDir(), kbId);
-        processDocAsync(docId, kbId, dataDir.resolve(docId + "_" + doc.getFileName()));
+        self.processDocAsync(docId, kbId, dataDir.resolve(docId + "_" + doc.getFileName()));
     }
 
     @Override
@@ -265,7 +268,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         doc.setCreatedAt(System.currentTimeMillis() / 1000);
         knowledgeDao.insertDoc(doc);
 
-        processDocContentAsync(docId, kbId, content, fileName);
+        self.processDocContentAsync(docId, kbId, content, fileName);
         return docId;
     }
 
@@ -298,7 +301,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         doc.setUpdatedAt(System.currentTimeMillis() / 1000);
         knowledgeDao.updateDoc(doc);
 
-        processDocContentAsync(docId, doc.getKbId(), content, fileName);
+        self.processDocContentAsync(docId, doc.getKbId(), content, fileName);
     }
 
     @Override
@@ -397,7 +400,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
             if (doc == null) { log.warn("文档已被删除，取消处理: docId={}", docId); return; }
             String text = tikaParser.parse(in);
-            processDocContentAsync(docId, kbId, text, filePath.getFileName().toString().replace(docId + "_", ""));
+            self.processDocContentAsync(docId, kbId, text, filePath.getFileName().toString().replace(docId + "_", ""));
         } catch (Exception e) {
             log.error("文档处理失败: docId={}", docId, e);
             knowledgeDao.updateDocStatus(docId, "error", 0, e.getMessage());

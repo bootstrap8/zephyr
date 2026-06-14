@@ -7,6 +7,7 @@ import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ public class LightRagClient {
         }
     }
 
+    @Async
     public void index(String kbId, String docId, String text) {
         if (!enabled()) return;
         try {
