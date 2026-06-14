@@ -326,6 +326,11 @@ export const useSettingsStore = defineStore('settings', () => {
     } catch (_) {}
   }
 
+  async function toggleKbScope(id: string, scope: string) {
+    await axios({ url: '/knowledge/kb/scope/toggle', method: 'post', data: { id, scope } })
+    await loadKnowledgeBases()
+  }
+
   async function loadUserInfo() {
     try {
       const res = await axios({ url: '/chat/whoami', method: 'get' })
@@ -347,6 +352,7 @@ export const useSettingsStore = defineStore('settings', () => {
     loadSkills, loadUserInfo, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
     syncScanSkills, syncInstallSkills,
     loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory,
-    loadKnowledgeBases
+    loadKnowledgeBases,
+    toggleKbScope
   }
 })

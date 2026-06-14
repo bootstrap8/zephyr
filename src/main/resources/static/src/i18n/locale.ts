@@ -351,6 +351,15 @@ const locale: any = {
         "knowledgeMgmt_docStatus_ready": "就绪",
         "knowledgeMgmt_docStatus_error": "错误",
         "knowledgeMgmt_deleteDocConfirm": "确定删除此文档？",
+        "knowledgeMgmt_sharedTab": "共享知识库",
+        "knowledgeMgmt_userTab": "我的知识库",
+        "knowledgeMgmt_shared": "共享",
+        "knowledgeMgmt_scope": "范围",
+        "knowledgeMgmt_personal": "个人",
+        "knowledgeMgmt_shareToAll": "设为共享",
+        "knowledgeMgmt_unshare": "取消共享",
+        "knowledgeMgmt_noShared": "暂无共享知识库",
+        "knowledgeMgmt_noUser": "暂无个人知识库",
 
         // 在线编辑
         "knowledgeMgmt_createInlineDoc": "新建 Markdown",
@@ -751,6 +760,15 @@ const locale: any = {
         "knowledgeMgmt_docStatus_ready": "Ready",
         "knowledgeMgmt_docStatus_error": "Error",
         "knowledgeMgmt_deleteDocConfirm": "Delete this document?",
+        "knowledgeMgmt_sharedTab": "Shared KB",
+        "knowledgeMgmt_userTab": "My KB",
+        "knowledgeMgmt_shared": "Shared",
+        "knowledgeMgmt_scope": "Scope",
+        "knowledgeMgmt_personal": "Personal",
+        "knowledgeMgmt_shareToAll": "Share to All",
+        "knowledgeMgmt_unshare": "Unshare",
+        "knowledgeMgmt_noShared": "No shared knowledge bases",
+        "knowledgeMgmt_noUser": "No personal knowledge bases",
 
         // Inline edit
         "knowledgeMgmt_createInlineDoc": "New Markdown",
@@ -1151,6 +1169,15 @@ const locale: any = {
         "knowledgeMgmt_docStatus_ready": "準備完了",
         "knowledgeMgmt_docStatus_error": "エラー",
         "knowledgeMgmt_deleteDocConfirm": "このドキュメントを削除しますか？",
+        "knowledgeMgmt_sharedTab": "共有ナレッジベース",
+        "knowledgeMgmt_userTab": "マイナレッジベース",
+        "knowledgeMgmt_shared": "共有",
+        "knowledgeMgmt_scope": "範囲",
+        "knowledgeMgmt_personal": "個人",
+        "knowledgeMgmt_shareToAll": "共有に設定",
+        "knowledgeMgmt_unshare": "共有解除",
+        "knowledgeMgmt_noShared": "共有ナレッジベースがありません",
+        "knowledgeMgmt_noUser": "個人ナレッジベースがありません",
 
         // インライン編集
         "knowledgeMgmt_createInlineDoc": "Markdown作成",

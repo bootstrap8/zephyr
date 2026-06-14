@@ -131,6 +131,19 @@ export interface MemoryItem {
   updatedAt: number
 }
 
+// === Knowledge Base ===
+export interface KnowledgeBase {
+  id?: string
+  name: string
+  description?: string
+  embedModel?: string
+  docCount?: number
+  scope?: 'user' | 'shared'
+  canManage?: boolean
+  createdAt?: number
+  updatedAt?: number
+}
+
 // === File Attachment ===
 export interface FileAttachment {
   path: string       // workspace 相对路径
