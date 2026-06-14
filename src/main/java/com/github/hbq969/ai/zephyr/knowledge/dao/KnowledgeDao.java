@@ -33,6 +33,8 @@ public interface KnowledgeDao {
     void updateDoc(KnowledgeDocEntity entity);
     void updateDocStatus(@Param("id") String id, @Param("status") String status,
                          @Param("chunkCount") Integer chunkCount, @Param("errorMsg") String errorMsg);
+
+    void updateDocGraphStatus(@Param("id") String id, @Param("graphStatus") String graphStatus);
     void deleteDoc(@Param("id") String id);
     void deleteDocsByKbId(@Param("kbId") String kbId);
 

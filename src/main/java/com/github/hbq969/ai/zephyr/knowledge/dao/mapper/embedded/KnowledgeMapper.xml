@@ -30,6 +30,7 @@
         chunk_count int default 0,
         status varchar(32) default 'processing',
         error_msg varchar(1024),
+        graph_status varchar(16),
         created_at bigint not null,
         updated_at bigint,
         primary key (id)

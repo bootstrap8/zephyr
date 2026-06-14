@@ -452,10 +452,17 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             knowledgeDao.updateDocStatus(docId, "ready", chunks.size(), null);
             log.info("文档处理完成: docId={}, chunks={}", docId, chunks.size());
 
-            // 图谱索引（ready 之后异步执行，不阻塞 chunk 管道）
+            // 图谱索引（ready 之后执行，追踪状态）
             KnowledgeBaseEntity kbRef = knowledgeDao.queryKbById(kbId);
             if (kbRef != null && Integer.valueOf(1).equals(kbRef.getGraphEnabled())) {
-                lightRagClient.index(kbId, docId, text);
+                try {
+                    knowledgeDao.updateDocGraphStatus(docId, "indexing");
+                    lightRagClient.index(kbId, docId, text);
+                    knowledgeDao.updateDocGraphStatus(docId, "ready");
+                } catch (Exception e) {
+                    log.warn("图谱索引失败: docId={}", docId, e);
+                    knowledgeDao.updateDocGraphStatus(docId, "error");
+                }
             }
         } catch (Exception e) {
             log.error("文档处理失败: docId={}", docId, e);

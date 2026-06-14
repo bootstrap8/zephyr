@@ -20,10 +20,10 @@ DATA_DIR = Path(os.environ.get("LIGHTRAG_DATA_DIR", os.path.expanduser("~/.zephy
 LLM_BASE_URL = os.environ.get("LIGHTRAG_LLM_BASE_URL", "https://api.deepseek.com")
 LLM_MODEL = os.environ.get("LIGHTRAG_LLM_MODEL", "deepseek-v4-pro")
 LLM_API_KEY = os.environ.get("LIGHTRAG_LLM_API_KEY", "sk-87bdc10630034af1b107ed43fccd7cfe")
-EMBED_BASE_URL = os.environ.get("LIGHTRAG_EMBED_BASE_URL", "http://localhost:11434/v1")
-EMBED_MODEL = os.environ.get("LIGHTRAG_EMBED_MODEL", "nomic-embed-text")
-EMBED_API_KEY = os.environ.get("LIGHTRAG_EMBED_API_KEY", LLM_API_KEY)
-EMBED_DIM = int(os.environ.get("LIGHTRAG_EMBED_DIM", "768"))
+EMBED_BASE_URL = os.environ.get("LIGHTRAG_EMBED_BASE_URL", "https://zhenze-huhehaote.cmecloud.cn/v1")
+EMBED_MODEL = os.environ.get("LIGHTRAG_EMBED_MODEL", "bge-m3")
+EMBED_API_KEY = os.environ.get("LIGHTRAG_EMBED_API_KEY", "t3uLkItDLzacnWdzkEim5c0tnpG7XQTpUC8I26aUSII")
+EMBED_DIM = int(os.environ.get("LIGHTRAG_EMBED_DIM", "1024"))
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 

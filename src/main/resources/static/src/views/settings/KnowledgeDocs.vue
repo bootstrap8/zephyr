@@ -96,6 +96,13 @@ const reParse = (doc: any) => {
 }
 
 const statusTagType = (status: string) => status === 'ready' ? 'success' : status === 'error' ? 'danger' : 'warning'
+const graphStatusTagType = (s: string) => !s ? 'info' : s === 'ready' ? 'success' : s === 'error' ? 'danger' : 'warning'
+const graphStatusLabel = (s: string) => {
+  if (!s) return '-'
+  if (s === 'ready') return '图谱就绪'
+  if (s === 'error') return '图谱失败'
+  return '图谱索引中'
+}
 const statusLabel = (status: string) => {
   if (status === 'ready') return langData.knowledgeMgmt_docStatus_ready
   if (status === 'error') return langData.knowledgeMgmt_docStatus_error
@@ -183,6 +190,14 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
           <el-tag :type="statusTagType(row.status)" size="small" effect="plain">{{ statusLabel(row.status) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="图谱" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag v-if="row.graphStatus" :type="graphStatusTagType(row.graphStatus)" size="small" effect="plain">
+            {{ graphStatusLabel(row.graphStatus) }}
+          </el-tag>
+          <span v-else style="color:var(--el-text-color-placeholder);font-size:12px;">-</span>
         </template>
       </el-table-column>
       <el-table-column :label="langData.tableHeaderCreateTime" width="110" align="center">

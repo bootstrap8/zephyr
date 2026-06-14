@@ -14,6 +14,7 @@ public class KnowledgeDocEntity {
     private Integer chunkCount;
     private String status;
     private String errorMsg;
+    private String graphStatus;
     private Long createdAt;
     private Long updatedAt;
 }
