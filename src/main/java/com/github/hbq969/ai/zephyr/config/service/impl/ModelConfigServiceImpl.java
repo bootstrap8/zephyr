@@ -27,28 +27,54 @@ public class ModelConfigServiceImpl implements ModelConfigService {
     @Resource
     private ModelConfigDao modelConfigDao;
 
+    @Resource
+    private com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao userModelPreferenceDao;
+
     @Override
     public List<ModelConfigEntity> list(String userName) {
-        List<ModelConfigEntity> list = modelConfigDao.queryByUserName(userName);
-        for (ModelConfigEntity e : list) {
+        List<ModelConfigEntity> shared = modelConfigDao.queryShared();
+        List<ModelConfigEntity> own = modelConfigDao.queryByUserName(userName);
+
+        Map<String, ModelConfigEntity> dedup = new LinkedHashMap<>();
+        for (ModelConfigEntity e : shared) {
+            dedup.put(e.getName(), e);
+        }
+        for (ModelConfigEntity e : own) {
+            dedup.put(e.getName(), e);
+        }
+
+        com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity llmPref =
+                userModelPreferenceDao.queryByUserAndType(userName, "llm");
+        com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity embPref =
+                userModelPreferenceDao.queryByUserAndType(userName, "embedding");
+
+        List<ModelConfigEntity> result = new ArrayList<>(dedup.values());
+        for (ModelConfigEntity e : result) {
             String key = e.getApiKeyEncrypted();
             if (key != null && !key.isEmpty()) {
                 e.setApiKeyEncrypted(maskApiKey(key));
             }
+            String mt = e.getModelType() != null ? e.getModelType() : "llm";
+            if ("llm".equals(mt) && llmPref != null && llmPref.getModelId().equals(e.getId())) {
+                e.setIsDefault(1);
+            } else if ("embedding".equals(mt) && embPref != null && embPref.getModelId().equals(e.getId())) {
+                e.setIsDefault(1);
+            }
         }
-        return list;
+        return result;
     }
 
     @Override
     public List<ModelConfigEntity> listByType(String modelType, String userName) {
-        List<ModelConfigEntity> list = modelConfigDao.queryByType(userName, modelType);
-        for (ModelConfigEntity e : list) {
-            String key = e.getApiKeyEncrypted();
-            if (key != null && !key.isEmpty()) {
-                e.setApiKeyEncrypted(maskApiKey(key));
+        List<ModelConfigEntity> all = list(userName);
+        List<ModelConfigEntity> filtered = new ArrayList<>();
+        for (ModelConfigEntity e : all) {
+            String mt = e.getModelType() != null ? e.getModelType() : "llm";
+            if (modelType.equals(mt)) {
+                filtered.add(e);
             }
         }
-        return list;
+        return filtered;
     }
 
     @Override
@@ -145,12 +171,38 @@ public class ModelConfigServiceImpl implements ModelConfigService {
     @Transactional
     public void setDefault(String id, String userName) {
         ModelConfigEntity entity = modelConfigDao.queryById(id);
-        if (entity != null && entity.getModelType() != null) {
-            modelConfigDao.clearDefaultByType(entity.getModelType());
-        } else {
-            modelConfigDao.clearDefault(userName);
+        if (entity == null) throw new RuntimeException("模型不存在");
+
+        if (!"shared".equals(entity.getScope()) && !userName.equals(entity.getUserName())) {
+            throw new RuntimeException("无权访问此模型");
         }
-        modelConfigDao.setDefault(id, userName);
+
+        String modelType = entity.getModelType() != null ? entity.getModelType() : "llm";
+        modelConfigDao.clearDefault(userName);
+
+        com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity pref =
+                new com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity();
+        pref.setId(java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        pref.setUserName(userName);
+        pref.setModelType(modelType);
+        pref.setModelId(id);
+        pref.setCreatedAt(System.currentTimeMillis() / 1000);
+        pref.setUpdatedAt(System.currentTimeMillis() / 1000);
+        userModelPreferenceDao.upsert(pref);
+    }
+
+    @Override
+    @Transactional
+    public void toggleScope(String id, String scope, String userName) {
+        com.github.hbq969.code.sm.login.model.UserInfo ui =
+                com.github.hbq969.code.sm.login.session.UserContext.getNoCheck();
+        if (ui == null || !ui.isAdmin()) throw new RuntimeException("仅 admin 可管理共享模型");
+
+        modelConfigDao.toggleScope(id, scope, System.currentTimeMillis() / 1000);
+
+        if ("user".equals(scope)) {
+            userModelPreferenceDao.deleteByModelId(id);
+        }
     }
 
     private String encryptApiKey(String plain) {

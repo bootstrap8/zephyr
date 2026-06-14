@@ -73,6 +73,15 @@ public class ModelConfigCtrl {
         return ReturnMessage.success("ok");
     }
 
+    @Operation(summary = "切换模型共享状态")
+    @RequestMapping(path = "/toggle-scope", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "modelConfig_toggleScope", apiDesc = "模型配置_切换共享状态")
+    public ReturnMessage<?> toggleScope(@RequestBody Map<String, String> body) {
+        modelConfigService.toggleScope(body.get("id"), body.get("scope"), userName());
+        return ReturnMessage.success("ok");
+    }
+
     @Operation(summary = "探测上下文大小")
     @RequestMapping(path = "/detect-context", method = RequestMethod.POST)
     @ResponseBody

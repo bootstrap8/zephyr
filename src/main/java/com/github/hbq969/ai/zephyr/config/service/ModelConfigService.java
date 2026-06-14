@@ -11,6 +11,7 @@ public interface ModelConfigService {
     void update(Map<String, String> body, String userName);
     void delete(String id, String userName);
     void setDefault(String id, String userName);
+    void toggleScope(String id, String scope, String userName);
     Long detectContext(Map<String, String> body, String userName);
     List<Map<String, Object>> fetchModels(Map<String, String> body);
 }
