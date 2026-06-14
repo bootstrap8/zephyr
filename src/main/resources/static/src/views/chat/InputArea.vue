@@ -43,13 +43,30 @@ const filteredSkills = computed(() => {
   return skillList.value.filter(s => s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
 })
 
+const filteredSkillsShared = computed(() => filteredSkills.value.filter(s => s.scope === 'shared'))
+const filteredSkillsUser = computed(() => filteredSkills.value.filter(s => s.scope !== 'shared'))
+
+const filteredMcpGroupsShared = computed(() =>
+  filteredMcpGroups.value.filter(g => g.tools[0]?.scope === 'shared'))
+const filteredMcpGroupsUser = computed(() =>
+  filteredMcpGroups.value.filter(g => g.tools[0]?.scope !== 'shared'))
+
 const chatModels = computed(() => settingsStore.models.filter((m: any) => !m.modelType || m.modelType === 'llm'))
 
 // 键盘导航：扁平化列表 + 选中索引
 interface FlatItem { name: string; desc: string }
+const sharedMcpToolCount = computed(() => {
+  let c = 0
+  for (const g of filteredMcpGroupsShared.value) c += g.tools.length
+  return c
+})
+
 const mcpFlatItems = computed<FlatItem[]>(() => {
   const items: FlatItem[] = []
-  for (const g of filteredMcpGroups.value) {
+  for (const g of filteredMcpGroupsShared.value) {
+    for (const t of g.tools) items.push({ name: t.name, desc: t.desc })
+  }
+  for (const g of filteredMcpGroupsUser.value) {
     for (const t of g.tools) items.push({ name: t.name, desc: t.desc })
   }
   return items
@@ -61,11 +78,14 @@ watch(mcpFilter, () => { mcpActiveIdx.value = 0 })
 watch(skillFilter, () => { skillActiveIdx.value = 0 })
 watch(hoveredAbility, () => { mcpActiveIdx.value = 0; skillActiveIdx.value = 0 })
 
-function mcpFlatIdx(groupIdx: number, toolIdx: number): number {
+function mcpFlatIdxShared(groupIdx: number, toolIdx: number): number {
   let count = 0
-  for (let i = 0; i < groupIdx; i++) {
-    count += filteredMcpGroups.value[i]?.tools.length || 0
-  }
+  for (let i = 0; i < groupIdx; i++) count += filteredMcpGroupsShared.value[i]?.tools.length || 0
+  return count + toolIdx
+}
+function mcpFlatIdxUser(groupIdx: number, toolIdx: number): number {
+  let count = sharedMcpToolCount.value
+  for (let i = 0; i < groupIdx; i++) count += filteredMcpGroupsUser.value[i]?.tools.length || 0
   return count + toolIdx
 }
 
@@ -376,7 +396,11 @@ async function loadMcpTools() {
         .catch(() => ({ server: s.name, tools: [] }))
     )
     const results = await Promise.all(toolReqs)
-    mcpGroups.value = results.filter(g => g.tools.length > 0)
+    mcpGroups.value = results.filter(g => g.tools.length > 0).sort((a, b) => {
+      const sa = a.tools[0]?.scope === 'shared' ? 0 : 1
+      const sb = b.tools[0]?.scope === 'shared' ? 0 : 1
+      return sa - sb
+    })
     mcpLoaded.value = true
   } catch (_) {}
   finally { mcpLoading.value = false }
@@ -390,7 +414,11 @@ async function loadSkills() {
     if (res.data.state === 'OK') {
       skillList.value = (res.data.body as any[]).filter((s: any) => s.enabled === 1 || s.enabled === true)
         .map((s: any) => ({ name: s.skillName || s.displayName, desc: s.description, scope: s.scope || 'user' }))
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => {
+          if (a.scope === 'shared' && b.scope !== 'shared') return -1
+          if (a.scope !== 'shared' && b.scope === 'shared') return 1
+          return a.name.localeCompare(b.name)
+        })
     }
     skillLoaded.value = true
   } catch (_) {}
@@ -630,14 +658,30 @@ function closeAll() {
                         <input v-model="mcpFilter" class="sub-search-input" :placeholder="langData.inputArea_searchPlaceholder" @click.stop @keydown="onMcpKeydown" />
                       </div>
                       <template v-if="filteredMcpGroups.length > 0">
-                        <template v-for="(g, gIdx) in filteredMcpGroups" :key="g.server">
-                          <div class="sub-group-label">{{ g.server }}</div>
-                          <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option" :class="{ 'sub-active': mcpFlatIdx(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
-                            <span class="cmd-name">{{ t.name }}</span>
-                            <span v-if="t.scope === 'shared'" class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
-                            <span v-else class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
-                            <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
-                          </div>
+                        <!-- 共享 MCP -->
+                        <template v-if="filteredMcpGroupsShared.length > 0">
+                          <div class="kb-section-label">{{ langData.mcpMgmt_sharedTab || '共享 MCP' }}</div>
+                          <template v-for="(g, gIdx) in filteredMcpGroupsShared" :key="g.server">
+                            <div class="sub-group-label">{{ g.server }}</div>
+                            <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option" :class="{ 'sub-active': mcpFlatIdxShared(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
+                              <span class="cmd-name">{{ t.name }}</span>
+                              <span class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
+                              <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
+                            </div>
+                          </template>
+                        </template>
+                        <div v-if="filteredMcpGroupsShared.length > 0 && filteredMcpGroupsUser.length > 0" class="kb-section-divider"></div>
+                        <!-- 我的 MCP -->
+                        <template v-if="filteredMcpGroupsUser.length > 0">
+                          <div class="kb-section-label">{{ langData.mcpMgmt_userTab || '我的 MCP' }}</div>
+                          <template v-for="(g, gIdx) in filteredMcpGroupsUser" :key="g.server">
+                            <div class="sub-group-label">{{ g.server }}</div>
+                            <div v-for="(t, tIdx) in g.tools" :key="t.name" class="pick-option sub-option" :class="{ 'sub-active': mcpFlatIdxUser(gIdx, tIdx) === mcpActiveIdx }" @click="insertTag('mcp', t.name)">
+                              <span class="cmd-name">{{ t.name }}</span>
+                              <span class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
+                              <span class="cmd-desc" v-if="t.desc">{{ t.desc }}</span>
+                            </div>
+                          </template>
                         </template>
                       </template>
                       <div v-else class="sub-loading">{{ mcpFilter ? langData.inputArea_noMatch : langData.inputArea_noSkills }}</div>
@@ -651,12 +695,23 @@ function closeAll() {
                         <input v-model="skillFilter" class="sub-search-input" :placeholder="langData.inputArea_searchPlaceholder" @click.stop @keydown="onSkillKeydown" />
                       </div>
                       <template v-if="filteredSkills.length > 0">
-                        <div v-for="(s, idx) in filteredSkills" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
-                          <span class="cmd-name">{{ s.name }}</span>
-                          <span v-if="s.scope === 'shared'" class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
-                          <span v-else class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
-                          <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
-                        </div>
+                        <template v-if="filteredSkillsShared.length > 0">
+                          <div class="kb-section-label">{{ langData.mcpMgmt_sharedTab || '共享 Skill' }}</div>
+                          <div v-for="(s, idx) in filteredSkillsShared" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
+                            <span class="cmd-name">{{ s.name }}</span>
+                            <span class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
+                            <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
+                          </div>
+                        </template>
+                        <div v-if="filteredSkillsShared.length > 0 && filteredSkillsUser.length > 0" class="kb-section-divider"></div>
+                        <template v-if="filteredSkillsUser.length > 0">
+                          <div class="kb-section-label">{{ langData.mcpMgmt_userTab || '我的 Skill' }}</div>
+                          <div v-for="(s, idx) in filteredSkillsUser" :key="s.name" class="pick-option sub-option" :class="{ 'sub-active': (idx + filteredSkillsShared.length) === skillActiveIdx }" @click="insertTag('skill', s.name)">
+                            <span class="cmd-name">{{ s.name }}</span>
+                            <span class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
+                            <span class="cmd-desc" v-if="s.desc">{{ s.desc }}</span>
+                          </div>
+                        </template>
                       </template>
                       <div v-else class="sub-loading">{{ skillFilter ? langData.inputArea_noMatch : langData.inputArea_noSkills }}</div>
                     </template>
