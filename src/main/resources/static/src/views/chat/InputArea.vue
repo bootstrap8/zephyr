@@ -52,6 +52,8 @@ const filteredMcpGroupsUser = computed(() =>
   filteredMcpGroups.value.filter(g => g.tools[0]?.scope !== 'shared'))
 
 const chatModels = computed(() => settingsStore.models.filter((m: any) => !m.modelType || m.modelType === 'llm'))
+const sharedModels = computed(() => chatModels.value.filter((m: any) => m.scope === 'shared'))
+const userModels = computed(() => chatModels.value.filter((m: any) => m.scope !== 'shared'))
 
 // 键盘导航：扁平化列表 + 选中索引
 interface FlatItem { name: string; desc: string }
@@ -586,16 +588,35 @@ function closeAll() {
             <span>{{ chatModels.length ? settingsStore.currentModel : langData.inputArea_noModel }}</span>
             <Icon icon="lucide:chevron-down" class="pick-arrow" />
             <div v-if="showModelList" class="pick-dropdown model-dropdown" @click.stop>
-              <div v-for="m in chatModels" :key="m.name" class="pick-option" :class="{ current: settingsStore.currentModel === m.name }" @click="selectModel(m.name)">
-                <div class="model-option-main">
-                  <span class="model-name">{{ m.name }}</span>
-                  <span class="model-tags">
-                    <span v-if="hasThinking(m.params)" class="model-tag think-tag">{{ langData.inputArea_thinking }}</span>
-                    <span v-if="m.maxContextTokens" class="model-tag ctx-tag">{{ formatContextSize(m.maxContextTokens) }}</span>
-                  </span>
+              <template v-if="sharedModels.length > 0">
+                <div class="kb-section-label">共享模型</div>
+                <div v-for="m in sharedModels" :key="m.name" class="pick-option" :class="{ current: settingsStore.currentModel === m.name }" @click="selectModel(m.name)">
+                  <div class="model-option-main">
+                    <span class="model-name">{{ m.name }}</span>
+                    <span class="model-tags">
+                      <span class="skill-scope-badge scope-shared">共享</span>
+                      <span v-if="hasThinking(m.params)" class="model-tag think-tag">思考</span>
+                      <span v-if="m.maxContextTokens" class="model-tag ctx-tag">{{ formatContextSize(m.maxContextTokens) }}</span>
+                    </span>
+                  </div>
+                  <Icon v-if="settingsStore.currentModel === m.name" icon="lucide:check" class="check-icon" />
                 </div>
-                <Icon v-if="settingsStore.currentModel === m.name" icon="lucide:check" class="check-icon" />
-              </div>
+              </template>
+              <div v-if="sharedModels.length > 0 && userModels.length > 0" class="kb-section-divider"></div>
+              <template v-if="userModels.length > 0">
+                <div class="kb-section-label">我的模型</div>
+                <div v-for="m in userModels" :key="m.name" class="pick-option" :class="{ current: settingsStore.currentModel === m.name }" @click="selectModel(m.name)">
+                  <div class="model-option-main">
+                    <span class="model-name">{{ m.name }}</span>
+                    <span class="model-tags">
+                      <span class="skill-scope-badge scope-user">个人</span>
+                      <span v-if="hasThinking(m.params)" class="model-tag think-tag">思考</span>
+                      <span v-if="m.maxContextTokens" class="model-tag ctx-tag">{{ formatContextSize(m.maxContextTokens) }}</span>
+                    </span>
+                  </div>
+                  <Icon v-if="settingsStore.currentModel === m.name" icon="lucide:check" class="check-icon" />
+                </div>
+              </template>
             </div>
           </div>
 
@@ -834,7 +855,7 @@ html.dark .mode-bypass { background: rgba(198,69,45,0.22); color: #e07373; }
   border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   min-width: 200px; padding: 4px; z-index: 100;
 }
-.model-dropdown { min-width: 280px; }
+.model-dropdown { min-width: 320px; }
 .ws-dropdown { min-width: 260px; }
 .pick-option {
   display: flex; align-items: center; gap: 8px;
