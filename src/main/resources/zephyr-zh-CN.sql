@@ -24,3 +24,5 @@ alter table if exists zephyr_knowledge_doc add column if not exists source_type 
 alter table if exists zephyr_knowledge_doc add column if not exists updated_at bigint;
 
 ALTER TABLE zephyr_knowledge_base ADD COLUMN IF NOT EXISTS scope varchar(16) DEFAULT 'user';
+
+ALTER TABLE zephyr_model_configs ADD COLUMN IF NOT EXISTS scope VARCHAR(16) DEFAULT 'user';
