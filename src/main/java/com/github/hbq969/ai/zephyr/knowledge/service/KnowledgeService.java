@@ -12,9 +12,9 @@ import java.util.Map;
 public interface KnowledgeService {
     List<KnowledgeVO> listKb(String userName);
 
-    KnowledgeBaseEntity createKb(Map<String, String> body, String userName);
+    KnowledgeBaseEntity createKb(Map<String, Object> body, String userName);
 
-    void updateKb(Map<String, String> body, String userName);
+    void updateKb(Map<String, Object> body, String userName);
 
     void deleteKb(String id, String userName);
 

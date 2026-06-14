@@ -12,6 +12,7 @@ public class KnowledgeVO {
     private String scope;
     private boolean canManage;
     private int docCount;
+    private Boolean graphEnabled;
     private Long createdAt;
     private Long updatedAt;
 }

@@ -10,6 +10,7 @@ public class KnowledgeBaseEntity {
     private String description;
     private String embedModelId;
     private String scope = "user";
+    private Boolean graphEnabled;
     private Long createdAt;
     private Long updatedAt;
 }

@@ -39,7 +39,7 @@ public class KnowledgeCtrl {
     @RequestMapping(path = "/kb/create", method = RequestMethod.POST)
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "knowledge_kb_create", apiDesc = "知识库管理_新建知识库")
-    public ReturnMessage<?> createKb(@RequestBody Map<String, String> body) {
+    public ReturnMessage<?> createKb(@RequestBody Map<String, Object> body) {
         return ReturnMessage.success(knowledgeService.createKb(body, userName()));
     }
 
@@ -47,7 +47,7 @@ public class KnowledgeCtrl {
     @RequestMapping(path = "/kb/update", method = RequestMethod.POST)
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "knowledge_kb_update", apiDesc = "知识库管理_修改知识库")
-    public ReturnMessage<?> updateKb(@RequestBody Map<String, String> body) {
+    public ReturnMessage<?> updateKb(@RequestBody Map<String, Object> body) {
         knowledgeService.updateKb(body, userName());
         return ReturnMessage.success("ok");
     }
