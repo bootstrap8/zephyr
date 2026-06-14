@@ -696,7 +696,7 @@ function closeAll() {
                       </div>
                       <template v-if="filteredSkills.length > 0">
                         <template v-if="filteredSkillsShared.length > 0">
-                          <div class="kb-section-label">{{ langData.mcpMgmt_sharedTab || '共享 Skill' }}</div>
+                          <div class="kb-section-label">共享 Skill</div>
                           <div v-for="(s, idx) in filteredSkillsShared" :key="s.name" class="pick-option sub-option skill-item" :class="{ 'sub-active': idx === skillActiveIdx }" @click="insertTag('skill', s.name)">
                             <span class="cmd-name">{{ s.name }}</span>
                             <span class="skill-scope-badge scope-shared">{{ langData.skillMgmt_scope_shared_badge || '共享' }}</span>
@@ -705,7 +705,7 @@ function closeAll() {
                         </template>
                         <div v-if="filteredSkillsShared.length > 0 && filteredSkillsUser.length > 0" class="kb-section-divider"></div>
                         <template v-if="filteredSkillsUser.length > 0">
-                          <div class="kb-section-label">{{ langData.mcpMgmt_userTab || '我的 Skill' }}</div>
+                          <div class="kb-section-label">我的 Skill</div>
                           <div v-for="(s, idx) in filteredSkillsUser" :key="s.name" class="pick-option sub-option skill-item" :class="{ 'sub-active': (idx + filteredSkillsShared.length) === skillActiveIdx }" @click="insertTag('skill', s.name)">
                             <span class="cmd-name">{{ s.name }}</span>
                             <span class="skill-scope-badge scope-user">{{ langData.skillMgmt_scope_user_badge || '个人' }}</span>
@@ -887,9 +887,9 @@ html.dark .think-tag { background: var(--el-color-primary-light-3); color: var(-
 /* 分栏标题颜色区分 */
 .kb-section-label { color: var(--el-color-primary); font-weight: 600; }
 /* MCP/Skill 一二缩进 */
-.ability-server-label { padding-left: 12px; }
-.ability-tool-item { padding-left: 24px; }
-.skill-item { padding-left: 12px; }
+.ability-server-label { padding-left: 20px; }
+.ability-tool-item { padding-left: 32px; }
+.skill-item { padding-left: 20px; }
 .sub-option.sub-active { background: var(--el-fill-color-light); }
 .sub-option .cmd-name { min-width: auto; font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
 .sub-option .skill-scope-badge {
