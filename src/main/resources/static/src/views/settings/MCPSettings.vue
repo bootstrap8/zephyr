@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue'
 import { ElMessageBox } from 'element-plus'
 import type { McpTool } from '@/types/chat'
 import { getLangData } from '@/i18n/locale'
+import { msg } from '@/utils/Utils'
 
 const store = useSettingsStore()
 const langData = getLangData()
@@ -91,8 +92,12 @@ async function deleteServer(id: string) {
 }
 
 async function connectServer(id: string) {
-  await store.connectMcpServer(id)
-  await toggleServerTools(id, true)
+  try {
+    await store.connectMcpServer(id)
+    await toggleServerTools(id, true)
+  } catch (err: any) {
+    msg(err?.response?.data?.errorMessage || err?.message || '连接失败', 'error')
+  }
 }
 
 async function disconnectServer(id: string) {

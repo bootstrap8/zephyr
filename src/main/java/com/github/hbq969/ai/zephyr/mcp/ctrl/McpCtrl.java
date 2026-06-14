@@ -37,7 +37,11 @@ public class McpCtrl {
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "mcp_createServer", apiDesc = "MCP管理_新增MCP服务器")
     public ReturnMessage<?> createServer(@RequestBody Map<String, String> body) {
-        return ReturnMessage.success(mcpService.createServer(body, userName()));
+        try {
+            return ReturnMessage.success(mcpService.createServer(body, userName()));
+        } catch (RuntimeException e) {
+            return ReturnMessage.fail(e.getMessage());
+        }
     }
 
     @Operation(summary = "修改MCP服务器")
@@ -63,8 +67,12 @@ public class McpCtrl {
     @ResponseBody
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "mcp_connect", apiDesc = "MCP管理_连接MCP服务器")
     public ReturnMessage<?> connect(@RequestBody Map<String, String> body) {
-        mcpService.connect(body.get("id"), userName());
-        return ReturnMessage.success("ok");
+        try {
+            mcpService.connect(body.get("id"), userName());
+            return ReturnMessage.success("ok");
+        } catch (RuntimeException e) {
+            return ReturnMessage.fail(e.getMessage());
+        }
     }
 
     @Operation(summary = "断开MCP服务器")

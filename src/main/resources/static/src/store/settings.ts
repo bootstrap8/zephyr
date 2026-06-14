@@ -166,7 +166,8 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function connectMcpServer(id: string) {
-    await axios({ url: '/mcp/server/connect', method: 'post', data: { id } })
+    const res = await axios({ url: '/mcp/server/connect', method: 'post', data: { id } })
+    if (res.data.state !== 'OK') throw new Error(res.data.errorMessage || '连接失败')
     await loadMcpServers()
   }
 
