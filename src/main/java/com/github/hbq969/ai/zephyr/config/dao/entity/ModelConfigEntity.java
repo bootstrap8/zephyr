@@ -15,5 +15,6 @@ public class ModelConfigEntity {
     private Long maxContextTokens;
     private String params;
     private String modelType;
+    private String scope = "user";
     private Integer dimensions;
 }
