@@ -326,8 +326,7 @@ public class SkillServiceImpl implements SkillService {
             // 检查是否有同名共享 Skill
             SkillConfigEntity sharedDup = skillDao.queryBySkillNameAndScope(skillName, SCOPE_SHARED);
             if (sharedDup != null) {
-                log.warn("已存在同名共享 Skill \"{}\"，跳过同步安装", skillName);
-                continue;
+                throw new RuntimeException("已存在同名共享 Skill \"" + skillName + "\"，请使用其他名称");
             }
 
             SkillConfigEntity existing = SCOPE_SHARED.equals(scope)
@@ -513,8 +512,7 @@ public class SkillServiceImpl implements SkillService {
             // 检查是否有同名共享 Skill
             SkillConfigEntity sharedDup = skillDao.queryBySkillNameAndScope(fullName, SCOPE_SHARED);
             if (sharedDup != null) {
-                log.warn("已存在同名共享 Skill \"{}\"，跳过安装", fullName);
-                continue;
+                throw new RuntimeException("已存在同名共享 Skill \"" + fullName + "\"，请使用其他名称");
             }
 
             SkillConfigEntity existing = SCOPE_SHARED.equals(scope)
