@@ -5,6 +5,7 @@
 
   <select id="queryKbByUserName" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
     select id, user_name as userName, name, description, embed_model_id as embedModelId, scope,
+      graph_enabled as graphEnabled,
       created_at as createdAt, updated_at as updatedAt
     from zephyr_knowledge_base
     where user_name = #{userName} and scope = 'user'
@@ -13,6 +14,7 @@
 
   <select id="queryKbById" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
     select id, user_name as userName, name, description, embed_model_id as embedModelId, scope,
+      graph_enabled as graphEnabled,
       created_at as createdAt, updated_at as updatedAt
     from zephyr_knowledge_base
     where id = #{id}
@@ -20,6 +22,7 @@
 
   <select id="queryKbByIds" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
     select id, user_name as userName, name, description, embed_model_id as embedModelId, scope,
+      graph_enabled as graphEnabled,
       created_at as createdAt, updated_at as updatedAt
     from zephyr_knowledge_base
     where id in
@@ -29,13 +32,13 @@
   </select>
 
   <insert id="insertKb">
-    insert into zephyr_knowledge_base (id, user_name, name, description, embed_model_id, scope, created_at, updated_at)
-    values (#{id}, #{userName}, #{name}, #{description}, #{embedModelId}, #{scope}, #{createdAt}, #{updatedAt})
+    insert into zephyr_knowledge_base (id, user_name, name, description, embed_model_id, scope, graph_enabled, created_at, updated_at)
+    values (#{id}, #{userName}, #{name}, #{description}, #{embedModelId}, #{scope}, #{graphEnabled}, #{createdAt}, #{updatedAt})
   </insert>
 
   <update id="updateKb">
     update zephyr_knowledge_base
-    set name = #{name}, description = #{description}, embed_model_id = #{embedModelId}, updated_at = #{updatedAt}
+    set name = #{name}, description = #{description}, embed_model_id = #{embedModelId}, graph_enabled = #{graphEnabled}, updated_at = #{updatedAt}
     where id = #{id}
   </update>
 
@@ -45,6 +48,7 @@
 
   <select id="querySharedKbs" resultType="com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity">
     select id, user_name as userName, name, description, embed_model_id as embedModelId, scope,
+      graph_enabled as graphEnabled,
       created_at as createdAt, updated_at as updatedAt
     from zephyr_knowledge_base
     where scope = 'shared'
