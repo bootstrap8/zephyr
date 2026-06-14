@@ -48,7 +48,8 @@ export const useSettingsStore = defineStore('settings', () => {
           maxContextTokens: m.maxContextTokens,
           params: m.params,
           modelType: m.modelType || 'llm',
-          dimensions: m.dimensions
+          dimensions: m.dimensions,
+          scope: m.scope || 'user'
         }))
         models.value = list
         const def = list.find((m: ModelConfig) => m.isDefault)
@@ -340,11 +341,16 @@ export const useSettingsStore = defineStore('settings', () => {
     } catch (_) {}
   }
 
+  async function toggleModelScope(id: string, scope: string) {
+    await axios({ url: '/model-config/toggle-scope', method: 'post', data: { id, scope } })
+    await loadModels()
+  }
+
   return {
     currentModel, models, mcpServers, mcpToolCount, skills, isAdmin, memories, knowledgeBases,
     contextUsed, contextLoaded, contextTotal, contextPercent, contextDetail,
     setModel, addModel,
-    loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote, detectCtxRaw, fetchModels,
+    loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote, detectCtxRaw, fetchModels, toggleModelScope,
     loadContextUsage,
     loadMcpServers, createMcpServer, updateMcpServer, deleteMcpServer,
     connectMcpServer, disconnectMcpServer,
