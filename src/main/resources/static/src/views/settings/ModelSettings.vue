@@ -487,8 +487,18 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
       <button v-if="!showForm && settingsStore.models.length > 0" class="btn-primary" @click="showForm = true; initParams()"><Icon icon="lucide:plus" />{{ langData.modelConfig_addModel }}</button>
     </div>
     <p class="subtitle">{{ langData.modelConfig_subtitle }}</p>
+
+    <div v-if="settingsStore.models.length === 0" class="empty-state">
+      <Icon icon="lucide:cpu" width="48" style="color: var(--el-text-color-placeholder)" />
+      <h3 class="empty-title">{{ langData.modelConfig_empty || '暂无模型' }}</h3>
+      <p class="empty-desc">{{ langData.modelConfig_emptyDesc || '添加第一个模型开始使用' }}</p>
+      <button class="btn-primary" @click="showForm = true; initParams()">
+        <Icon icon="lucide:plus" /> {{ langData.modelConfig_addFirst || '创建第一个模型' }}
+      </button>
+    </div>
+
     <div class="page-body">
-      <el-tabs v-model="currentTab" class="model-tabs">
+      <el-tabs v-if="settingsStore.models.length > 0" v-model="currentTab" class="model-tabs">
         <el-tab-pane :label="'我的模型 (' + userModels.length + ')'" name="user">
           <div v-if="userModels.length > 0" class="type-filter-bar">
             <el-select v-model="userTypeFilter" class="type-filter-select" placeholder="类型筛选" clearable>
@@ -521,7 +531,12 @@ function removeParam(idx: number) { params.value.splice(idx, 1) }
               <span v-else-if="(m.modelType || 'llm') === 'llm'" class="current-badge">当前</span>
             </div>
           </div>
-          <div v-if="userModels.length === 0" class="empty-hint"><p>暂无个人模型，请先创建</p></div>
+          <div v-if="userModels.length === 0" class="empty-hint">
+            <p>暂无个人模型</p>
+            <button class="btn-primary" style="margin-top:12px" @click="showForm = true; initParams()">
+              <Icon icon="lucide:plus" /> 创建第一个模型
+            </button>
+          </div>
         </el-tab-pane>
         <el-tab-pane :label="'共享模型 (' + sharedModels.length + ')'" name="shared">
           <div v-if="sharedModels.length > 0" class="type-filter-bar">
@@ -789,4 +804,7 @@ html.dark .toggle-slider::before { background: var(--el-bg-color); }
 .type-filter-select { width: 160px; }
 .badge-scope-shared { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; background: rgba(204,120,92,0.12); color: var(--el-color-primary); margin-left: 6px; vertical-align: middle; }
 .empty-hint { text-align: center; padding: 40px 0; color: var(--el-text-color-secondary); font-size: 14px; }
+.empty-state { text-align: center; padding: 80px 24px; }
+.empty-state .empty-title { font-family: Georgia, serif; font-size: 20px; font-weight: 400; color: var(--el-text-color-primary); margin: 16px 0 8px; }
+.empty-state .empty-desc { font-size: 14px; color: var(--el-text-color-secondary); margin: 0 0 24px; }
 </style>

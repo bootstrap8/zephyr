@@ -10,7 +10,7 @@ server:
         same-site: strict
         path: /
         name: zephyr-sid
-      timeout: 7200m
+      timeout: 1200m
   tomcat:
     accesslog:
       enabled: true
@@ -59,7 +59,7 @@ spring:
       login:
         enabled: true
         session-key: zephyr-sid
-        cookie-max-age-sec: 1800
+        cookie-max-age-sec: 72000
         include-urls:
           - "/**"
         exclude-urls:

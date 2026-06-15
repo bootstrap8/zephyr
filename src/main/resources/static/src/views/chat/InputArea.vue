@@ -261,8 +261,12 @@ function onPaste(e: ClipboardEvent) {
   if (sel && sel.rangeCount > 0) {
     const range = sel.getRangeAt(0)
     range.deleteContents()
-    range.insertNode(document.createTextNode(text))
-    range.collapse(false)
+    const lines = text.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) { range.insertNode(document.createElement('br')) }
+      range.insertNode(document.createTextNode(lines[i]))
+      range.collapse(false)
+    }
     sel.removeAllRanges()
     sel.addRange(range)
   }
@@ -795,7 +799,7 @@ export default { inheritAttrs: false }
 .input-container { max-width: 820px; margin: 0 auto; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 12px; padding: 8px 12px; transition: border-color 0.2s; }
 .input-container:focus-within { border-color: var(--el-color-primary); }
 
-.input-textarea { width: 100%; resize: none; border: none; background: transparent; color: var(--el-text-color-primary); font-family: 'Inter', -apple-system, sans-serif; font-size: 15px; padding: 6px 2px 6px 0; max-height: 160px; min-height: 40px; outline: none; line-height: 1.6; overflow-y: auto; }
+.input-textarea { width: 100%; resize: none; border: none; background: transparent; color: var(--el-text-color-primary); font-family: 'Inter', -apple-system, sans-serif; font-size: 15px; padding: 6px 2px 6px 0; max-height: 160px; min-height: 40px; outline: none; line-height: 1.6; overflow-y: auto; white-space: pre-wrap; }
 .input-textarea::-webkit-scrollbar { width: 2px; }
 .input-textarea::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.8); border-radius: 1px; }
 .input-textarea::-webkit-scrollbar-track { background: transparent; }
