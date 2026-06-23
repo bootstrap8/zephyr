@@ -49,9 +49,11 @@ public class McpConnectionManager {
             try {
                 long pid = Long.parseLong(Files.readString(f.toPath()).trim());
                 ProcessHandle.of(pid).ifPresent(ph -> {
-                    ph.descendants().forEach(ProcessHandle::destroyForcibly);
+                    List<ProcessHandle> children = ph.descendants().toList();
+                    log.info("清理孤儿 MCP 进程树: parentPid={}, childrenPids={}, file={}",
+                            pid, children.stream().map(c -> String.valueOf(c.pid())).toList(), f.getName());
+                    children.forEach(ProcessHandle::destroyForcibly);
                     ph.destroyForcibly();
-                    log.info("已清理孤儿 MCP 进程: pid={}, file={}", pid, f.getName());
                 });
                 Files.deleteIfExists(f.toPath());
             } catch (Exception e) {
