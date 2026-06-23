@@ -72,6 +72,69 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private static final String SCOPE_SHARED = "shared";
     private static final String SCOPE_USER = "user";
 
+    private static final Set<String> STOP_WORDS = Set.of(
+            "如何", "怎么", "怎样", "可以", "这个", "那个", "什么", "为什么",
+            "哪些", "哪里", "是否", "能不能", "有没有", "怎么办",
+            "的", "了", "吗", "呢", "吧", "啊", "嘛"
+    );
+
+    /**
+     * 查询增强：从查询中提取关键词拼接到原查询后面，拉近与 chunk 的语义距离。
+     * <p>
+     * 中文：提取 2-4 字连续汉字片段，过滤停用词，去重。
+     * 英文：提取长度 ≥ 3 的字母数字 token，去重。
+     */
+    private String augmentQuery(String query) {
+        if (query == null || query.trim().isEmpty()) return query;
+
+        List<String> keywords = new ArrayList<>();
+
+        StringBuilder cnBuf = new StringBuilder();
+        for (int i = 0; i < query.length(); i++) {
+            char c = query.charAt(i);
+            if (Character.UnicodeScript.of(c) == Character.UnicodeScript.HAN) {
+                cnBuf.append(c);
+            } else {
+                extractChineseKeywords(cnBuf.toString(), keywords);
+                cnBuf.setLength(0);
+            }
+        }
+        extractChineseKeywords(cnBuf.toString(), keywords);
+
+        for (String token : query.split("[\\s\\p{Punct}]+")) {
+            token = token.trim().toLowerCase();
+            if (token.length() >= 3 && token.matches("[a-z0-9]+")) {
+                keywords.add(token);
+            }
+        }
+
+        if (keywords.isEmpty()) return query;
+
+        String augmented = query + " " + String.join(" ", keywords);
+        if (augmented.length() > query.length() * 3) {
+            StringBuilder sb = new StringBuilder(query);
+            for (String kw : keywords) {
+                if (sb.length() + kw.length() + 1 > query.length() * 2) break;
+                sb.append(" ").append(kw);
+            }
+            return sb.toString();
+        }
+        return augmented;
+    }
+
+    private void extractChineseKeywords(String cnText, List<String> out) {
+        if (cnText.length() < 2) return;
+        int maxWindow = Math.min(4, cnText.length());
+        for (int w = maxWindow; w >= 2; w--) {
+            for (int i = 0; i <= cnText.length() - w; i++) {
+                String kw = cnText.substring(i, i + w);
+                if (!STOP_WORDS.contains(kw)) {
+                    out.add(kw);
+                }
+            }
+        }
+    }
+
     private boolean isAdmin() {
         UserInfo ui = UserContext.getNoCheck();
         return ui != null && ui.isAdmin();
@@ -328,13 +391,15 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         int fetchSize = topK * 2;
         List<ChromaClient.QueryResult> allVecResults = new ArrayList<>();
 
+        String augmentedQuery = augmentQuery(query);
+
         for (Map.Entry<String, List<String>> entry : kbByModel.entrySet()) {
             ModelConfigEntity embedModel = modelConfigDao.queryById(entry.getKey());
             if (embedModel == null) {
                 log.warn("Embedding 模型 {} 不存在，跳过", entry.getKey());
                 continue;
             }
-            List<float[]> embeddings = embeddingClient.embed(List.of(query), embedModel);
+            List<float[]> embeddings = embeddingClient.embed(List.of(augmentedQuery), embedModel);
             if (embeddings.isEmpty()) continue;
             for (String kbId : entry.getValue()) {
                 try {
