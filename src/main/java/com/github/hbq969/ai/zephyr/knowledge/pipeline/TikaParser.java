@@ -1,5 +1,6 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
