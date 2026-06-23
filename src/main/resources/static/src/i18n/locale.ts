@@ -343,6 +343,7 @@ const locale: any = {
         "knowledgeMgmt_docCount": "{count} 个文档",
         "knowledgeMgmt_uploadDoc": "上传文档",
         "knowledgeMgmt_reParse": "重新解析",
+        "knowledgeMgmt_refreshList": "刷新列表",
         "knowledgeMgmt_noKb": "暂无知识库",
         "knowledgeMgmt_noKbHint": "点击「创建知识库」开始",
         "knowledgeMgmt_noDoc": "暂无文档",

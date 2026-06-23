@@ -16,6 +16,7 @@ const kbId = route.params.kbId as string
 const kbName = ref('')
 const kbCanManage = ref(false)
 const docs = ref<any[]>([])
+const refreshingDocs = ref(false)
 const uploadVisible = ref(false)
 const uploadFile = ref<File | null>(null)
 const uploading = ref(false)
@@ -41,9 +42,11 @@ const openEditInline = (doc: any) => {
 const onDocSaved = () => { fetchDocs() }
 
 const fetchDocs = () => {
+  refreshingDocs.value = true
   axios({ url: '/knowledge/doc/list', method: 'get', params: { kbId } })
     .then(res => { if (res.data.state === 'OK') docs.value = res.data.body })
     .catch(err => msg(err?.response?.data?.errorMessage || '加载失败', 'error'))
+    .finally(() => { refreshingDocs.value = false })
 }
 
 const fetchKbName = () => {
@@ -136,12 +139,17 @@ onMounted(() => { fetchDocs(); fetchKbName() })
       <h2>{{ kbName || langData.knowledgeMgmt_title }}</h2>
     </div>
 
-    <div v-if="docs.length > 0 && kbCanManage" class="page-toolbar">
+    <div v-if="docs.length > 0" class="page-toolbar">
+      <el-tooltip :content="langData.knowledgeMgmt_refreshList" placement="top">
+        <el-button circle :loading="refreshingDocs" @click="fetchDocs">
+          <Icon icon="lucide:refresh-cw" v-if="!refreshingDocs" />
+        </el-button>
+      </el-tooltip>
       <div style="flex:1"></div>
-      <el-button @click="openCreateInline">
+      <el-button v-if="kbCanManage" @click="openCreateInline">
         <Icon icon="lucide:edit-3" style="margin-right:4px" /> {{ langData.knowledgeMgmt_createInlineDoc }}
       </el-button>
-      <el-button type="primary" @click="uploadVisible = true">
+      <el-button v-if="kbCanManage" type="primary" @click="uploadVisible = true">
         <Icon icon="lucide:upload" style="margin-right:4px" /> {{ langData.knowledgeMgmt_uploadDoc }}
       </el-button>
     </div>
