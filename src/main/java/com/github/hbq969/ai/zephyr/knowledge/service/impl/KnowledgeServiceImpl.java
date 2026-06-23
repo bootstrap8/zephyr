@@ -231,6 +231,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         knowledgeDao.deleteDocsByKbId(id);
         lightRagClient.deleteKb(id);
         knowledgeDao.deleteKb(id);
+        chromaClient.deleteCollection("kb_" + id);
+        deleteKbDataDir(id);
     }
 
     @Override
@@ -586,6 +588,21 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         } catch (Exception e) {
             log.error("文档处理失败: docId={}", docId, e);
             knowledgeDao.updateDocStatus(docId, "error", 0, e.getMessage());
+        }
+    }
+
+    private void deleteKbDataDir(String kbId) {
+        try {
+            Path dataDir = Paths.get(cfg.getKnowledge().getDataDir(), kbId);
+            if (Files.exists(dataDir)) {
+                try (var stream = Files.walk(dataDir)) {
+                    stream.sorted(Comparator.reverseOrder()).forEach(p -> {
+                        try { Files.delete(p); } catch (IOException e) { log.warn("删除文件失败: {}", p, e); }
+                    });
+                }
+            }
+        } catch (Exception e) {
+            log.warn("清理知识库文件目录失败: kbId={}", kbId, e);
         }
     }
 
