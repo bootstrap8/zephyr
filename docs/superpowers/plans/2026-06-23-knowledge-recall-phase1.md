@@ -210,6 +210,8 @@ public class KeywordIndex {
     private final Map<String, Integer> totalChars = new HashMap<>();
     // chunkId -> text (flat reverse index for O(1) lookup)
     private final Map<String, String> textById = new HashMap<>();
+    // chunkId -> kbId (for O(1) KB lookup in window expansion)
+    private final Map<String, String> chunkKbMap = new HashMap<>();
 }
 ```
 
@@ -226,6 +228,7 @@ public class KeywordIndex {
             String chunkText = chunks.get(i);
             kbTexts.put(chunkId, chunkText);
             textById.put(chunkId, chunkText);
+            chunkKbMap.put(chunkId, kbId);
 
             totalChunks.merge(kbId, 1, Integer::sum);
             totalChars.merge(kbId, chunkText.length(), Integer::sum);
@@ -281,31 +284,28 @@ public class KeywordIndex {
         for (String chunkId : toRemove) {
             String text = kbTexts.remove(chunkId);
             textById.remove(chunkId);
+            chunkKbMap.remove(chunkId);
             if (text != null) {
                 totalChars.merge(kbId, -text.length(), Integer::sum);
             }
             totalChunks.merge(kbId, -1, Integer::sum);
 
-            // 从词频表中移除该 chunk，同时清理 doc 级倒排
-            Iterator<Map.Entry<String, Map<String, Integer>>> termIt = kbTermChunk.entrySet().iterator();
-            while (termIt.hasNext()) {
-                Map.Entry<String, Map<String, Integer>> entry = termIt.next();
-                String term = entry.getKey();
-                Map<String, Integer> chunkMap = entry.getValue();
-                chunkMap.remove(chunkId);
-                if (chunkMap.isEmpty()) {
-                    termIt.remove();
+            // 仅处理该 chunk 包含的 term，而非遍历整个词表
+            Set<String> chunkTerms = tokenizeForBm25(text != null ? text : "");
+            for (String term : chunkTerms) {
+                Map<String, Integer> chunkMap = kbTermChunk.get(term);
+                if (chunkMap != null) {
+                    chunkMap.remove(chunkId);
+                    if (chunkMap.isEmpty()) {
+                        kbTermChunk.remove(term);
+                    }
                 }
                 // 检查该 term 在本 doc 的其他 chunk 中是否还存在
                 Set<String> docSet = kbTermDoc.get(term);
                 if (docSet != null) {
-                    boolean docStillHasTerm = false;
-                    for (String remainingChunk : kbTexts.keySet()) {
-                        if (remainingChunk.startsWith(docId + "_") && chunkMap.containsKey(remainingChunk)) {
-                            docStillHasTerm = true;
-                            break;
-                        }
-                    }
+                    boolean docStillHasTerm = kbTexts.keySet().stream()
+                            .anyMatch(c -> c.startsWith(docId + "_")
+                                    && kbTermChunk.getOrDefault(term, Collections.emptyMap()).containsKey(c));
                     if (!docStillHasTerm) {
                         docSet.remove(docId);
                         if (docSet.isEmpty()) {
@@ -339,6 +339,7 @@ public class KeywordIndex {
         if (kbTexts != null) {
             for (String chunkId : kbTexts.keySet()) {
                 textById.remove(chunkId);
+                chunkKbMap.remove(chunkId);
             }
         }
         termChunkFreq.remove(kbId);
@@ -463,7 +464,7 @@ EOF
             "第零段", "第一段", "第二段", "第三段", "第四段"
         ));
 
-        List<String> window = idx.expandWindow(KB1, "doc-window_2", 2);
+        List<String> window = idx.expandWindow("doc-window_2", 2);
         assertEquals(List.of("doc-window_0", "doc-window_1", "doc-window_2", "doc-window_3", "doc-window_4"), window);
     }
 
@@ -472,11 +473,11 @@ EOF
         idx.addChunks(KB1, "doc-edge", List.of("首段", "次段", "尾段"));
 
         // 窗口起始越界
-        List<String> window = idx.expandWindow(KB1, "doc-edge_0", 2);
+        List<String> window = idx.expandWindow("doc-edge_0", 2);
         assertEquals(List.of("doc-edge_0", "doc-edge_1", "doc-edge_2"), window);
 
         // 窗口结束越界
-        window = idx.expandWindow(KB1, "doc-edge_2", 2);
+        window = idx.expandWindow("doc-edge_2", 2);
         assertEquals(List.of("doc-edge_0", "doc-edge_1", "doc-edge_2"), window);
     }
 
@@ -484,9 +485,27 @@ EOF
     void expandWindow_shouldReturnOnlySelfWhenNoNeighbors() {
         idx.addChunks(KB1, "solo-doc", List.of("唯一一段"));
 
-        List<String> window = idx.expandWindow(KB1, "solo-doc_0", 2);
+        List<String> window = idx.expandWindow("solo-doc_0", 2);
         assertEquals(List.of("solo-doc_0"), window);
     }
+
+    @Test
+    void expandWindow_shouldFindCorrectKb() {
+        String kb2 = "test-kb-2";
+        idx.addChunks(KB1, "kb1-doc", List.of("A1", "A2", "A3"));
+        idx.addChunks(kb2, "kb2-doc", List.of("B1", "B2", "B3"));
+
+        // 跨 KB 查找不应交叉污染
+        List<String> w1 = idx.expandWindow("kb1-doc_1", 1);
+        assertEquals(List.of("kb1-doc_0", "kb1-doc_1", "kb1-doc_2"), w1,
+                "应从 KB1 展开，不含 KB2 的 chunk");
+
+        List<String> w2 = idx.expandWindow("kb2-doc_1", 1);
+        assertEquals(List.of("kb2-doc_0", "kb2-doc_1", "kb2-doc_2"), w2,
+                "应从 KB2 展开，不含 KB1 的 chunk");
+    }
+
+    private static final String KB2 = "test-kb-2";
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -504,8 +523,11 @@ mvn test -Dtest=KeywordIndexTest#expandWindow_shouldReturnAdjacentChunks -Dsuref
      * 获取指定 chunk 前后各 window 个相邻 chunk 的 chunkId 列表（含自身）。
      * chunkId 格式为 {docId}_{chunkIndex}，窗口内的 chunk 按 chunkIndex 升序排列。
      * 越界的 chunkIndex 静默跳过，不存在的 chunkId 不包含在结果中。
+     * 自动通过 chunkKbMap 定位所属 KB（O(1)）。
      */
-    public synchronized List<String> expandWindow(String kbId, String chunkId, int window) {
+    public synchronized List<String> expandWindow(String chunkId, int window) {
+        String kbId = chunkKbMap.get(chunkId);
+        if (kbId == null) return List.of(chunkId);
         Map<String, String> kbTexts = chunkTexts.get(kbId);
         if (kbTexts == null) return List.of(chunkId);
 
@@ -550,17 +572,10 @@ mvn test -Dtest=KeywordIndexTest -Dsurefire.useFile=false 2>&1 | tail -20
         final int MAX_TOTAL_CHARS = 8000;
 
         // 1. 收集每个 Top-K chunkId 的窗口，合并为连续区间
-        //    mergedIds 可能来自多个 KB，遍历所有 kbIds 直到命中
         Set<String> expandedIds = new LinkedHashSet<>();
         for (String chunkId : mergedIds) {
-            for (String kbId : kbIds) {
-                List<String> window = keywordIndex.expandWindow(kbId, chunkId, WINDOW_SIZE);
-                // expandWindow 在 kbId 不匹配时默认只返回 [chunkId]
-                if (window.size() > 1 || window.contains(chunkId)) {
-                    expandedIds.addAll(window);
-                    break;
-                }
-            }
+            List<String> window = keywordIndex.expandWindow(chunkId, WINDOW_SIZE);
+            expandedIds.addAll(window);
         }
 
         // 2. 转为按 (docId, chunkIndex) 排序的列表
@@ -617,8 +632,87 @@ EOF
 
 **Files:**
 - Modify: `src/main/java/com/github/hbq969/ai/zephyr/knowledge/service/impl/KnowledgeServiceImpl.java`
+- Create: `src/test/java/com/github/hbq969/ai/zephyr/knowledge/service/impl/AugmentQueryTest.java`
 
-- [ ] **Step 1: 在 KnowledgeServiceImpl 中实现 augmentQuery()**
+- [ ] **Step 1: 编写 augmentQuery 单元测试**
+
+```java
+// src/test/java/com/github/hbq969/ai/zephyr/knowledge/service/impl/AugmentQueryTest.java
+package com.github.hbq969.ai.zephyr.knowledge.service.impl;
+
+import org.junit.jupiter.api.Test;
+import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class AugmentQueryTest {
+
+    // augmentQuery 是 private 方法，通过反射调用便于测试
+    private String callAugmentQuery(String query) throws Exception {
+        KnowledgeServiceImpl svc = new KnowledgeServiceImpl();
+        Method m = KnowledgeServiceImpl.class.getDeclaredMethod("augmentQuery", String.class);
+        m.setAccessible(true);
+        return (String) m.invoke(svc, query);
+    }
+
+    @Test
+    void shouldAppendChineseKeywords() throws Exception {
+        String result = callAugmentQuery("如何配置MCP服务器超时时间");
+        assertTrue(result.startsWith("如何配置MCP服务器超时时间 "));
+        // 应包含中文关键词，不含停用词"如何"
+        assertTrue(result.contains("配置"));
+        assertTrue(result.contains("服务器"));
+        assertFalse(result.split(" ")[1].contains("如何"));
+    }
+
+    @Test
+    void shouldNotContainStopWords() throws Exception {
+        String result = callAugmentQuery("怎么可以这样做");
+        // "怎么"、"可以" 是停用词，不应出现在追加部分
+        String[] parts = result.split(" ", 2);
+        if (parts.length > 1) {
+            assertFalse(parts[1].contains("怎么"));
+            assertFalse(parts[1].contains("可以"));
+        }
+    }
+
+    @Test
+    void shouldHandleEnglishTokens() throws Exception {
+        String result = callAugmentQuery("fix bug in MCP handler");
+        // 英文 token：fix(3) bug(3) MCP(3) handler(7)
+        assertTrue(result.contains("fix"));
+        assertTrue(result.contains("bug"));
+        assertTrue(result.contains("mcp"));
+        assertTrue(result.contains("handler"));
+        // "in"(2) 长度 < 3，不应出现
+        assertFalse(result.split(" ")[1].contains("in"));
+    }
+
+    @Test
+    void shouldLimitAugmentedLength() throws Exception {
+        // 构造长查询，验证长度控制在 3 倍以内
+        String longQuery = "a".repeat(200);
+        String result = callAugmentQuery(longQuery);
+        assertTrue(result.length() <= longQuery.length() * 3 + 10);
+    }
+
+    @Test
+    void shouldReturnOriginalForEmptyQuery() throws Exception {
+        assertEquals("", callAugmentQuery(""));
+        assertNull(callAugmentQuery(null));
+    }
+}
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+```bash
+mvn test -Dtest=AugmentQueryTest -Dsurefire.useFile=false 2>&1 | tail -10
+```
+
+预期：编译失败，`augmentQuery` 方法不存在。
+
+- [ ] **Step 3: 在 KnowledgeServiceImpl 中实现 augmentQuery()**
 
 ```java
     // 停用词表
@@ -693,7 +787,15 @@ EOF
     }
 ```
 
-- [ ] **Step 2: 在 search() 中集成查询增强**
+- [ ] **Step 4: 运行测试确认通过**
+
+```bash
+mvn test -Dtest=AugmentQueryTest -Dsurefire.useFile=false 2>&1 | tail -10
+```
+
+预期：5 个测试 PASS。
+
+- [ ] **Step 5: 在 search() 中集成查询增强**
 
 ```java
 // 在 KnowledgeServiceImpl.search() 中，embedding 调用之前，修改 query 为增强后的文本
@@ -709,14 +811,14 @@ EOF
         }
 ```
 
-- [ ] **Step 3: 编译确认**
+- [ ] **Step 6: 编译确认**
 
 ```bash
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
 mvn compile -DskipTests 2>&1 | tail -10
 ```
 
-- [ ] **Step 4: 端到端验证**
+- [ ] **Step 7: 端到端验证**
 
 ```bash
 # 确保后端已启动（localhost:30733），然后用 curl 测试
@@ -730,7 +832,7 @@ curl -s -u admin:1 -H "X-SM-Test: 1" \
 # 对比有增强和无增强的结果（改动前后各跑一次）
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/main/java/com/github/hbq969/ai/zephyr/knowledge/service/impl/KnowledgeServiceImpl.java
@@ -843,7 +945,30 @@ class RecallTest {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: 添加 p95 延迟测试**
+
+```java
+// 在 RecallTest.java 中添加
+    @Test
+    void searchLatency_shouldBeUnder500msP95() {
+        int samples = 50;
+        List<Long> latencies = new ArrayList<>();
+        for (int i = 0; i < samples; i++) {
+            long start = System.nanoTime();
+            knowledgeService.search("延迟测试查询", List.of("test-kb-id"), 5);
+            latencies.add((System.nanoTime() - start) / 1_000_000);
+        }
+        latencies.sort(Long::compareTo);
+        long p95 = latencies.get((int) (samples * 0.95));
+        double avgMs = latencies.stream().mapToLong(Long::valueOf).average().orElse(0);
+
+        System.out.printf("Search latency: avg=%.0fms, p95=%dms (50 samples)%n", avgMs, p95);
+        assertTrue(p95 < 500, "p95 should be < 500ms, got " + p95 + "ms (avg=" + avgMs + "ms)");
+        System.out.println("LATENCY_CHECK: p95=" + p95 + "ms, avg=" + avgMs + "ms");
+    }
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/test/ && git commit -m "$(cat <<'EOF'
