@@ -46,12 +46,12 @@ public class ChromaClient implements InitializingBean {
     private void startEmbeddedChroma() {
         var chromaCfg = cfg.getKnowledge().getChroma();
         try {
-            new ProcessBuilder("chroma", "run", "--path", chromaCfg.getDataDir(),
+            new ProcessBuilder(chromaCfg.getBinPath(), "run", "--path", chromaCfg.getDataDir(),
                     "--port", String.valueOf(chromaCfg.getPort()))
                     .inheritIO()
                     .start();
             Thread.sleep(2000);
-            log.info("Embedded Chroma 已启动, path={}, port={}", chromaCfg.getDataDir(), chromaCfg.getPort());
+            log.info("Embedded Chroma 已启动, path={}, port={}, bin={}", chromaCfg.getDataDir(), chromaCfg.getPort(), chromaCfg.getBinPath());
         } catch (Exception e) {
             log.warn("Chroma 子进程启动失败，请确保已安装: pip install chromadb。将尝试连接已有实例。");
         }

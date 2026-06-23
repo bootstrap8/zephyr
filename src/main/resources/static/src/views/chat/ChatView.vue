@@ -185,6 +185,7 @@ function onStop() {
   if (abortController) { abortController.abort(); abortController = null }
   axios({ url: '/chat/cancel', method: 'post' }).catch(() => {})
   chatStore.streaming = false
+  chatStore.cancelRunningToolCalls()
 }
 
 function restoreConversation(id: string) {

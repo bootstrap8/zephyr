@@ -194,6 +194,8 @@ public class ZephyrConfigProperties {
         public static class Chroma {
             /** 部署模式: embedded 或 server */
             private String mode = "embedded";
+            /** chroma 可执行文件路径（embedded 模式需要），默认 "chroma" 走系统 PATH */
+            private String binPath = "chroma";
             /** embedded 模式数据目录 */
             private String dataDir = System.getProperty("user.home") + "/.zephyr/chroma";
             /** embedded 模式 HTTP 端口 */

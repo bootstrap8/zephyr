@@ -12,6 +12,9 @@
             <outputDirectory>deploy</outputDirectory>
             <directoryMode>0755</directoryMode>
             <fileMode>0755</fileMode>
+            <excludes>
+                <exclude>lightrag/venv/</exclude>
+            </excludes>
             <includes>
                 <include>**/*</include>
             </includes>

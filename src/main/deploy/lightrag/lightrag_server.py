@@ -27,6 +27,9 @@ EMBED_DIM = int(os.environ["LIGHTRAG_EMBED_DIM"])
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+log.info("LightRAG config: DATA_DIR=%s LLM_BASE_URL=%s LLM_MODEL=%s EMBED_BASE_URL=%s EMBED_MODEL=%s EMBED_DIM=%s",
+         DATA_DIR, LLM_BASE_URL, LLM_MODEL, EMBED_BASE_URL, EMBED_MODEL, EMBED_DIM)
+
 # --- per-KB RAG instances ---
 _rags: dict[str, LightRAG] = {}
 _initialized: set[str] = set()
@@ -62,6 +65,7 @@ async def _get_rag(kb_id: str) -> LightRAG:
                         max_token_size=8192,
                         func=embed_func
                     ),
+                    llm_model_max_async=8
                 )
                 await rag.initialize_storages()
                 _rags[kb_id] = rag

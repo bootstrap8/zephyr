@@ -1,7 +1,11 @@
 **/*-me.yml
+**/*-prod.yml
+**/*-gray.yml
 **/*-me.properties
 **/*-me-gray.yml
 **/*-me.xml
+**/*-prod.xml
+**/*-gray.xml
 **/node_modules
 **/.claude
 **/package-lock.json
@@ -30,3 +34,4 @@
 **/.env.lightrag
 *-preview.png
 *-snapshot.md
+**/*.gz

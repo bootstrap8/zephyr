@@ -39,11 +39,11 @@
       <artifactId>h-sm</artifactId>
       <version>${common.version}</version>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>com.github.hbq969</groupId>-->
-<!--      <artifactId>spring-cloud-starter-hdbc-config</artifactId>-->
-<!--      <version>1.2</version>-->
-<!--    </dependency>-->
+    <dependency>
+      <groupId>com.github.hbq969</groupId>
+      <artifactId>spring-cloud-starter-hdbc-config</artifactId>
+      <version>1.2</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
@@ -141,8 +141,14 @@
         <includes>
           <include>*.*</include>
           <include>static/zephyr-ui/</include>
-          <include>static/*.png</include>
+          <include>static/ui/</include>
         </includes>
+      </resource>
+      <resource>
+        <directory>src/main/deploy</directory>
+        <excludes>
+          <exclude>**/*</exclude>
+        </excludes>
       </resource>
     </resources>
 

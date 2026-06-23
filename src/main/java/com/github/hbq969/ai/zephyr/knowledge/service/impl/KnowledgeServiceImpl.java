@@ -11,6 +11,7 @@ import com.github.hbq969.ai.zephyr.knowledge.pipeline.ChromaClient;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.EmbeddingClient;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.KeywordIndex;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.RrfMerger;
+import com.github.hbq969.ai.zephyr.knowledge.pipeline.TextCleaner;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.TextSplitter;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.TikaParser;
 import com.github.hbq969.ai.zephyr.knowledge.client.LightRagClient;
@@ -48,6 +49,9 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     @Resource
     private TikaParser tikaParser;
+
+    @Resource
+    private TextCleaner textCleaner;
 
     @Resource
     private EmbeddingClient embeddingClient;
@@ -383,6 +387,16 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         for (String kbId : kbIds) {
             KnowledgeBaseEntity kb = knowledgeDao.queryKbById(kbId);
             if (kb == null || !Integer.valueOf(1).equals(kb.getGraphEnabled())) continue;
+
+            List<KnowledgeDocEntity> docs = knowledgeDao.queryDocsByKbId(kbId);
+            boolean graphNotReady = docs.stream().anyMatch(d -> "indexing".equals(d.getGraphStatus()));
+            if (graphNotReady) {
+                results.add(new SearchResult(
+                        "知识库\"" + kb.getName() + "\"的图谱仍在索引中，暂不支持图谱增强检索",
+                        "系统提示", 0.0));
+                continue;
+            }
+
             List<LightRagClient.GraphSearchResult> graphResults =
                     lightRagClient.search(kbId, query, "hybrid", topK);
             for (LightRagClient.GraphSearchResult gr : graphResults) {
@@ -415,8 +429,11 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
             if (doc == null) { log.warn("文档已被删除，取消处理: docId={}", docId); return; }
 
+            text = textCleaner.clean(text);
+
             TextSplitter splitter = new TextSplitter(800, 150);
             List<String> chunks = splitter.split(text);
+            chunks = textCleaner.filterLowQualityChunks(chunks);
             if (chunks.isEmpty()) {
                 knowledgeDao.updateDocStatus(docId, "error", 0, "文档内容为空");
                 return;

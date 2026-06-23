@@ -275,6 +275,7 @@ zephyr:
     data-dir: ${user.home}/.zephyr/knowledge
     chroma:
       mode: embedded
+      bin-path: chroma  # chroma 可执行文件路径，默认 "chroma" 走系统 PATH，可配置为 venv/bin/chroma 绝对路径
       data-dir: ${user.home}/.zephyr/chroma
       port: 18951
     lightrag:

@@ -74,6 +74,20 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  function cancelRunningToolCalls() {
+    flushTokens()
+    for (const msg of messages.value) {
+      if (msg.toolCalls) {
+        for (const tc of msg.toolCalls) {
+          if (tc.status === 'running') {
+            tc.status = 'error'
+            tc.output = '已取消'
+          }
+        }
+      }
+    }
+  }
+
   function upsertToolCall(name: string, patch: Partial<ToolCall>) {
     flushTokens()
     const msgs = messages.value
@@ -99,5 +113,5 @@ export const useChatStore = defineStore('chat', () => {
   }
 
 
-  return { messages, streaming, currentThinking, sessionStartTime, mode, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, startSession, pruneEmptyAssistant, upsertToolCall, cycleMode }
+  return { messages, streaming, currentThinking, sessionStartTime, mode, addMessage, appendToken, setThinking, updateLastThinking, clearMessages, startSession, pruneEmptyAssistant, cancelRunningToolCalls, upsertToolCall, cycleMode }
 })
