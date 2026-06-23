@@ -116,17 +116,34 @@ public class JsonPreprocessor {
     }
 
     /**
-     * 递归展平一个 JSON 对象为 key: value 行。
+     * 展平对象：短字段优先输出，确保 title/status 等关键字段在 chunk 头部，
+     * 长文本字段（如 description）放在后面，避免 TextSplitter 把关键字段冲散。
      */
     private String flatten(JsonObject obj, int depth) {
+        // 收集字段，按值长度排序：标量短字段 > 标量长字段 > 数组/对象
+        List<Map.Entry<String, JsonElement>> entries = new ArrayList<>();
+        for (Map.Entry<String, JsonElement> e : obj.entrySet()) {
+            if (!e.getValue().isJsonNull()) entries.add(e);
+        }
+        entries.sort((a, b) -> Integer.compare(fieldWeight(a), fieldWeight(b)));
+
         StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
-            String key = entry.getKey();
-            JsonElement val = entry.getValue();
-            if (val.isJsonNull()) continue;
-            appendValue(sb, key, val, depth);
+        for (Map.Entry<String, JsonElement> entry : entries) {
+            appendValue(sb, entry.getKey(), entry.getValue(), depth);
         }
         return sb.toString().stripTrailing();
+    }
+
+    /** 字段权重：短标量=0，长标量=1，数组/对象=2 */
+    private int fieldWeight(Map.Entry<String, JsonElement> e) {
+        JsonElement val = e.getValue();
+        if (val.isJsonPrimitive()) {
+            if (val.getAsJsonPrimitive().isString()) {
+                return val.getAsString().length() < 200 ? 0 : 1;
+            }
+            return 0; // number/boolean 都是短字段
+        }
+        return 2; // array/object 最后
     }
 
     private void appendValue(StringBuilder sb, String key, JsonElement val, int depth) {
@@ -148,7 +165,6 @@ public class JsonPreprocessor {
                 sb.append(key).append(": [...]\n");
                 return;
             }
-            // 对象数组 → 每个元素独立展开
             if (isObjectArray(arr)) {
                 for (int i = 0; i < arr.size(); i++) {
                     JsonObject item = arr.get(i).getAsJsonObject();
@@ -161,7 +177,6 @@ public class JsonPreprocessor {
                     }
                 }
             } else {
-                // 基本类型数组 → 逗号拼接
                 List<String> items = new ArrayList<>();
                 for (JsonElement el : arr) {
                     if (el.isJsonPrimitive()) {
