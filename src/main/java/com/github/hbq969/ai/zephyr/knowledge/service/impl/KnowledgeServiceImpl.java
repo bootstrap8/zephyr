@@ -8,7 +8,7 @@ import com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeBaseEntity;
 import com.github.hbq969.ai.zephyr.knowledge.dao.entity.KnowledgeDocEntity;
 import com.github.hbq969.ai.zephyr.knowledge.model.KnowledgeVO;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.ChromaClient;
-import com.github.hbq969.ai.zephyr.knowledge.pipeline.JsonTaskPreprocessor;
+import com.github.hbq969.ai.zephyr.knowledge.pipeline.JsonPreprocessor;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.EmbeddingClient;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.KeywordIndex;
 import com.github.hbq969.ai.zephyr.knowledge.pipeline.RrfMerger;
@@ -52,7 +52,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private TikaParser tikaParser;
 
     @Resource
-    private JsonTaskPreprocessor jsonTaskPreprocessor;
+    private JsonPreprocessor jsonPreprocessor;
 
     @Resource
     private TextCleaner textCleaner;
@@ -530,7 +530,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             KnowledgeDocEntity doc = knowledgeDao.queryDocById(docId);
             if (doc == null) { log.warn("文档已被删除，取消处理: docId={}", docId); return; }
 
-            text = jsonTaskPreprocessor.preprocess(text);
+            text = jsonPreprocessor.preprocess(text);
             text = textCleaner.clean(text);
 
             TextSplitter splitter = new TextSplitter(800, 150);
