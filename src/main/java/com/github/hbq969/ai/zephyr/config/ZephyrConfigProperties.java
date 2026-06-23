@@ -183,12 +183,22 @@ public class ZephyrConfigProperties {
 
     @Data
     public static class Knowledge {
+        /** BM25 关键词检索参数 */
+        private Bm25 bm25 = new Bm25();
         /** Chroma 向量数据库 */
         private Chroma chroma = new Chroma();
         /** LightRAG 图谱增强配置 */
         private LightRag lightrag = new LightRag();
         /** 文档存储根目录，默认 ~/.zephyr/knowledge */
         private String dataDir = System.getProperty("user.home") + "/.zephyr/knowledge";
+
+        @Data
+        public static class Bm25 {
+            /** 词频饱和度参数，默认 1.5 */
+            private double k1 = 1.5;
+            /** 长度归一化参数，默认 0.75（chunk 近似等长可适当降低） */
+            private double b = 0.75;
+        }
 
         @Data
         public static class Chroma {
