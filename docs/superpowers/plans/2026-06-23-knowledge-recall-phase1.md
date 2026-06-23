@@ -602,7 +602,7 @@ mvn test -Dtest=KeywordIndexTest -Dsurefire.useFile=false 2>&1 | tail -20
         if (!results.isEmpty() && expandedText.length() > 0) {
             SearchResult first = results.get(0);
             results.add(0, new SearchResult(expandedText.toString(),
-                    first.getFileName() + "（上下文窗口）", first.getVecScore()));
+                    first.getSourceFile() + "（上下文窗口）", first.getScore()));
         }
 ```
 
@@ -858,6 +858,7 @@ EOF
 ```json
 // src/test/resources/knowledge-recall-testset.json
 {
+  "kbId": "test-kb-id",
   "kbName": "recall-test-kb",
   "queries": [
     // === 配置问题 (5条) ===
@@ -923,22 +924,23 @@ class RecallTest {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> queries = (List<Map<String, Object>>) testset.get("queries");
+        String kbId = (String) testset.get("kbId");
 
         int hitCount = 0;
-        int total = queries.size();
+        int total = 0;
 
         for (Map<String, Object> q : queries) {
             String query = (String) q.get("query");
             @SuppressWarnings("unchecked")
             List<String> expected = (List<String>) q.get("expectedChunkIds");
             if (expected == null || expected.isEmpty()) {
-                total--;
-                continue;
+                total++;
+                continue;  // 未标注的查询跳过但计入 total，避免 NaN
             }
-
-            var results = knowledgeService.search(query, List.of("test-kb-id"), 3);
+            total++;
+            var results = knowledgeService.search(query, List.of(kbId), 3);
             boolean hit = results.stream().anyMatch(r ->
-                    expected.stream().anyMatch(e -> r.getFileName().contains(e) || r.getText().contains(e)));
+                    expected.stream().anyMatch(e -> r.getSourceFile().contains(e) || r.getContent().contains(e)));
             if (hit) hitCount++;
         }
 
@@ -990,17 +992,21 @@ class RecallTest {
         baseline.put("timestamp", System.currentTimeMillis());
         List<Map<String, Object>> results = new ArrayList<>();
 
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> queries = (List<Map<String, Object>>) testset.get("queries");
+        String kbId = (String) testset.get("kbId");
+
         for (Map<String, Object> q : queries) {
             String query = (String) q.get("query");
             long start = System.nanoTime();
-            var sr = knowledgeService.search(query, List.of("test-kb-id"), 3);
+            var sr = knowledgeService.search(query, List.of(kbId), 3);
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("query", query);
             entry.put("latencyMs", elapsedMs);
-            entry.put("top3ChunkIds", sr.stream().map(r -> r.getFileName()).toList());
-            entry.put("top3Scores", sr.stream().map(r -> r.getVecScore()).toList());
+            entry.put("top3ChunkIds", sr.stream().map(r -> r.getSourceFile()).toList());
+            entry.put("top3Scores", sr.stream().map(r -> r.getScore()).toList());
             results.add(entry);
         }
         baseline.put("results", results);
@@ -1045,7 +1051,13 @@ EOF
 ## Execution Order
 
 ```
-Task 1 (BM25)  →  Task 2 (窗口扩展)  →  Task 3 (查询增强)  →  Task 4 (验证)
+前置: 导入测试知识库数据 + captureBaseline(原始代码)
+  →  Task 1 (BM25)
+  →  Task 2 (窗口扩展)
+  →  Task 3 (查询增强)
+  →  Task 4 (验证: recallAt3 + 对比 baseline)
 ```
+
+⚠️ **重要：** 在开始 Task 1 之前，必须在**原始代码**上先 `captureBaseline()` 并保存到 `target/recall-baseline-before.json`。Task 4 的验证需要将此 baseline 与改动后的结果（`target/recall-baseline-after.json`）对比，确保 Recall@3 不退化。
 
 三项改动互不依赖，顺序任意。Task 4 在所有改动完成后执行，需事先导入测试知识库数据。
