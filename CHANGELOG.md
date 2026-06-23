@@ -2,6 +2,31 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
 
+## [1.1.2] - 2026-06-23
+
+### 新增
+
+- **MCP 连接生命周期管理**：connect 启动持久进程 + listTools 自动发现工具 + DB 状态清理，重启/重连保证状态一致
+- **MCP 进程树追踪与清理**：动态查找所有子孙 PID，kill 时先杀子进程再杀父进程，逐个记录 kill 结果便于排查
+- **启动自动重连**：Zephyr 启动时自动重连之前处于 connected 状态的 MCP 服务器
+- **知识库混合检索**：BM25 关键词检索（文档级 IDF）+ 向量检索 RRF 融合
+- **上下文窗口扩展**：RRF 融合后获取相邻 chunk 合并排序返回，提高上下文完整性
+- **查询增强**：embedding 前自动提取查询关键词拼接，拉近与 chunk 的语义距离
+- **文本清洗管线**：TextCleaner 统一处理文本清理、低质量 chunk 过滤
+- **Chroma 路径可配置**：chroma dataDir/binPath/baseUrl 通过配置文件管理
+- **知识库文档列表刷新按钮**：方便查看文档处理状态
+
+### 修复
+
+- 删除知识库时同步清理 Chroma 向量数据和文件目录
+- TikaParser 解除 100000 字符截断限制
+- 启动重连跳过权限检查
+- 模型管理空状态无添加按钮
+
+### 测试
+
+- 知识库召回率验证框架：Recall@3 跑分 + baseline + p95 延迟测试 + 15 条数据集
+
 ## [1.1.1] - 2026-06-14
 
 ### 变更
