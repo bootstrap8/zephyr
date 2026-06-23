@@ -1,0 +1,21 @@
+{
+  "kbId": "test-kb-id",
+  "kbName": "recall-test-kb",
+  "queries": [
+    { "query": "如何配置超时时间", "category": "配置问题", "expectedChunkIds": [] },
+    { "query": "怎么修改端口号", "category": "配置问题", "expectedChunkIds": [] },
+    { "query": "日志级别怎么设置", "category": "配置问题", "expectedChunkIds": [] },
+    { "query": "线程池大小配置参数", "category": "配置问题", "expectedChunkIds": [] },
+    { "query": "数据源连接池配置", "category": "配置问题", "expectedChunkIds": [] },
+    { "query": "MCP服务器支持哪些协议", "category": "接口查找", "expectedChunkIds": [] },
+    { "query": "如何调用知识库搜索接口", "category": "接口查找", "expectedChunkIds": [] },
+    { "query": "模型配置有哪些API", "category": "接口查找", "expectedChunkIds": [] },
+    { "query": "文档上传接口参数说明", "category": "接口查找", "expectedChunkIds": [] },
+    { "query": "对话SSE接口怎么用", "category": "接口查找", "expectedChunkIds": [] },
+    { "query": "什么是embedding向量化", "category": "概念解释", "expectedChunkIds": [] },
+    { "query": "RRF融合算法原理", "category": "概念解释", "expectedChunkIds": [] },
+    { "query": "LightRAG和传统RAG的区别", "category": "概念解释", "expectedChunkIds": [] },
+    { "query": "ChromaDB是什么", "category": "概念解释", "expectedChunkIds": [] },
+    { "query": "BM25打分怎么算的", "category": "概念解释", "expectedChunkIds": [] }
+  ]
+}
