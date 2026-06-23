@@ -336,6 +336,28 @@ public class McpServiceImpl implements McpService {
         return AESUtil.encrypt(plain, cfg.getEncrypt().getRestful().getAes().getKey(), cfg.getEncrypt().getRestful().getAes().getIv(), StandardCharsets.UTF_8);
     }
 
+    @Override
+    public void reconnectOnStartup() {
+        List<McpServerEntity> servers = connectionManager.getStartupReconnectList();
+        if (servers.isEmpty()) {
+            log.info("无需要重连的 MCP 服务器");
+            return;
+        }
+        log.info("开始重连 {} 个 MCP 服务器", servers.size());
+        int ok = 0;
+        for (McpServerEntity s : servers) {
+            try {
+                connect(s.getId(), s.getUserName());
+                ok++;
+                log.info("MCP 启动重连成功: server={}, user={}", s.getName(), s.getUserName());
+            } catch (Exception e) {
+                log.warn("MCP 启动重连失败: server={}, user={}, error={}",
+                        s.getName(), s.getUserName(), e.getMessage());
+            }
+        }
+        log.info("MCP 启动重连完成: 成功 {}/{}", ok, servers.size());
+    }
+
     private String maskHeaders(String encrypted) {
         if (encrypted.length() <= 8) return "****";
         return encrypted.substring(0, 4) + "****" + encrypted.substring(encrypted.length() - 4);

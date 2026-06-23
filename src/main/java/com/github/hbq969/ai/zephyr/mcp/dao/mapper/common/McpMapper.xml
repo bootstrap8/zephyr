@@ -47,6 +47,14 @@
         update zephyr_mcp_servers set status = #{status}
     </update>
 
+    <select id="queryConnectedServers" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity">
+        select id, user_name as userName, name, transport,
+               command, args, env_vars as envVars,
+               url, headers, status, scope,
+               created_at as createdAt, updated_at as updatedAt
+        from zephyr_mcp_servers where status = 'connected'
+    </select>
+
     <select id="queryToolById" resultType="com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity">
         select id, user_name as userName, server_id as serverId,
                tool_name as toolName, description, parameters_json as parametersJson,

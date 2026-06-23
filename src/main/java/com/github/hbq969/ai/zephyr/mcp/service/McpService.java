@@ -22,4 +22,7 @@ public interface McpService {
 
     int countEnabledTools(String userName);
     void toggleServerScope(String id, String scope);
+
+    /** Zephyr 启动后重连之前处于 connected 状态的 MCP 服务器 */
+    void reconnectOnStartup();
 }

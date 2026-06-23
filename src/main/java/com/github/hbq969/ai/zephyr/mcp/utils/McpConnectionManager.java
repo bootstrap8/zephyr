@@ -30,38 +30,57 @@ public class McpConnectionManager {
 
     private final Map<String, McpConnection> connections = new ConcurrentHashMap<>();
 
+    /** 启动时保存的待重连服务器列表（reset 前查询，供 McpServiceImpl.reconnectOnStartup() 使用） */
+    private volatile List<McpServerEntity> startupReconnectList;
+
     @Resource private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
     @PostConstruct
     void cleanupOrphanProcesses() {
+        // 1. 记录重启前处于 connected 状态的服务器
+        try {
+            startupReconnectList = mcpDao.queryConnectedServers();
+            log.info("启动时发现 {} 个 connected 状态的 MCP 服务器，将尝试重连", startupReconnectList.size());
+        } catch (Exception e) {
+            log.warn("查询 connected 服务器列表失败", e);
+            startupReconnectList = List.of();
+        }
+
+        // 2. 清理孤儿进程
         try {
             Files.createDirectories(PIDS_DIR);
         } catch (Exception e) {
             log.warn("创建 MCP PID 目录失败: {}", PIDS_DIR, e);
-            return;
         }
         File[] files = PIDS_DIR.toFile().listFiles((d, n) -> n.endsWith(".pid"));
         if (files == null || files.length == 0) {
             log.info("无孤儿 MCP 进程需要清理");
-            return;
-        }
-        for (File f : files) {
-            try {
-                long pid = Long.parseLong(Files.readString(f.toPath()).trim());
-                ProcessHandle.of(pid).ifPresent(ph -> {
-                    List<ProcessHandle> children = ph.descendants().toList();
-                    log.info("清理孤儿 MCP 进程树: parentPid={}, childrenPids={}, file={}",
-                            pid, children.stream().map(c -> String.valueOf(c.pid())).toList(), f.getName());
-                    children.forEach(ProcessHandle::destroyForcibly);
-                    ph.destroyForcibly();
-                });
-                Files.deleteIfExists(f.toPath());
-            } catch (Exception e) {
-                log.warn("清理孤儿进程失败: {}", f.getName(), e);
+        } else {
+            for (File f : files) {
+                try {
+                    long pid = Long.parseLong(Files.readString(f.toPath()).trim());
+                    ProcessHandle.of(pid).ifPresent(ph -> {
+                        List<ProcessHandle> children = ph.descendants().toList();
+                        log.info("清理孤儿 MCP 进程树: parentPid={}, childrenPids={}, file={}",
+                                pid, children.stream().map(c -> String.valueOf(c.pid())).toList(), f.getName());
+                        children.forEach(ProcessHandle::destroyForcibly);
+                        ph.destroyForcibly();
+                    });
+                    Files.deleteIfExists(f.toPath());
+                } catch (Exception e) {
+                    log.warn("清理孤儿进程失败: {}", f.getName(), e);
+                }
             }
         }
+
+        // 3. 重置所有 DB 状态
         mcpDao.resetAllServerStatus("disconnected");
         log.info("MCP 服务器状态已重置: 所有服务器设为 disconnected");
+    }
+
+    /** 获取启动时需要重连的服务器列表 */
+    public List<McpServerEntity> getStartupReconnectList() {
+        return startupReconnectList != null ? startupReconnectList : List.of();
     }
 
 

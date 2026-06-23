@@ -24,6 +24,8 @@ public interface McpDao {
 
     void resetAllServerStatus(@Param("status") String status);
 
+    List<McpServerEntity> queryConnectedServers();
+
     McpToolEntity queryToolById(@Param("id") String id);
     List<McpToolEntity> queryToolsByServerId(@Param("serverId") String serverId, @Param("userName") String userName);
     void insertTool(McpToolEntity entity);

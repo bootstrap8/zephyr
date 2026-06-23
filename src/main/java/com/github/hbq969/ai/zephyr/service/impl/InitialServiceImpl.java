@@ -47,6 +47,9 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
     @Resource
     private com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao userModelPreferenceDao;
 
+    @Resource
+    private com.github.hbq969.ai.zephyr.mcp.service.McpService mcpService;
+
     @Override
     protected void tableCreate0() {
         com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_model_configs",
@@ -71,6 +74,11 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
                 () -> knowledgeDao.createConversationKbTable());
         com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_user_model_prefs",
                 () -> userModelPreferenceDao.createUserModelPrefsTable());
+
+        // 建表完成后重连之前处于 connected 状态的 MCP 服务器
+        asyncScriptInitialDone(30, java.util.concurrent.TimeUnit.SECONDS, () -> {
+            mcpService.reconnectOnStartup();
+        });
     }
 
     @Override
