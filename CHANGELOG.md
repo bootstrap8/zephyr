@@ -2,6 +2,23 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
 
+## [1.2.0] - 2026-06-24
+
+### 新增
+
+- **Shell 命令执行**：内置 `execute_shell`/`list_processes`/`kill_process` 三个工具，AI 可在对话中执行 shell 命令、管理后台进程
+- **命令白名单**：`allowAll`/`whitelist`/`disabled` 三种安全模式，白名单模式仅允许清单内命令执行（不含 rm/rmdir 等危险命令）
+- **白名单配置外置**：命令白名单完整默认值写入 `application.yml`，可直接在配置文件中修改无需重新编译
+- **后台进程管理**：`BackgroundProcessManager` 用户级后台进程管理，支持配额限制、超时自动 kill、会话级隔离
+- **ProcessSlot 机制**：`SessionHandle` 新增 ProcessSlot，消除 fork-register 竞争条件
+- **会话生命周期管理**：空闲超时自动取消、自清理任务扫描、关键节点日志记录
+
+### 修复
+
+- 后台进程日志文件命名为 `$$.log` 而非 PID 日志
+- 删除对话时同步清理后台进程，不允许跨会话存活
+- 无活跃会话时删除/取消同样记录日志
+
 ## [1.1.2] - 2026-06-23
 
 ### 新增
