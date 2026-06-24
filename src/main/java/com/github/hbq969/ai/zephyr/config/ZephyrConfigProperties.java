@@ -4,6 +4,8 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * zephyr 统一配置，对应 application.yml 中 {@code zephyr} 前缀下所有属性。
  * <p>
@@ -42,6 +44,9 @@ public class ZephyrConfigProperties {
 
     /** 加解密配置 */
     private Encrypt encrypt = new Encrypt();
+
+    /** Shell 命令执行相关配置 */
+    private Shell shell = new Shell();
 
     // ================================================================
     //  对话配置
@@ -282,5 +287,49 @@ public class ZephyrConfigProperties {
                 private String iv;
             }
         }
+    }
+
+    // ================================================================
+    //  Shell 命令执行
+    // ================================================================
+
+    @Data
+    public static class Shell {
+        /** Shell 执行模式: disabled | whitelist | allowAll，默认 whitelist */
+        private String mode = "whitelist";
+        /** whitelist 模式下允许的命令（仅命令名，不含参数） */
+        private List<String> allowedCommands = List.of(
+            // 解释器
+            "python3", "python", "node", "ruby", "perl", "php", "lua", "deno", "bun",
+            // 包管理
+            "npm", "npx", "yarn", "pnpm", "pip", "pip3", "gem", "composer", "cargo", "go",
+            // 版本控制
+            "git", "hg",
+            // 编译构建
+            "javac", "java", "mvn", "gradle", "make", "cmake", "gcc", "g++", "clang", "clang++", "rustc", "dotnet",
+            // 文件操作
+            "ls", "cat", "head", "tail", "wc", "find", "grep", "egrep", "awk", "sed",
+            "mkdir", "touch", "cp", "mv", "rm", "rmdir", "ln", "stat", "file", "du",
+            "df", "tree", "realpath", "basename", "dirname",
+            // 文本处理
+            "sort", "uniq", "cut", "tr", "tee", "diff", "patch", "echo", "printf",
+            "xargs", "envsubst", "column", "jq", "yq", "iconv", "strings", "od", "hexdump", "xxd",
+            // 压缩归档
+            "tar", "gzip", "gunzip", "zip", "unzip", "bzip2", "bunzip2", "xz", "unxz", "zstd", "unzstd",
+            // 网络（仅安全工具）
+            "curl",
+            // 系统信息
+            "date", "env", "which", "whoami", "uname", "hostname", "uptime", "free", "vmstat", "iostat", "ulimit"
+        );
+        /** 每个用户最大后台进程数，默认 5 */
+        private int maxBackgroundProcesses = 5;
+        /** 后台进程最大运行时间（秒），超时自动 kill，默认 3600 */
+        private int maxBackgroundLifetimeSeconds = 3600;
+        /** 后台进程超时扫描间隔（秒），默认 60 */
+        private int cleanupIntervalSeconds = 60;
+        /** 同步执行最大等待时间（秒），超时 destroyForcibly，默认 120 */
+        private int commandTimeoutSeconds = 120;
+        /** 前台命令输出最大读取字节数，超出截断，默认 1MB */
+        private int maxOutputBytes = 1_048_576;
     }
 }

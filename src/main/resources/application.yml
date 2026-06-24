@@ -298,6 +298,14 @@ zephyr:
       aes:
         key: ${encrypt.restful.aes.key}  # 引用原有配置
         iv: ${encrypt.restful.aes.iv}
+  shell:
+    mode: whitelist  # disabled | whitelist | allowAll
+    # allowedCommands 默认值已在 Java 代码中定义，此处仅展示可覆盖项
+    max-background-processes: 5  # 每用户最大后台进程数
+    max-background-lifetime-seconds: 3600  # 后台进程最大存活时间（秒）
+    cleanup-interval-seconds: 60  # 后台进程超时扫描间隔（秒）
+    command-timeout-seconds: 120  # 同步命令超时（秒）
+    max-output-bytes: 1048576  # 前台命令输出最大读取字节数（1MB）
 
 management:
   endpoint:
