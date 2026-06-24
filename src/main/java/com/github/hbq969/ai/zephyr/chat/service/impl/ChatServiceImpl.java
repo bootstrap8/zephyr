@@ -716,7 +716,7 @@ public class ChatServiceImpl implements ChatService {
                         .redirectErrorStream(false)
                         .start();
                 long pid = p.pid();
-                backgroundProcessManager.register(userName, p, command, workspacePath);
+                backgroundProcessManager.register(userName, conversationId, p, command, workspacePath);
                 return "PID: " + pid + ", 日志: " + workspacePath + "/.zephyr-logs/" + pid + ".log";
             } catch (Exception e) {
                 return "后台命令启动失败: " + e.getMessage();

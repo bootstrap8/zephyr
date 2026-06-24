@@ -5,6 +5,7 @@ import com.github.hbq969.ai.zephyr.chat.dao.ChatDao;
 import com.github.hbq969.ai.zephyr.chat.dao.entity.ConversationEntity;
 import com.github.hbq969.ai.zephyr.chat.dao.entity.MessageEntity;
 import com.github.hbq969.ai.zephyr.chat.model.ConversationVO;
+import com.github.hbq969.ai.zephyr.chat.service.BackgroundProcessManager;
 import com.github.hbq969.ai.zephyr.chat.service.ConversationService;
 import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
 import com.google.gson.Gson;
@@ -27,6 +28,9 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Resource
     private ChatDao chatDao;
+
+    @Resource
+    private BackgroundProcessManager backgroundProcessManager;
 
     @Resource
     private ConversationSessionManager sessionManager;
@@ -91,6 +95,7 @@ public class ConversationServiceImpl implements ConversationService {
         } else {
             log.info("[会话] 删除对话（无活跃会话） cid={}, user={}", id, userName);
         }
+        backgroundProcessManager.killByConversationId(id);
         chatDao.deleteMessagesByConvId(id);
         chatDao.deleteConversation(id, userName);
     }

@@ -32,16 +32,17 @@ public class BackgroundProcessManager {
     public static class TrackedProcess {
         private final long pid;
         private final String userName;
+        private final String conversationId;
         private final String command;
         private final String workspacePath;
         private final Instant startedAt;
     }
 
-    public long register(String userName, Process p, String command, String workspacePath) {
+    public long register(String userName, String conversationId, Process p, String command, String workspacePath) {
         long pid = p.pid();
-        TrackedProcess tp = new TrackedProcess(pid, userName, command, workspacePath, Instant.now());
+        TrackedProcess tp = new TrackedProcess(pid, userName, conversationId, command, workspacePath, Instant.now());
         userProcesses.computeIfAbsent(userName, k -> new ConcurrentHashMap<>()).put(pid, tp);
-        log.info("[后台进程] 注册 user={}, pid={}, cmd={}", userName, pid, command);
+        log.info("[后台进程] 注册 user={}, cid={}, pid={}, cmd={}", userName, conversationId, pid, command);
         return pid;
     }
 
@@ -111,6 +112,22 @@ public class BackgroundProcessManager {
         if (m != null && m.size() >= max) {
             throw new RuntimeException("后台进程数已达上限 " + max + "，请先使用 kill_process 终止旧进程");
         }
+    }
+
+    public void killByConversationId(String conversationId) {
+        userProcesses.forEach((user, processes) -> {
+            List<TrackedProcess> matched = new ArrayList<>();
+            for (TrackedProcess tp : processes.values()) {
+                if (conversationId.equals(tp.getConversationId())) {
+                    matched.add(tp);
+                }
+            }
+            for (TrackedProcess tp : matched) {
+                kill(user, tp.getPid());
+                log.info("[后台进程] 对话删除清理 cid={}, user={}, pid={}, cmd={}",
+                        conversationId, user, tp.getPid(), tp.getCommand());
+            }
+        });
     }
 
     @PostConstruct
