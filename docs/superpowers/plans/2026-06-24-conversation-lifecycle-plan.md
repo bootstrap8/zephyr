@@ -386,6 +386,7 @@ public SseEmitter send(String userName, String conversationId, String workspaceI
 
     // === 异步阶段 ===
     sessionManager.getExecutor().execute(() -> {
+        boolean completed = false;  // 防止 finally 中二次 complete
         try {
             long now = System.currentTimeMillis() / 1000;
             long msgSeq = now;
@@ -536,6 +537,7 @@ public SseEmitter send(String userName, String conversationId, String workspaceI
                     }
                     emitter.send(SseEmitter.event().name("message")
                             .data(ChatEvent.builder().type("done").build()));
+                    completed = true;
                     return;
                 }
             }
@@ -556,7 +558,9 @@ public SseEmitter send(String userName, String conversationId, String workspaceI
                 } catch (Exception ignored) {}
             }
         } finally {
-            try { emitter.complete(); } catch (Exception ignored) {}
+            if (!completed) {
+                try { emitter.complete(); } catch (Exception ignored) {}
+            }
             sessionManager.remove(cid);
         }
     });
@@ -583,7 +587,7 @@ case "clear" -> {
 }
 ```
 
-`/help` 和 `/context` 不变——它们是正常完成，保持原有的 `emitter.complete() + return null`。
+`/help` 和 `/context` ——在 `emitter.complete()` 前设置 `completed = true`，避免 finally 中重复 complete。
 
 注意：`handleSlashCommand` 方法签名需要新增 `SessionHandle handle` 参数：
 
@@ -595,14 +599,17 @@ private String handleSlashCommand(String message, String userName, String cid,
 
 但 `/help` 和 `/context` 不需要 handle——它们直接 complete 和 return null，不涉及取消。
 
-- [ ] **Step 4: 修改 cancel() 方法 — 支持按 conversationId**
+- [ ] **Step 4: 修改 cancel() 方法 — cancel(userName) 迭代所有会话**
+
+LlmClient.activeCalls 的 key 已改为 conversationId，`cancel(userName)` 不能再直接调 `llmClient.cancelCall(userName)`。改为遍历 SessionManager 中该用户的所有活跃会话，逐个 cancel：
 
 ```java
 @Override
 public void cancel(String userName) {
-    // 取消该用户所有活跃会话
-    // 注意：此方法由 ChatCtrl.cancel() 调用，保留 per-user 语义
-    llmClient.cancelCall(userName);
+    // 取消该用户所有活跃会话（合作式取消，不强制 kill）
+    // 注意：activeCalls 的 key 已是 conversationId，不能直接传 userName
+    // 通过 sessionManager 遍历该用户的所有 Handle
+    // 此方法由 ChatCtrl.cancel() 调用（无 conversationId 时走此路径）
 }
 
 // 新增：按 conversationId 取消
@@ -614,9 +621,17 @@ public void cancelByConversationId(String conversationId) {
 }
 ```
 
-`ChatService` 接口暂不修改（cancel 仍接受 userName），`cancelByConversationId` 作为 ChatServiceImpl 的 public 方法供 ConversationServiceImpl 调用。
+> **注：** `cancel(userName)` 的遍历实现可利用 `sessionManager` 在 Task 2 中暂不暴露 `listByUser()` 方法，在 Task 6 实现时一并补充。实际就是调用 `cancelByConversationId` 遍历该用户的 session。
 
-- [ ] **Step 5: 编译验证**
+`ChatService` 接口新增 `void cancelByConversationId(String conversationId);`。
+
+- [ ] **Step 5: 实施注意事项**
+
+- `dispatchTools()` 内部每个 MCP 工具调用可能耗时最长 60 秒——`checkCancel()` 放在工具循环前后，不在 `dispatchTools()` 内部。取消延时最多一个工具调用的时长，可接受。
+- `final boolean completed` 标志在 `/help`、`/context` 正常完成路径中设为 true，在工具调用循环正常退出时也设为 true。其他路径（CancelSessionException、一般 Exception）completed 保持 false，由 finally 中 `if (!completed)` 守卫完成 emitter。
+- `handleSlashCommand` 方法签名增加 `SessionHandle handle` 参数，但仅在 `/clear` 中使用。
+
+- [ ] **Step 6: 编译验证**
 
 ```bash
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
@@ -689,31 +704,30 @@ git commit -m "feat: 删除会话时先通知异步任务取消再删DB"
 
 - [ ] **Step 1: cancel 接口支持 conversationId**
 
+`ChatService` 接口新增方法：
+
+```java
+void cancelByConversationId(String conversationId);
+```
+
+`ChatCtrl.cancel()` 改为接受可选 `conversationId`：
+
 ```java
 @Operation(summary = "取消当前对话")
 @RequestMapping(path = "/cancel", method = RequestMethod.POST)
 @ResponseBody
 @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "chat_cancel", apiDesc = "聊天接口_取消当前对话")
-public ReturnMessage<?> cancel(@RequestBody(required = false) ChatRequest body) {
-    if (body != null && body.getConversationId() != null && !body.getConversationId().isEmpty()) {
-        ((ChatServiceImpl) chatService).cancelByConversationId(body.getConversationId());
+public ReturnMessage<?> cancel(@RequestBody(required = false) Map<String, String> body) {
+    if (body != null && body.containsKey("conversationId") && !body.get("conversationId").isEmpty()) {
+        chatService.cancelByConversationId(body.get("conversationId"));
     } else {
-        chatService.cancel(userName());
+        chatService.cancel(userName());  // 无 conversationId 时取消用户所有活跃会话
     }
     return ReturnMessage.success("ok");
 }
 ```
 
-需要注入方式改为 `@Resource private ChatServiceImpl chatService;`（原来是 `ChatService` 接口），以便调用 `cancelByConversationId`。
-
-或更干净的做法：在 `ChatService` 接口新增 `void cancelByConversationId(String conversationId);`。选择接口方式：
-
-```java
-// ChatService.java 新增方法
-void cancelByConversationId(String conversationId);
-```
-
-`ChatCtrl` 保持注入 `ChatService`，调用 `chatService.cancelByConversationId(body.getConversationId())`。
+> 使用 `Map<String, String>` 接收请求体，避免新建 DTO 类。`cancel(userName)` 遍历 SessionManager 中该用户的所有会话逐个 cancel（Task 4 已实现）。
 
 - [ ] **Step 2: 编译验证**
 
