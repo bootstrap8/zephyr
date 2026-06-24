@@ -3,6 +3,7 @@ package com.github.hbq969.ai.zephyr.chat.client;
 import com.github.hbq969.ai.zephyr.chat.model.ChatEvent;
 import com.github.hbq969.ai.zephyr.chat.model.LlmResult;
 import com.github.hbq969.ai.zephyr.chat.model.ToolDef;
+import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
 import com.github.hbq969.ai.zephyr.config.dao.entity.ModelConfigEntity;
 import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
 import com.google.gson.*;
@@ -54,7 +55,8 @@ public class LlmClient {
     }
 
     public LlmResult chat(ModelConfigEntity model, List<Map<String, Object>> messages,
-                          List<ToolDef> tools, SseEmitter emitter, String conversationId) throws IOException {
+                          List<ToolDef> tools, SseEmitter emitter, String conversationId,
+                          ConversationSessionManager.SessionHandle handle) throws IOException {
         String apiKey = AESUtil.decrypt(model.getApiKeyEncrypted(), cfg.getEncrypt().getRestful().getAes().getKey(), cfg.getEncrypt().getRestful().getAes().getIv(), StandardCharsets.UTF_8);
         String baseUrl = model.getBaseUrl();
         if (!baseUrl.endsWith("/")) baseUrl += "/";
@@ -87,7 +89,7 @@ public class LlmClient {
 
         int timeout = getTimeoutSeconds(params);
         RequestBody reqBody = RequestBody.create(gson.toJson(bodyJson), JSON);
-        OkHttpClient client = (timeout != 120)
+        OkHttpClient client = (timeout != cfg.getLlm().getClient().getReadTimeoutSeconds())
                 ? httpClient.newBuilder().readTimeout(timeout, TimeUnit.SECONDS).build()
                 : httpClient;
         Request request = new Request.Builder()
@@ -131,6 +133,9 @@ public class LlmClient {
                 if (line.startsWith("data: ")) {
                     String data = line.substring(6).trim();
                     if (data.equals("[DONE]")) break;
+
+                    handle.touch();
+                    handle.checkCancel();
 
                     try {
                         JsonObject event = gson.fromJson(data, JsonObject.class);
@@ -269,13 +274,13 @@ public class LlmClient {
     }
 
     private int getTimeoutSeconds(Map<String, Object> params) {
-        if (params == null) return 120;
+        if (params == null) return 300;
         Object v = params.get("request_timeout");
         if (v instanceof Number) {
             int t = ((Number) v).intValue();
-            return t > 0 ? t : 120;
+            return t > 0 ? t : 300;
         }
-        return 120;
+        return 300;
     }
 
     private void setNestedProperty(JsonObject root, String path, Object value) {
