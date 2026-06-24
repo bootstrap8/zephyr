@@ -10,6 +10,7 @@ import com.github.hbq969.ai.zephyr.chat.model.LlmResult;
 import com.github.hbq969.ai.zephyr.chat.service.ChatService;
 import com.github.hbq969.ai.zephyr.chat.service.ContextBuilder;
 import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
+import com.github.hbq969.ai.zephyr.chat.service.BackgroundProcessManager;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.ai.zephyr.memory.service.MemoryService;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
@@ -62,6 +63,8 @@ public class ChatServiceImpl implements ChatService {
     private KnowledgeService knowledgeService;
     @Resource
     private ConversationSessionManager sessionManager;
+    @Resource
+    private BackgroundProcessManager backgroundProcessManager;
 
     @Override
     public SseEmitter send(String userName, String conversationId, String workspaceId,
@@ -201,7 +204,7 @@ public class ChatServiceImpl implements ChatService {
                         persistAssistantMessage(cid, result, msgSeq++);
 
                         List<String> enabledKbIds = cid != null ? knowledgeDao.queryKbIdsByConversation(cid) : List.of();
-                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds);
+                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid);
 
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
                             LlmResult.ToolCall tc = result.getToolCalls().get(i);
@@ -266,6 +269,7 @@ public class ChatServiceImpl implements ChatService {
                 if (!completed) {
                     try { emitter.complete(); } catch (Exception ignored) {}
                 }
+                handle.killTrackedProcesses();
                 log.info("[会话] 异步任务结束 cid={}, completed={}", cid, completed);
                 sessionManager.remove(cid);
             }
@@ -377,7 +381,7 @@ public class ChatServiceImpl implements ChatService {
         return "请调用 " + cmdName;
     }
 
-    private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls, String userName, List<String> enabledKbIds) {
+    private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls, String userName, List<String> enabledKbIds, String conversationId) {
         List<Map<String, Object>> results = new ArrayList<>();
         for (LlmResult.ToolCall tc : toolCalls) {
             String content;
@@ -386,6 +390,9 @@ public class ChatServiceImpl implements ChatService {
                     case "use_skill" -> executeUseSkill(tc.getArguments().get("skill_name").toString(), userName);
                     case "use_memory" -> executeUseMemory(tc.getArguments().get("memory_name").toString(), userName);
                     case "search_knowledge" -> executeSearchKnowledge(tc.getArguments(), enabledKbIds);
+                    case "execute_shell" -> executeShell(tc.getArguments(), userName, conversationId);
+                    case "list_processes" -> listProcesses(userName);
+                    case "kill_process" -> killProcess(tc.getArguments(), userName);
                     default -> executeMcpTool(tc.getName(), tc.getArguments(), userName);
                 };
             } catch (Exception e) {
@@ -649,5 +656,126 @@ public class ChatServiceImpl implements ChatService {
 
     private boolean isNotBlank(String s) {
         return s != null && !s.isBlank();
+    }
+
+    private String executeShell(Map<String, Object> args, String userName, String conversationId) {
+        String mode = cfg.getShell().getMode();
+        if ("disabled".equals(mode)) {
+            return "Shell 命令执行已禁用";
+        }
+
+        String command = args.get("command").toString().trim();
+        if (command.isEmpty()) {
+            return "命令不能为空";
+        }
+
+        boolean background = args.containsKey("background") && Boolean.TRUE.equals(args.get("background"));
+
+        // 命令白名单校验（程序化硬约束）
+        if (!"allowAll".equals(mode)) {
+            String cmdName = command.split("\\s+", 2)[0];
+            int lastSlash = cmdName.lastIndexOf('/');
+            if (lastSlash >= 0) {
+                cmdName = cmdName.substring(lastSlash + 1);
+            }
+            if (!cfg.getShell().getAllowedCommands().contains(cmdName)) {
+                return "命令 '" + cmdName + "' 不在白名单中，拒绝执行";
+            }
+        }
+
+        // 获取工作空间路径
+        String workspacePath = System.getProperty("user.home");
+        ConversationEntity conv = chatDao.queryConversationById(conversationId);
+        if (conv != null && conv.getWorkspaceId() != null) {
+            com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity ws =
+                    workspaceDao.queryById(conv.getWorkspaceId());
+            if (ws != null) {
+                workspacePath = ws.getPath();
+            }
+        }
+
+        ConversationSessionManager.SessionHandle handle = sessionManager.get(conversationId);
+        if (handle == null) {
+            return "会话不存在，无法执行命令";
+        }
+
+        if (background) {
+            // 后台模式：检查配额 → 创建日志目录 → shell 层重定向到日志文件 → 启动 → 注册
+            backgroundProcessManager.enforceQuota(userName);
+            java.nio.file.Path logDir = java.nio.file.Paths.get(workspacePath, ".zephyr-logs");
+            try {
+                java.nio.file.Files.createDirectories(logDir);
+            } catch (java.io.IOException e) {
+                return "创建日志目录失败: " + e.getMessage();
+            }
+            try {
+                // 用单引号包裹路径防止空格问题；$$ 展开为 shell pid = Process.pid()
+                Process p = new ProcessBuilder("sh", "-c",
+                        "exec >'" + workspacePath + "/.zephyr-logs/$$.log' 2>&1; " + command)
+                        .directory(new java.io.File(workspacePath))
+                        .redirectErrorStream(false)
+                        .start();
+                long pid = p.pid();
+                backgroundProcessManager.register(userName, p, command, workspacePath);
+                return "PID: " + pid + ", 日志: " + workspacePath + "/.zephyr-logs/" + pid + ".log";
+            } catch (Exception e) {
+                return "后台命令启动失败: " + e.getMessage();
+            }
+        } else {
+            // 前台模式：ProcessSlot → 启动 → 等待 → 返回结果
+            ConversationSessionManager.ProcessSlot slot = handle.reserveProcessSlot(command);
+            Process p = null;
+            try {
+                p = new ProcessBuilder("sh", "-c", command)
+                        .directory(new java.io.File(workspacePath))
+                        .redirectErrorStream(true)
+                        .start();
+                slot.bind(p.pid());
+
+                int timeout = cfg.getShell().getCommandTimeoutSeconds();
+                boolean timeoutReached = !p.waitFor(timeout, java.util.concurrent.TimeUnit.SECONDS);
+                if (timeoutReached) {
+                    p.destroyForcibly();
+                    return "命令超时（" + timeout + "s），已终止";
+                }
+
+                // 限制读取大小，防止 OOM
+                int maxBytes = cfg.getShell().getMaxOutputBytes();
+                byte[] buf = p.getInputStream().readNBytes(maxBytes + 1);
+                boolean truncated = buf.length > maxBytes;
+                String output = new String(buf, 0, Math.min(buf.length, maxBytes), java.nio.charset.StandardCharsets.UTF_8);
+                if (truncated) {
+                    output += "\n\n[输出已截断，超过 " + maxBytes + " 字节]";
+                }
+                return "退出码: " + p.exitValue() + "\n" + output;
+            } catch (Exception e) {
+                slot.markFailed();
+                if (p != null) {
+                    p.destroyForcibly();
+                }
+                return "命令执行异常: " + e.getMessage();
+            }
+        }
+    }
+
+    private String listProcesses(String userName) {
+        List<BackgroundProcessManager.TrackedProcess> list = backgroundProcessManager.list(userName);
+        if (list.isEmpty()) {
+            return "当前没有后台进程";
+        }
+        StringBuilder sb = new StringBuilder("后台进程列表:\n");
+        for (BackgroundProcessManager.TrackedProcess tp : list) {
+            sb.append("PID: ").append(tp.getPid())
+              .append(", 命令: ").append(tp.getCommand())
+              .append(", 启动时间: ").append(tp.getStartedAt())
+              .append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String killProcess(Map<String, Object> args, String userName) {
+        long pid = ((Number) args.get("pid")).longValue();
+        boolean killed = backgroundProcessManager.kill(userName, pid);
+        return killed ? "进程 " + pid + " 已终止" : "进程 " + pid + " 未找到或已结束";
     }
 }

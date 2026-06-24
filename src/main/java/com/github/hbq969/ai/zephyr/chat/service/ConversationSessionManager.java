@@ -168,12 +168,12 @@ public class ConversationSessionManager {
             this.command = command;
         }
 
-        void bind(long pid) {
+        public void bind(long pid) {
             this.pid = pid;
             this.state = State.BOUND;
         }
 
-        void markFailed() {
+        public void markFailed() {
             this.state = State.FAILED;
         }
     }
