@@ -65,6 +65,12 @@ public class ZephyrConfigProperties {
         /** 上下文估算 */
         private Context context = new Context();
 
+        /** 会话空闲超时秒数，默认 900（15 分钟），超时后自动标记取消 */
+        private int sessionIdleTimeoutSeconds = 900;
+
+        /** 会话超时扫描间隔秒数，默认 60 */
+        private int sessionScanIntervalSeconds = 60;
+
         @Data
         public static class Upload {
             /** 上传文件大小上限，默认 10MB */
@@ -75,8 +81,8 @@ public class ZephyrConfigProperties {
 
         @Data
         public static class Sse {
-            /** SSE 连接超时（毫秒），默认 5 分钟 */
-            private long timeoutMillis = 300_000L;
+            /** SSE 连接超时（毫秒），默认 15 分钟（与会话超时对齐） */
+            private long timeoutMillis = 900_000L;
         }
 
         @Data

@@ -9,6 +9,7 @@ import com.github.hbq969.ai.zephyr.chat.model.ChatEvent;
 import com.github.hbq969.ai.zephyr.chat.model.LlmResult;
 import com.github.hbq969.ai.zephyr.chat.service.ChatService;
 import com.github.hbq969.ai.zephyr.chat.service.ContextBuilder;
+import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.ai.zephyr.memory.service.MemoryService;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
@@ -38,7 +39,6 @@ import java.util.concurrent.Executors;
 public class ChatServiceImpl implements ChatService {
 
     private static final Gson gson = new Gson();
-    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @Resource
     private ContextBuilder contextBuilder;
@@ -54,48 +54,60 @@ public class ChatServiceImpl implements ChatService {
     private McpConnectionManager mcpConnectionManager;
     @Resource
     private WorkspaceDao workspaceDao;
-
     @Resource
     private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
-
     @Resource
     private KnowledgeDao knowledgeDao;
-
     @Resource
     private KnowledgeService knowledgeService;
+    @Resource
+    private ConversationSessionManager sessionManager;
 
     @Override
     public SseEmitter send(String userName, String conversationId, String workspaceId,
                            String originalMessage, String mode, List<String> filePaths) {
+
+        // === 同步阶段：解析 conversationId、注册 SessionHandle、创建 SseEmitter ===
+        String cid = (conversationId != null && !conversationId.isEmpty())
+                ? conversationId
+                : UUID.fastUUID().toString(true).substring(0, 12);
+
+        ConversationSessionManager.SessionHandle handle = sessionManager.register(cid, userName);
+
         SseEmitter emitter = new SseEmitter(cfg.getChat().getSse().getTimeoutMillis());
-        String cancelKey = userName;
 
         emitter.onTimeout(() -> {
-            llmClient.cancelCall(cancelKey);
-            emitter.complete();
+            handle.cancel();
         });
         emitter.onError(th -> {
             log.warn("SSE client disconnected: {}", th.getMessage());
-            llmClient.cancelCall(cancelKey);
+            handle.cancel();
         });
 
-        executor.execute(() -> {
+        // === 异步阶段 ===
+        sessionManager.getExecutor().execute(() -> {
+            boolean completed = false;
             try {
-                String cid = conversationId;
                 long now = System.currentTimeMillis() / 1000;
-                long msgSeq = now;  // 单调递增计数器，保证所有消息 timestamp 唯一
+                long msgSeq = now;
+
+                handle.checkCancel();
 
                 // 0. 预处理斜杠命令
                 String message = originalMessage;
                 if (message.startsWith("/")) {
-                    String handled = handleSlashCommand(message, userName, cid, emitter, now);
-                    if (handled == null) return; // 已直接处理完成
-                    message = handled; // 改写后的消息
+                    String handled = handleSlashCommand(message, userName, cid, emitter, now, handle);
+                    if (handled == null) {
+                        completed = true;
+                        return;
+                    }
+                    message = handled;
                 }
 
-                // 1. 确保会话存在（首次对话自动创建）
-                if (cid == null || cid.isEmpty()) {
-                    cid = UUID.fastUUID().toString(true).substring(0, 12);
+                handle.checkCancel();
+
+                // 1. 确保会话存在（cid 已预生成）
+                if (conversationId == null || conversationId.isEmpty()) {
                     ConversationEntity conv = new ConversationEntity();
                     conv.setId(cid);
                     conv.setUserName(userName);
@@ -104,16 +116,16 @@ public class ChatServiceImpl implements ChatService {
                     conv.setCreatedAt(now);
                     conv.setUpdatedAt(now);
                     chatDao.insertConversation(conv);
-                    // 通知前端新会话ID
                     emitter.send(SseEmitter.event().name("message")
                             .data(ChatEvent.builder().type("meta").content(cid).build()));
                 }
 
-                // 2. 组装上下文（不含当前用户消息）
+                handle.checkCancel();
+
+                // 2. 组装上下文
                 ContextBuilder.Context ctx = contextBuilder.build(userName, cid, mode != null ? mode : "default");
                 List<Map<String, Object>> messages = ctx.getMessages();
 
-                // 如果有上传文件，拼入用户消息
                 String userContent = message;
                 if (filePaths != null && !filePaths.isEmpty()) {
                     StringBuilder sb = new StringBuilder();
@@ -124,7 +136,6 @@ public class ChatServiceImpl implements ChatService {
                         int dotIdx = name.lastIndexOf('.');
                         if (dotIdx > 0) {
                             ext = name.substring(dotIdx).toLowerCase();
-                            // 去掉时间戳前缀（如 1718123456_）
                             int usIdx = name.indexOf('_');
                             if (usIdx > 0 && usIdx < dotIdx) {
                                 name = name.substring(usIdx + 1);
@@ -146,7 +157,7 @@ public class ChatServiceImpl implements ChatService {
                 }
                 messages.add(Map.of("role", "user", "content", userContent));
 
-                // 3. 持久化 user 消息（必须在上下文构建之后，避免重复加载）
+                // 3. 持久化 user 消息
                 MessageEntity userMsg = new MessageEntity();
                 userMsg.setId(UUID.fastUUID().toString(true).substring(0, 12));
                 userMsg.setConversationId(cid);
@@ -155,19 +166,23 @@ public class ChatServiceImpl implements ChatService {
                 userMsg.setCreatedAt(msgSeq++);
                 chatDao.insertMessage(userMsg);
 
-                // 4. 工具调用循环（无轮次限制，模型自行决定何时停止）
+                handle.checkCancel();
+
+                // 4. 工具调用循环
                 LlmResult result = null;
                 int totalInputTokens = 0, totalOutputTokens = 0, rounds = 0;
                 while (true) {
-                    result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter, cancelKey);
+                    handle.checkCancel();
+                    result = llmClient.chat(ctx.getModel(), messages, ctx.getTools(), emitter, cid);
                     rounds++;
                     if (result.getUsage() != null) {
                         totalInputTokens += result.getUsage().getOrDefault("inputTokens", 0);
                         totalOutputTokens += result.getUsage().getOrDefault("outputTokens", 0);
                     }
 
+                    handle.touch();
+
                     if (result.hasToolCalls()) {
-                        // 4a. 添加 assistant 消息（含 tool_calls）
                         Map<String, Object> assistantMsg = new LinkedHashMap<>();
                         assistantMsg.put("role", "assistant");
                         assistantMsg.put("content", result.getContent() != null ? result.getContent() : "");
@@ -181,15 +196,11 @@ public class ChatServiceImpl implements ChatService {
                             }).toList());
                         }
                         messages.add(assistantMsg);
-
-                        // 4b. 持久化 assistant 消息（单调递增保证顺序）
                         persistAssistantMessage(cid, result, msgSeq++);
 
-                        // 4c. 分发工具调用
                         List<String> enabledKbIds = cid != null ? knowledgeDao.queryKbIdsByConversation(cid) : List.of();
                         List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds);
 
-                        // 推送工具执行结果
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
                             LlmResult.ToolCall tc = result.getToolCalls().get(i);
                             String output = toolResults.get(i).get("content").toString();
@@ -207,7 +218,6 @@ public class ChatServiceImpl implements ChatService {
 
                         messages.addAll(toolResults);
 
-                        // 4d. 持久化 tool 消息
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
                             LlmResult.ToolCall tc = result.getToolCalls().get(i);
                             MessageEntity toolMsg = new MessageEntity();
@@ -219,8 +229,9 @@ public class ChatServiceImpl implements ChatService {
                             toolMsg.setCreatedAt(msgSeq++);
                             chatDao.insertMessage(toolMsg);
                         }
+
+                        handle.checkCancel();
                     } else {
-                        // 5. 正常结束（内容为空时跳过持久化，避免空消息气泡）
                         if (isNotBlank(result.getContent()) || result.hasToolCalls()) {
                             persistAssistantMessage(cid, result, msgSeq++);
                         }
@@ -230,13 +241,15 @@ public class ChatServiceImpl implements ChatService {
                         }
                         emitter.send(SseEmitter.event().name("message")
                                 .data(ChatEvent.builder().type("done").build()));
-                        emitter.complete();
+                        completed = true;
                         return;
                     }
                 }
+            } catch (ConversationSessionManager.CancelSessionException e) {
+                log.debug("会话已被取消: {}", e.getMessage());
+                llmClient.cancelCall(cid);
             } catch (Exception e) {
-                // 客户端断连是预期行为，不记 ERROR
-                boolean disconnected = e instanceof java.io.IOException
+                boolean disconnected = e instanceof IOException
                         && e.getMessage() != null && e.getMessage().contains("CANCEL");
                 if (disconnected) {
                     log.debug("SSE 客户端已断开，终止对话");
@@ -245,9 +258,13 @@ public class ChatServiceImpl implements ChatService {
                     try {
                         emitter.send(SseEmitter.event().name("message")
                                 .data(ChatEvent.builder().type("error").content(e.getMessage()).build()));
-                        emitter.complete();
                     } catch (Exception ignored) {}
                 }
+            } finally {
+                if (!completed) {
+                    try { emitter.complete(); } catch (Exception ignored) {}
+                }
+                sessionManager.remove(cid);
             }
         });
 
@@ -287,7 +304,8 @@ public class ChatServiceImpl implements ChatService {
      * 返回非 null 字符串表示改写后的消息（继续走 LLM 流程）。
      */
     private String handleSlashCommand(String message, String userName, String cid,
-                                       SseEmitter emitter, long now) throws IOException {
+                                       SseEmitter emitter, long now,
+                                       ConversationSessionManager.SessionHandle handle) throws IOException {
         String cmd = message.trim();
         int spaceIdx = cmd.indexOf(' ');
         String cmdName = spaceIdx > 0 ? cmd.substring(1, spaceIdx) : cmd.substring(1);
@@ -302,8 +320,7 @@ public class ChatServiceImpl implements ChatService {
                         .data(ChatEvent.builder().type("clear").build()));
                 emitter.send(SseEmitter.event().name("message")
                         .data(ChatEvent.builder().type("done").build()));
-                emitter.complete();
-                return null;
+                throw new ConversationSessionManager.CancelSessionException(cid);
             }
             case "help" -> {
                 String help = """
@@ -533,7 +550,19 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public void cancel(String userName) {
-        llmClient.cancelCall(userName);
+        for (ConversationSessionManager.SessionHandle h : sessionManager.getByUser(userName)) {
+            h.cancel();
+            llmClient.cancelCall(h.getConversationId());
+        }
+    }
+
+    @Override
+    public void cancelByConversationId(String conversationId) {
+        ConversationSessionManager.SessionHandle h = sessionManager.get(conversationId);
+        if (h != null) {
+            h.cancel();
+            llmClient.cancelCall(conversationId);
+        }
     }
 
     @Override

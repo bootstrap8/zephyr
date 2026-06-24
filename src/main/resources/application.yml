@@ -243,7 +243,7 @@ zephyr:
       max-file-size: 209715200  # 200MB
       directory-name: .zephyr-uploads
     sse:
-      timeout-millis: 300000  # SSE 连接超时（毫秒），默认 5 分钟
+      timeout-millis: 900000  # SSE 连接超时（毫秒），15 分钟，对齐会话超时
     tool-output:
       max-length: 8000  # tool 结果最大字符数，超出截断
       binary-sample-size: 4096  # 二进制检测采样字符数
@@ -252,6 +252,8 @@ zephyr:
     context:
       token-estimation-ratio: 0.3  # token 估算系数（字符数 × 系数）
       skill-token-threshold: 1000  # tool 内容超过此 token 数判定为 skill 而非 memory
+    session-idle-timeout-seconds: 900  # 会话空闲超时（秒），15 分钟无活动自动取消
+    session-scan-interval-seconds: 60  # 会话超时扫描间隔（秒）
   llm:
     client:
       connect-timeout-seconds: 30  # LLM API 连接超时

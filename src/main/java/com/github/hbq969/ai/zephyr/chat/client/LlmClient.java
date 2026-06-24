@@ -54,7 +54,7 @@ public class LlmClient {
     }
 
     public LlmResult chat(ModelConfigEntity model, List<Map<String, Object>> messages,
-                          List<ToolDef> tools, SseEmitter emitter, String cancelKey) throws IOException {
+                          List<ToolDef> tools, SseEmitter emitter, String conversationId) throws IOException {
         String apiKey = AESUtil.decrypt(model.getApiKeyEncrypted(), cfg.getEncrypt().getRestful().getAes().getKey(), cfg.getEncrypt().getRestful().getAes().getIv(), StandardCharsets.UTF_8);
         String baseUrl = model.getBaseUrl();
         if (!baseUrl.endsWith("/")) baseUrl += "/";
@@ -107,7 +107,7 @@ public class LlmClient {
         log.info("请求模型 {}，消息数: {}，上下文约 {} 字符", model.getName(), messages.size(), bodyStr.length());
 
         okhttp3.Call call = client.newCall(request);
-        activeCalls.put(cancelKey, call);
+        activeCalls.put(conversationId, call);
         try (Response response = call.execute()) {
             if (!response.isSuccessful()) {
                 int code = response.code();
@@ -233,14 +233,14 @@ public class LlmClient {
             }
             } catch (IOException e) {
                 // cancelCall 触发的是预期行为，不抛异常
-                if (!activeCalls.containsKey(cancelKey)) {
-                    log.debug("LLM 调用已被取消: {}", cancelKey);
+                if (!activeCalls.containsKey(conversationId)) {
+                    log.debug("LLM 调用已被取消: {}", conversationId);
                 } else {
                     throw e;
                 }
             }
         } finally {
-            activeCalls.remove(cancelKey, call);
+            activeCalls.remove(conversationId, call);
         }
 
         if (!usageResult.isEmpty()) {

@@ -45,12 +45,16 @@ public class ChatCtrl {
         );
     }
 
-    @Operation(summary = "取消当前对话")
+    @Operation(summary = "取消对话")
     @RequestMapping(path = "/cancel", method = RequestMethod.POST)
     @ResponseBody
-    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "chat_cancel", apiDesc = "聊天接口_取消当前对话")
-    public ReturnMessage<?> cancel() {
-        chatService.cancel(userName());
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "chat_cancel", apiDesc = "聊天接口_取消对话")
+    public ReturnMessage<?> cancel(@RequestBody(required = false) ChatRequest body) {
+        if (body != null && body.getConversationId() != null && !body.getConversationId().isEmpty()) {
+            chatService.cancelByConversationId(body.getConversationId());
+        } else {
+            chatService.cancel(userName());
+        }
         return ReturnMessage.success("ok");
     }
 

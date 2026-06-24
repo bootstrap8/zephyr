@@ -6,6 +6,7 @@ import com.github.hbq969.ai.zephyr.chat.dao.entity.ConversationEntity;
 import com.github.hbq969.ai.zephyr.chat.dao.entity.MessageEntity;
 import com.github.hbq969.ai.zephyr.chat.model.ConversationVO;
 import com.github.hbq969.ai.zephyr.chat.service.ConversationService;
+import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.Resource;
@@ -24,6 +25,9 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Resource
     private ChatDao chatDao;
+
+    @Resource
+    private ConversationSessionManager sessionManager;
 
     @Override
     public List<ConversationVO> list(String userName) {
@@ -77,6 +81,10 @@ public class ConversationServiceImpl implements ConversationService {
         ConversationEntity conv = chatDao.queryConversationById(id);
         if (conv == null || !conv.getUserName().equals(userName)) {
             throw new RuntimeException("无权限或记录不存在");
+        }
+        ConversationSessionManager.SessionHandle handle = sessionManager.get(id);
+        if (handle != null) {
+            handle.cancel();
         }
         chatDao.deleteMessagesByConvId(id);
         chatDao.deleteConversation(id, userName);
