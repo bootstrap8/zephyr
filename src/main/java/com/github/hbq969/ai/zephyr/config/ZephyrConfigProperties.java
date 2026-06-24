@@ -70,8 +70,8 @@ public class ZephyrConfigProperties {
         /** 上下文估算 */
         private Context context = new Context();
 
-        /** 会话空闲超时秒数，默认 900（15 分钟），超时后自动标记取消 */
-        private int sessionIdleTimeoutSeconds = 900;
+        /** 会话空闲超时秒数，默认 1800（30 分钟），超时后自动标记取消 */
+        private int sessionIdleTimeoutSeconds = 1800;
 
         /** 会话超时扫描间隔秒数，默认 60 */
         private int sessionScanIntervalSeconds = 60;
@@ -86,8 +86,8 @@ public class ZephyrConfigProperties {
 
         @Data
         public static class Sse {
-            /** SSE 连接超时（毫秒），默认 15 分钟（与会话超时对齐） */
-            private long timeoutMillis = 900_000L;
+            /** SSE 连接超时（毫秒），默认无限制（会话空闲超时驱动生命周期） */
+            private long timeoutMillis = Long.MAX_VALUE;
         }
 
         @Data
@@ -124,8 +124,8 @@ public class ZephyrConfigProperties {
         public static class Client {
             /** 建立 TCP 连接超时（秒） */
             private int connectTimeoutSeconds = 30;
-            /** 等待响应数据超时（秒） */
-            private int readTimeoutSeconds = 120;
+            /** 等待响应数据超时（秒），默认 300（5 分钟），覆盖长时间工具执行后的慢响应 */
+            private int readTimeoutSeconds = 300;
         }
     }
 
