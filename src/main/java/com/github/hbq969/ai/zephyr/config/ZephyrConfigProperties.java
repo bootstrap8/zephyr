@@ -48,6 +48,9 @@ public class ZephyrConfigProperties {
     /** Shell 命令执行相关配置 */
     private Shell shell = new Shell();
 
+    /** 工作空间相关配置 */
+    private Workspace workspace = new Workspace();
+
     // ================================================================
     //  对话配置
     // ================================================================
@@ -331,5 +334,15 @@ public class ZephyrConfigProperties {
         private int commandTimeoutSeconds = 120;
         /** 前台命令输出最大读取字节数，超出截断，默认 1MB */
         private int maxOutputBytes = 1_048_576;
+    }
+
+    // ================================================================
+    //  工作空间
+    // ================================================================
+
+    @Data
+    public static class Workspace {
+        /** browse 接口默认根目录，相对路径相对于 user.home，默认 .zephyr/workspace */
+        private String browseRoot = ".zephyr/workspace";
     }
 }
