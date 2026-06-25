@@ -414,7 +414,7 @@ zephyr:
     max-output-bytes: 1048576  # 前台命令输出最大读取字节数（1MB）
 
   workspace:
-    browse-root: ${user.home}/.zephyr/workspace  # browse 接口默认根目录
+    browse-root: .zephyr/workspace  # browse 接口默认根目录，相对于 user.home
 
 management:
   endpoint:

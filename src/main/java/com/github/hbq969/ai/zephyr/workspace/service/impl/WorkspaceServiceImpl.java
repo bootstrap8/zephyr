@@ -106,6 +106,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         if (name.contains("/") || name.contains("\0")) {
             throw new RuntimeException("目录名称包含非法字符");
         }
+        if (parent == null || parent.isBlank()) {
+            throw new RuntimeException("父目录路径不能为空");
+        }
+        java.io.File parentDir = new java.io.File(parent);
+        if (!parentDir.exists() || !parentDir.isDirectory()) {
+            throw new RuntimeException("父目录不存在: " + parent);
+        }
         java.nio.file.Path newDir = java.nio.file.Path.of(parent, name);
         try {
             java.nio.file.Files.createDirectory(newDir);
