@@ -336,7 +336,7 @@ public class ContextBuilder {
             Set<String> foundIds = new HashSet<>();
             for (int j = i + 1; j < messages.size(); j++) {
                 Map<String, Object> next = messages.get(j);
-                if (!"tool".equals(next.get("role"))) break;
+                if (!ROLE_TOOL.equals(next.get("role"))) break;
                 Object tci = next.get("tool_call_id");
                 if (tci != null) foundIds.add(tci.toString());
             }
@@ -352,7 +352,7 @@ public class ContextBuilder {
         // 第二遍：移除没有对应 assistant tool_calls 的孤立 tool 消息
         for (int i = 0; i < messages.size(); i++) {
             Map<String, Object> msg = messages.get(i);
-            if (!"tool".equals(msg.get("role"))) continue;
+            if (!ROLE_TOOL.equals(msg.get("role"))) continue;
             Object tci = msg.get("tool_call_id");
             if (tci != null && !validToolCallIds.contains(tci.toString())) {
                 log.warn("历史消息中存在孤立 tool 消息（无前置 assistant tool_calls），已移除: tool_call_id={}", tci);

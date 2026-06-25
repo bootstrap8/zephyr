@@ -31,6 +31,7 @@ public final class ZephyrConstants {
     public static final String ROLE_SYSTEM = "system";
     public static final String ROLE_ASSISTANT = "assistant";
     public static final String ROLE_USER = "user";
+    public static final String ROLE_TOOL = "tool";
 
     // === 工具调用 ===
     public static final String TOOL_CALL_TYPE_FUNCTION = "function";

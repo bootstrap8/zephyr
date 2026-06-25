@@ -304,7 +304,7 @@ public class McpClient {
         if (raw == null) return null;
         // SSE format: "data:{json}"
         for (String line : raw.split("\n")) {
-            if (line.startsWith(SSE_DATA_PREFIX)) {
+            if (line.startsWith("data:")) {
                 return line.substring(5).trim();
             }
         }

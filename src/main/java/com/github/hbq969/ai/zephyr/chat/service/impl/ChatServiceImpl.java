@@ -195,7 +195,7 @@ public class ChatServiceImpl implements ChatService {
                 MessageEntity userMsg = new MessageEntity();
                 userMsg.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
                 userMsg.setConversationId(cid);
-                userMsg.setRole("user");
+                userMsg.setRole(ROLE_USER);
                 userMsg.setContent(message);
                 userMsg.setCreatedAt(msgSeq++);
                 chatDao.insertMessage(userMsg);
@@ -258,7 +258,7 @@ public class ChatServiceImpl implements ChatService {
                             MessageEntity toolMsg = new MessageEntity();
                             toolMsg.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
                             toolMsg.setConversationId(cid);
-                            toolMsg.setRole("tool");
+                            toolMsg.setRole(ROLE_TOOL);
                             toolMsg.setContent(toolResults.get(i).get("content").toString());
                             toolMsg.setToolCallId(tc.getId());
                             toolMsg.setCreatedAt(msgSeq++);
