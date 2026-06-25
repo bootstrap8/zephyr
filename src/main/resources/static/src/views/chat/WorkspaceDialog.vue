@@ -18,6 +18,9 @@ const saving = ref(false)
 const showBrowser = ref(false)
 const treeRoot = ref<{ name: string; path: string; children: DirNode[]; expanded: boolean; loaded: boolean } | null>(null)
 const browserLoading = ref(false)
+const rootCreating = ref(false)
+const rootNewDirName = ref('')
+const rootCreatingError = ref('')
 
 function toDirNode(d: any): DirNode {
   return {
@@ -43,10 +46,10 @@ function loadRoot() {
   axios({ url: '/workspace/browse', method: 'get' })
     .then(res => {
       if (res.data.state === 'OK') {
-        const items = (res.data.body || []).filter((d: any) => d.name !== '..').map(toDirNode)
-        const rootPath = items.length > 0
-          ? items[0].path.substring(0, items[0].path.lastIndexOf('/')) || '/'
-          : '/'
+        const body = res.data.body || []
+        const currentEntry = body.find((d: any) => d.name === '.')
+        const rootPath = currentEntry ? currentEntry.path : '/'
+        const items = body.filter((d: any) => d.name !== '.' && d.name !== '..').map(toDirNode)
         treeRoot.value = { name: rootPath, path: rootPath, children: items, expanded: true, loaded: true }
       }
     })
@@ -60,12 +63,50 @@ function loadChildren(node: DirNode) {
   axios({ url: '/workspace/browse', method: 'get', params: { parent: node.path } })
     .then(res => {
       if (res.data.state === 'OK') {
-        node.children = (res.data.body || []).filter((d: any) => d.name !== '..').map(toDirNode)
+        node.children = (res.data.body || []).filter((d: any) => d.name !== '.' && d.name !== '..').map(toDirNode)
         node.loaded = true
       }
     })
     .catch(() => msg('加载目录失败', 'error'))
     .finally(() => { node.loading = false })
+}
+
+function startRootCreate() {
+  rootCreating.value = true
+  rootNewDirName.value = ''
+  rootCreatingError.value = ''
+}
+
+function cancelRootCreate() {
+  rootCreating.value = false
+  rootNewDirName.value = ''
+  rootCreatingError.value = ''
+}
+
+function confirmRootCreate() {
+  const dirName = rootNewDirName.value.trim()
+  if (!dirName) {
+    rootCreatingError.value = '目录名不能为空'
+    return
+  }
+  axios({
+    url: '/workspace/mkdir',
+    method: 'post',
+    data: { parent: treeRoot.value!.path, name: dirName }
+  })
+    .then(res => {
+      if (res.data.state === 'OK') {
+        rootCreating.value = false
+        rootNewDirName.value = ''
+        rootCreatingError.value = ''
+        loadRoot()
+      } else {
+        rootCreatingError.value = res.data.errorMessage || '创建失败'
+      }
+    })
+    .catch(err => {
+      rootCreatingError.value = err?.response?.data?.errorMessage || '创建失败'
+    })
 }
 
 function ensureExpanded(node: DirNode) {
@@ -180,6 +221,20 @@ function onSubmit() {
           <div class="ws-browser-head">
             <Icon icon="lucide:folder-open" class="ws-browser-icon" />
             <span class="ws-browser-path">{{ treeRoot?.path || '' }}</span>
+            <button class="ws-browser-head-add" title="新建目录" @click="startRootCreate">
+              <Icon icon="lucide:plus" width="14" />
+            </button>
+          </div>
+          <div v-if="rootCreating" class="tn-create" style="padding:4px 8px;border-bottom:1px solid var(--el-border-color)">
+            <input v-model="rootNewDirName" class="tn-create-input" placeholder="目录名"
+              @keydown.enter="confirmRootCreate" @keydown.escape="cancelRootCreate" />
+            <button class="tn-create-btn tn-create-ok" @click="confirmRootCreate">
+              <Icon icon="lucide:check" width="14" />
+            </button>
+            <button class="tn-create-btn tn-create-cancel" @click="cancelRootCreate">
+              <Icon icon="lucide:x" width="14" />
+            </button>
+            <span v-if="rootCreatingError" class="tn-create-error">{{ rootCreatingError }}</span>
           </div>
           <div v-if="browserLoading" class="ws-browser-loading">{{ langData.inputArea_loading }}</div>
           <div v-else class="ws-browser-tree">
@@ -226,7 +281,9 @@ function onSubmit() {
 .ws-browser { border: 1px solid var(--el-border-color); border-radius: 8px; overflow: hidden; max-height: 320px; display: flex; flex-direction: column; }
 .ws-browser-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--el-border-color); background: var(--el-fill-color-light); font-size: 12px; color: var(--el-text-color-secondary); }
 .ws-browser-icon { font-size: 14px; color: var(--el-color-primary); flex-shrink: 0; }
-.ws-browser-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+.ws-browser-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+.ws-browser-head-add { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--el-text-color-secondary); cursor: pointer; border-radius: 4px; flex-shrink: 0; padding: 0; }
+.ws-browser-head-add:hover { background: var(--el-fill-color); color: var(--el-color-primary); }
 .ws-browser-loading { padding: 20px; text-align: center; font-size: 12px; color: var(--el-text-color-placeholder); }
 .ws-browser-tree { flex: 1; overflow-y: auto; padding: 4px 8px; }
 .ws-browser-tree::-webkit-scrollbar { width: 4px; }
@@ -241,4 +298,13 @@ function onSubmit() {
 .ws-btn-confirm { background: var(--el-color-primary); color: #fff; border-color: var(--el-color-primary); }
 .ws-btn-confirm:hover { background: var(--el-color-primary-dark-2); }
 .ws-btn-confirm:disabled { opacity: 0.6; cursor: default; }
+
+.tn-create { display: flex; align-items: center; gap: 4px; padding: 4px 0; }
+.tn-create-input { flex: 1; padding: 4px 8px; border: 1px solid var(--el-color-primary); border-radius: 4px; background: var(--el-bg-color); color: var(--el-text-color-primary); font-size: 12px; outline: none; font-family: inherit; }
+.tn-create-btn { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0; }
+.tn-create-ok { background: var(--el-color-primary); color: #fff; }
+.tn-create-ok:hover { background: var(--el-color-primary-dark-2); }
+.tn-create-cancel { background: transparent; color: var(--el-text-color-secondary); }
+.tn-create-cancel:hover { background: var(--el-fill-color-light); }
+.tn-create-error { font-size: 11px; color: var(--el-color-danger); white-space: nowrap; }
 </style>

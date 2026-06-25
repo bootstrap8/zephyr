@@ -78,6 +78,12 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         File dir = new File(root);
         if (!dir.exists() || !dir.isDirectory()) return result;
 
+        // 当前目录
+        Map<String, Object> current = new LinkedHashMap<>();
+        current.put("name", ".");
+        current.put("path", root);
+        result.add(current);
+
         // 上级目录
         File parentFile = dir.getParentFile();
         Map<String, Object> up = new LinkedHashMap<>();
