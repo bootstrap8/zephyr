@@ -85,4 +85,23 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         }
         return result;
     }
+
+    @Override
+    public String mkdir(String parent, String name) {
+        if (name == null || name.isBlank()) {
+            throw new RuntimeException("目录名称不能为空");
+        }
+        if (name.contains("/") || name.contains("\0")) {
+            throw new RuntimeException("目录名称包含非法字符");
+        }
+        java.nio.file.Path newDir = java.nio.file.Path.of(parent, name);
+        try {
+            java.nio.file.Files.createDirectory(newDir);
+            return newDir.toAbsolutePath().toString();
+        } catch (java.nio.file.FileAlreadyExistsException e) {
+            throw new RuntimeException("目录已存在: " + newDir);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("创建目录失败: " + e.getMessage(), e);
+        }
+    }
 }

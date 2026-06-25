@@ -10,4 +10,5 @@ public interface WorkspaceService {
     WorkspaceEntity create(Map<String, String> body, String userName);
     void delete(String id, String userName);
     List<Map<String, Object>> browse(String parent);
+    String mkdir(String parent, String name);
 }
