@@ -253,13 +253,13 @@ public class ChatServiceImpl implements ChatService {
                     }
                 }
             } catch (ConversationSessionManager.CancelSessionException e) {
-                log.info("[会话] 已取消 cid={}", cid);
+                log.info("[SSE] 连接已取消 cid={}", cid);
                 llmClient.cancelCall(cid);
             } catch (Exception e) {
                 boolean disconnected = e instanceof IOException
                         && e.getMessage() != null && e.getMessage().contains("CANCEL");
                 if (disconnected) {
-                    log.info("[会话] SSE 客户端断开，终止对话 cid={}", cid);
+                    log.info("[会话] SSE 客户端断开，中断 SSE 流 cid={}", cid);
                 } else {
                     log.error("[会话] 异常 cid={}", cid, e);
                     try {
@@ -276,7 +276,7 @@ public class ChatServiceImpl implements ChatService {
                     }
                 }
                 handle.killTrackedProcesses();
-                log.info("[会话] 异步任务结束 cid={}, completed={}", cid, completed);
+                log.info("[会话] SSE 响应完成 cid={}, completed={}", cid, completed);
                 sessionManager.remove(cid);
             }
         });
@@ -571,7 +571,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void cancel(String userName) {
         List<ConversationSessionManager.SessionHandle> handles = sessionManager.getByUser(userName);
-        log.info("[会话] 批量取消 user={}, 数量={}", userName, handles.size());
+        log.info("[SSE] 批量取消连接 user={}, 数量={}", userName, handles.size());
         for (ConversationSessionManager.SessionHandle h : handles) {
             h.cancel();
             llmClient.cancelCall(h.getConversationId());
@@ -582,11 +582,11 @@ public class ChatServiceImpl implements ChatService {
     public void cancelByConversationId(String conversationId) {
         ConversationSessionManager.SessionHandle h = sessionManager.get(conversationId);
         if (h != null) {
-            log.info("[会话] 按 cid 取消 cid={}", conversationId);
+            log.info("[SSE] 按 cid 取消连接 cid={}", conversationId);
             h.cancel();
             llmClient.cancelCall(conversationId);
         } else {
-            log.info("[会话] 按 cid 取消（无活跃会话） cid={}", conversationId);
+            log.info("[SSE] 按 cid 取消连接（无活跃连接） cid={}", conversationId);
         }
     }
 

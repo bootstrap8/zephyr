@@ -49,9 +49,6 @@ export const useConversationsStore = defineStore('conversations', () => {
 
   function setConversations(list: Conversation[]) {
     conversations.value = list
-    if (list.length > 0 && !currentId.value) {
-      currentId.value = list[0].id
-    }
   }
 
   function selectConversation(id: string) {

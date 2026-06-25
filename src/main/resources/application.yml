@@ -242,8 +242,6 @@ zephyr:
     upload:
       max-file-size: 209715200  # 200MB
       directory-name: .zephyr-uploads
-    sse:
-      # SSE 连接存活时间不再设限（Java 默认 Long.MAX_VALUE），由会话空闲超时驱动生命周期
     tool-output:
       max-length: 8000  # tool 结果最大字符数，超出截断
       binary-sample-size: 4096  # 二进制检测采样字符数

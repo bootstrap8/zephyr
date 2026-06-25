@@ -51,12 +51,13 @@ function onSearchKeydown(e: KeyboardEvent) {
   const items = filteredConversations.value
   if (e.key === 'ArrowDown') { e.preventDefault(); searchActiveIdx.value = Math.min(searchActiveIdx.value + 1, items.length - 1) }
   if (e.key === 'ArrowUp') { e.preventDefault(); searchActiveIdx.value = Math.max(searchActiveIdx.value - 1, 0) }
-  if (e.key === 'Enter' && items.length > 0) { e.preventDefault(); const c = items[searchActiveIdx.value]; if (c) { convStore.selectConversation(c.id); closeSearch() } }
+  if (e.key === 'Enter' && items.length > 0) { e.preventDefault(); const c = items[searchActiveIdx.value]; if (c) { convStore.selectConversation(c.id); restoreConversation(c.id); closeSearch() } }
   if (e.key === 'Escape') { closeSearch() }
 }
 
 function selectSearchResult(id: string) {
   convStore.selectConversation(id)
+  restoreConversation(id)
   closeSearch()
 }
 
@@ -191,6 +192,8 @@ function onStop() {
 function restoreConversation(id: string) {
   axios({ url: `/conversations/${id}/messages`, method: 'get' })
     .then(res => {
+      // 防止过期响应覆盖当前会话：当前选中的对话已变更时跳过
+      if (convStore.currentId !== id) return
       if (res.data.state === 'OK') {
         const body = res.data.body
         const msgs = (body.messages || body || []).map((m: any) => ({
@@ -251,18 +254,27 @@ function restoreConversation(id: string) {
     })
 }
 
-watch(() => convStore.currentId, (newId) => {
-  if (newId && !chatStore.streaming) {
-    restoreConversation(newId)
-  } else if (!newId) {
-    chatStore.clearMessages()
-  }
-})
-
 onMounted(() => {
   axios({ url: '/conversations/list', method: 'get' })
     .then(res => {
-      if (res.data.state === 'OK') convStore.setConversations(res.data.body)
+      if (res.data.state === 'OK') {
+        convStore.setConversations(res.data.body)
+        const list = res.data.body as any[]
+        const savedConvId = sessionStorage.getItem('zephyr-active-conv')
+        if (savedConvId) {
+          sessionStorage.removeItem('zephyr-active-conv')
+          const found = list.find((c: any) => c.id === savedConvId)
+          if (found) {
+            convStore.selectConversation(savedConvId)
+            restoreConversation(savedConvId)
+            return
+          }
+        }
+        if (list.length > 0) {
+          convStore.selectConversation(list[0].id)
+          restoreConversation(list[0].id)
+        }
+      }
     })
   settingsStore.loadModels()
   settingsStore.loadMcpServers()

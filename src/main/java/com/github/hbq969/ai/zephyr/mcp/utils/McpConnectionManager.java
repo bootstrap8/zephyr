@@ -5,10 +5,9 @@ import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
 import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -73,9 +72,13 @@ public class McpConnectionManager {
             }
         }
 
-        // 3. 重置所有 DB 状态
-        mcpDao.resetAllServerStatus("disconnected");
-        log.info("MCP 服务器状态已重置: 所有服务器设为 disconnected");
+        // 3. 重置所有 DB 状态（表可能尚未创建，忽略异常）
+        try {
+            mcpDao.resetAllServerStatus("disconnected");
+            log.info("MCP 服务器状态已重置: 所有服务器设为 disconnected");
+        } catch (Exception e) {
+            log.warn("重置 MCP 服务器状态失败（表可能尚未创建）", e);
+        }
     }
 
     /** 获取启动时需要重连的服务器列表 */
@@ -103,7 +106,7 @@ public class McpConnectionManager {
         if (existing != null) return existing;
 
         if (connections.size() >= cfg.getMcp().getConnection().getMaxConnections()) {
-            evictLru();
+            throw new RuntimeException("MCP 连接数已达上限: " + cfg.getMcp().getConnection().getMaxConnections());
         }
 
         McpServerEntity server = mcpDao.queryServerById(serverId);
@@ -162,34 +165,22 @@ public class McpConnectionManager {
         return server != null ? server.getUserName() : null;
     }
 
-    private void evictLru() {
-        String oldest = null;
-        long oldestTime = Long.MAX_VALUE;
-        for (Map.Entry<String, McpConnection> e : connections.entrySet()) {
-            if (e.getValue().getLastUsedAt() < oldestTime) {
-                oldestTime = e.getValue().getLastUsedAt();
-                oldest = e.getKey();
+    @PreDestroy
+    public void destroy() {
+        int count = connections.size();
+        for (Map.Entry<String, McpConnection> entry : connections.entrySet()) {
+            entry.getValue().close();
+            int idx = entry.getKey().indexOf(':');
+            if (idx > 0) {
+                try {
+                    mcpDao.updateServerStatus(entry.getKey().substring(idx + 1), "disconnected",
+                            entry.getKey().substring(0, idx));
+                } catch (Exception e) {
+                    log.warn("更新 MCP 服务器状态失败: key={}", entry.getKey(), e);
+                }
             }
         }
-        if (oldest != null) {
-            McpConnection conn = connections.remove(oldest);
-            if (conn != null) conn.close();
-            log.info("LRU 淘汰 MCP 连接: {}, 当前连接数={}", oldest, connections.size());
-        }
-    }
-
-    @Scheduled(fixedRateString = "${zephyr.mcp.connection.cleanup-interval-millis:300000}")
-    public void cleanupIdle() {
-        long now = System.currentTimeMillis();
-        connections.entrySet().removeIf(entry -> {
-            long idleDuration = now - entry.getValue().getLastUsedAt();
-            if (idleDuration > cfg.getMcp().getConnection().getIdleTimeoutMillis()) {
-                entry.getValue().close();
-                log.info("空闲 MCP 连接已回收: userServer={}, 空闲时间={}ms, 剩余连接数={}",
-                        entry.getKey(), idleDuration, connections.size() - 1);
-                return true;
-            }
-            return false;
-        });
+        connections.clear();
+        log.info("MCP 连接管理器已销毁，已关闭 {} 个连接", count);
     }
 }

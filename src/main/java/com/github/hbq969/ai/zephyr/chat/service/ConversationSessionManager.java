@@ -32,7 +32,7 @@ public class ConversationSessionManager {
     public SessionHandle register(String conversationId, String userName) {
         SessionHandle handle = new SessionHandle(conversationId, userName);
         sessions.put(conversationId, handle);
-        log.info("[会话] 注册 cid={}, user={}, 当前活跃: {}", conversationId, userName, sessions.size());
+        log.info("[SSE] 注册连接 cid={}, user={}, 当前活跃连接: {}", conversationId, userName, sessions.size());
         return handle;
     }
 
@@ -48,7 +48,7 @@ public class ConversationSessionManager {
 
     public void remove(String conversationId) {
         sessions.remove(conversationId);
-        log.info("[会话] 注销 cid={}, 剩余活跃: {}", conversationId, sessions.size());
+        log.info("[SSE] 连接关闭 cid={}, 剩余活跃连接: {}", conversationId, sessions.size());
     }
 
     public ExecutorService getExecutor() {
@@ -68,7 +68,7 @@ public class ConversationSessionManager {
         long idleTimeout = cfg.getChat().getSessionIdleTimeoutSeconds();
         sessions.values().forEach(h -> {
             if (!h.cancelled && now - h.lastActivityTime > idleTimeout) {
-                log.info("会话超时取消: conversationId={}, idle={}s",
+                log.info("SSE 连接空闲超时取消: conversationId={}, idle={}s",
                         h.conversationId, now - h.lastActivityTime);
                 h.cancel();
             }
@@ -77,7 +77,7 @@ public class ConversationSessionManager {
 
     @PreDestroy
     public void shutdown() {
-        log.info("ConversationSessionManager 关闭，取消所有活跃会话");
+        log.info("ConversationSessionManager 关闭，取消所有活跃 SSE 连接");
         sessions.values().forEach(SessionHandle::cancel);
         executor.shutdown();
         try {
@@ -129,9 +129,9 @@ public class ConversationSessionManager {
                             ph.descendants().forEach(ProcessHandle::destroyForcibly);
                             ph.destroyForcibly();
                         });
-                        log.info("[会话] 清理进程 cid={}, pid={}, cmd={}", conversationId, s.pid, s.command);
+                        log.info("[SSE] 清理进程 cid={}, pid={}, cmd={}", conversationId, s.pid, s.command);
                     } catch (Exception e) {
-                        log.warn("[会话] 清理进程失败 cid={}, pid={}", conversationId, s.pid, e);
+                        log.warn("[SSE] 清理进程失败 cid={}, pid={}", conversationId, s.pid, e);
                     }
                 }
             }
@@ -141,7 +141,7 @@ public class ConversationSessionManager {
         public void cancel() {
             if (!this.cancelled) {
                 this.cancelled = true;
-                log.info("[会话] 标记取消 cid={}, idle={}s",
+                log.info("[SSE] 连接标记取消 cid={}, idle={}s",
                         conversationId, System.currentTimeMillis() / 1000 - lastActivityTime);
             }
         }

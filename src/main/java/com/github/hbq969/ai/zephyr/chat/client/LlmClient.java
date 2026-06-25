@@ -274,13 +274,14 @@ public class LlmClient {
     }
 
     private int getTimeoutSeconds(Map<String, Object> params) {
-        if (params == null) return 300;
+        int defaultTimeout = cfg.getLlm().getClient().getReadTimeoutSeconds();
+        if (params == null) return defaultTimeout;
         Object v = params.get("request_timeout");
         if (v instanceof Number) {
             int t = ((Number) v).intValue();
-            return t > 0 ? t : 300;
+            return t > 0 ? t : defaultTimeout;
         }
-        return 300;
+        return defaultTimeout;
     }
 
     private void setNestedProperty(JsonObject root, String path, Object value) {

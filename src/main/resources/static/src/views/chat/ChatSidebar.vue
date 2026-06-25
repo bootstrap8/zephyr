@@ -31,7 +31,7 @@ onMounted(fetchUserInfo)
 
 function deleteConversation(id: string) {
   axios({ url: '/conversations/delete', method: 'post', data: { id } })
-    .then(() => { convStore.removeConversation(id); openMenuId.value = null })
+    .then(() => { window.location.reload() })
     .catch(() => {})
 }
 
@@ -60,7 +60,10 @@ function confirmRename(id: string) {
 
 function cancelRename() { renameId.value = null }
 function closeMenu() { openMenuId.value = null }
-function selectAndCloseSidebar(id: string) { convStore.selectConversation(id) }
+function selectAndCloseSidebar(id: string) {
+	  sessionStorage.setItem('zephyr-active-conv', id)
+	  window.location.reload()
+	}
 </script>
 
 <template>

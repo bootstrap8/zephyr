@@ -90,10 +90,10 @@ public class ConversationServiceImpl implements ConversationService {
         }
         ConversationSessionManager.SessionHandle handle = sessionManager.get(id);
         if (handle != null) {
-            log.info("[会话] 删除对话触发取消 cid={}, user={}", id, userName);
+            log.info("[会话] 删除对话，取消活跃 SSE 连接 cid={}, user={}", id, userName);
             handle.cancel();
         } else {
-            log.info("[会话] 删除对话（无活跃会话） cid={}, user={}", id, userName);
+            log.info("[会话] 删除对话（无活跃 SSE 连接） cid={}, user={}", id, userName);
         }
         backgroundProcessManager.killByConversationId(id);
         chatDao.deleteMessagesByConvId(id);
