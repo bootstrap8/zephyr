@@ -299,7 +299,7 @@ zephyr:
   shell:
     mode: whitelist  # disabled | whitelist | allowAll，默认 whitelist
     # whitelist 模式下允许执行的命令（仅命令名，不含参数），逗号分隔
-    allowed-commands: python3,python,node,ruby,perl,php,lua,deno,bun,npm,npx,yarn,pnpm,pip,pip3,gem,composer,cargo,go,git,hg,javac,java,mvn,gradle,make,cmake,gcc,g++,clang,clang++,rustc,dotnet,ls,cat,head,tail,wc,find,grep,egrep,awk,sed,mkdir,touch,cp,mv,ln,stat,file,du,df,tree,realpath,basename,dirname,sort,uniq,cut,tr,tee,diff,patch,echo,printf,xargs,envsubst,column,jq,yq,iconv,strings,od,hexdump,xxd,tar,gzip,gunzip,zip,unzip,bzip2,bunzip2,xz,unxz,zstd,unzstd,curl,date,env,which,whoami,uname,hostname,uptime,free,vmstat,iostat,ulimit
+    allowed-commands: rm,python3,python,node,ruby,perl,php,lua,deno,bun,npm,npx,yarn,pnpm,pip,pip3,gem,composer,cargo,go,git,hg,javac,java,mvn,gradle,make,cmake,gcc,g++,clang,clang++,rustc,dotnet,ls,cat,head,tail,wc,find,grep,egrep,awk,sed,mkdir,touch,cp,mv,ln,stat,file,du,df,tree,realpath,basename,dirname,sort,uniq,cut,tr,tee,diff,patch,echo,printf,xargs,envsubst,column,jq,yq,iconv,strings,od,hexdump,xxd,tar,gzip,gunzip,zip,unzip,bzip2,bunzip2,xz,unxz,zstd,unzstd,curl,date,env,which,whoami,uname,hostname,uptime,free,vmstat,iostat,ulimit
     max-background-processes: 5  # 每用户最大后台进程数
     max-background-lifetime-seconds: 3600  # 后台进程最大存活时间（秒）
     cleanup-interval-seconds: 60  # 后台进程超时扫描间隔（秒）

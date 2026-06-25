@@ -46,7 +46,7 @@
 
     <appender name="debug-console" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>DEBUG</level>
+            <level>INFO</level>
             <onMatch>NEUTRAL</onMatch>
             <onMismatch>DENY</onMismatch>
         </filter>
