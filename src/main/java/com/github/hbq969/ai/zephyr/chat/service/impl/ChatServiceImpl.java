@@ -412,12 +412,14 @@ public class ChatServiceImpl implements ChatService {
             WorkspaceEntity ws = workspaceDao.queryById(conv.getWorkspaceId());
             if (ws == null || ws.getPath() == null) return WorkspaceBoundary.NONE;
             Path wsPath = Path.of(ws.getPath());
-            if (!Files.exists(wsPath)) {
-                log.warn("[安全] workspace 路径不存在，使用规范化形式: {}", wsPath);
+            try {
+                return new WorkspaceBoundary(wsPath.toRealPath());
+            } catch (IOException e) {
+                log.warn("[安全] workspace 路径不存在或无法解析，使用规范化形式: {} ({})",
+                        wsPath, e.getMessage());
                 return new WorkspaceBoundary(wsPath.normalize().toAbsolutePath());
             }
-            return new WorkspaceBoundary(wsPath.toRealPath());
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.warn("[安全] 解析 workspace 路径失败 conv={}: {}", conversationId, e.getMessage());
             return WorkspaceBoundary.NONE;
         }

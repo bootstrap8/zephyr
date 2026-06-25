@@ -71,6 +71,10 @@ public class SecurityEvaluator {
         public static Result block(String rule, String reason) { return new Result(Decision.BLOCK, rule, reason); }
     }
 
+    // 安全规则标识常量，前端弹窗据此展示风险文案
+    public static final String RULE_WORKSPACE_BOUNDARY = "WORKSPACE_BOUNDARY";
+    public static final String RULE_MODE_DEFAULT = "MODE_DEFAULT";
+
     /**
      * workspace 边界信息，用于文件写入路径检查。
      * 纯值对象，零依赖。
@@ -82,6 +86,15 @@ public class SecurityEvaluator {
 
         public boolean contains(Path target) {
             return isPresent() && target.startsWith(path);
+        }
+
+        /** 规范化目标路径（相对路径以 workspace 为基准解析，消除 . 和 ..） */
+        public Path resolveTarget(String filePath) {
+            Path targetPath = Path.of(filePath);
+            if (!targetPath.isAbsolute()) {
+                targetPath = path.resolve(targetPath);
+            }
+            return targetPath.normalize();
         }
     }
 
@@ -199,13 +212,8 @@ public class SecurityEvaluator {
             return Result.allow();
         }
 
-        // workspace 边界检查
         if (boundary.isPresent()) {
-            Path targetPath = Path.of(filePath);
-            if (!targetPath.isAbsolute()) {
-                targetPath = boundary.path().resolve(targetPath);
-            }
-            targetPath = targetPath.normalize();
+            Path targetPath = boundary.resolveTarget(filePath);
             try {
                 targetPath = targetPath.toRealPath();
             } catch (IOException ignored) {
@@ -213,14 +221,14 @@ public class SecurityEvaluator {
             }
 
             if (!boundary.contains(targetPath)) {
-                return Result.confirm("WORKSPACE_BOUNDARY",
+                return Result.confirm(RULE_WORKSPACE_BOUNDARY,
                         "目标路径 " + filePath + " 不在工作空间 " + boundary.path() + " 内");
             }
         }
 
         // default 模式：所有文件编辑需确认
         if (!"acceptEdits".equalsIgnoreCase(mode)) {
-            return Result.confirm("MODE_DEFAULT", "Default 模式下文件写入需要用户确认");
+            return Result.confirm(RULE_MODE_DEFAULT, "Default 模式下文件写入需要用户确认");
         }
 
         // acceptEdits 模式：workspace 内文件编辑自动放行
