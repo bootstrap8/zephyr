@@ -269,11 +269,9 @@ public class ChatServiceImpl implements ChatService {
                     }
                 }
             } finally {
-                if (!completed) {
-                    try {
-                        emitter.complete();
-                    } catch (Exception ignored) {
-                    }
+                try {
+                    emitter.complete();
+                } catch (Exception ignored) {
                 }
                 handle.killTrackedProcesses();
                 log.info("[会话] SSE 响应完成 cid={}, completed={}", cid, completed);
