@@ -52,73 +52,13 @@ public class ContextBuilder {
     private com.github.hbq969.ai.zephyr.knowledge.service.KnowledgeService knowledgeService;
     @Resource
     private com.github.hbq969.ai.zephyr.config.dao.UserModelPreferenceDao userModelPreferenceDao;
-
-    private static final String FS_DEFAULT = """
-            ## 文件系统安全（Default 模式）
-            - **路径规范化（强制执行）**：任何文件操作前，必须先将路径解析为规范化绝对路径：
-              1. 相对路径 → 以工作空间路径为基准解析为绝对路径
-              2. 消除路径中的 `.` 和 `..` 成分
-              3. 如果路径中包含符号链接，解析其真实路径
-            - **边界检查**：规范化后的绝对路径必须以工作空间路径开头（含结尾 `/` 的精确前缀匹配），否则视为工作空间外访问
-            - **路径遍历禁止**：严禁使用 `../` 或任何形式的路径遍历访问父目录。即使用户在消息中指定了含 `../` 的路径，也必须拒绝并提示用户该路径不在工作空间内
-            - **工作空间目录内**：规范化后确认在边界内的，直接读写，无需确认
-            - **工作空间目录外**：每次访问都需用户明确回复"同意"授权。授权仅当次有效，下次访问同一路径仍需重新授权
-            - **即使用户在消息中指定了工作空间外的路径（含相对路径、`../` 等），也必须先征得授权，不得直接执行""";
-
-    private static final String FS_ACCEPT_EDITS = """
-            ## 文件系统安全（Accept Edits 模式）
-            - **路径规范化（强制执行）**：任何文件操作前，必须先将路径解析为规范化绝对路径：
-              1. 相对路径 → 以工作空间路径为基准解析为绝对路径
-              2. 消除路径中的 `.` 和 `..` 成分
-              3. 如果路径中包含符号链接，解析其真实路径
-            - **边界检查**：规范化后的绝对路径必须以工作空间路径开头（含结尾 `/` 的精确前缀匹配），否则视为工作空间外访问
-            - **路径遍历禁止**：严禁使用 `../` 或任何形式的路径遍历访问父目录
-            - **工作空间目录内**：规范化后确认在边界内的，直接读写，无需确认
-            - **工作空间目录外**：同一文件首次访问需用户明确回复"同意"授权，授权后在当前对话内持续有效，后续访问无需再次确认。不同文件仍需各自首次授权
-            - **即使用户在消息中指定了工作空间外的路径（含相对路径、`../` 等），也必须先征得授权，不得直接执行""";
-
-    private static final String FS_BYPASS = """
-            ## 文件系统（Bypass 模式 — 无限制）
-            你拥有完整文件系统访问权限，不再受工作空间目录约束。请对破坏性操作保持谨慎。
-            生成新文件时优先使用绝对路径。""";
-
-    private static final String ROLE_PROMPT = """
-            你是一个 AI 助手，名为 zephyr。
-
-            你可以使用 MCP 工具获取实时数据，使用技能（Skill）获取特定任务的详细指导，
-            查看用户记忆（Memory）了解历史上下文和偏好。
-
-            ## 文件处理
-            用户上传文件后，消息中会包含文件名、路径和推荐的 skill。
-            **必须先用 use_skill 加载对应技能，获得处理该类型文件的完整指导，然后严格按指导操作。**
-            你不具备直接读取文件内容的能力，依赖技能中的工具来完成解析。
-
-            {fileSystemSecurity}
-
-            ## 工具使用说明
-            - 优先使用 MCP 工具获取实时准确的数据
-            - 需要特定任务的详细指导时，使用 use_skill 工具
-            - 需要了解用户的背景或偏好时，使用 use_memory 工具
-            - 你可以多次调用工具，直到获得足够信息后再回答
-
-            ## 命令约定
-            当用户消息中以下列格式引用工具或技能时，必须调用对应工具，禁止只回复文字而不调用工具：
-
-            ### 前缀格式（tag 插入）
-            - `MCP/工具名` → 调用同名 MCP 工具
-            - `Skill/技能名` → 调用 use_skill(skill_name="技能名")
-            - `Memory/记忆名` → 调用 use_memory(memory_name="记忆名")
-
-            ### 斜杠格式（手动输入，兼容保留）
-            - `/工具名`（如 `/browser_navigate`）→ 调用同名 MCP 工具
-            - `/技能名`（如 `/frontend-design`）→ 调用 use_skill(skill_name="技能名") 加载该技能
-            - `/记忆名` → 调用 use_memory(memory_name="记忆名") 查看该记忆
-            """;
+    @Resource
+    private com.github.hbq969.ai.zephyr.security.PromptLoader promptLoader;
 
     private String fileSystemSecurityPrompt(String mode) {
-        if ("bypass".equalsIgnoreCase(mode)) return FS_BYPASS;
-        if ("acceptEdits".equalsIgnoreCase(mode)) return FS_ACCEPT_EDITS;
-        return FS_DEFAULT;
+        if ("bypass".equalsIgnoreCase(mode)) return promptLoader.load("modes/bypass.md");
+        if ("acceptEdits".equalsIgnoreCase(mode)) return promptLoader.load("modes/accept-edits.md");
+        return promptLoader.load("modes/default.md");
     }
 
     public Context build(String userName, String conversationId, String mode) {
@@ -172,9 +112,25 @@ public class ContextBuilder {
         // 4. 加载记忆索引
         String memoryIndex = buildMemoryIndex(userName);
 
-        // 5. 组装 system prompt
-        StringBuilder systemPrompt = new StringBuilder(ROLE_PROMPT.replace("{fileSystemSecurity}",
-                fileSystemSecurityPrompt(mode)));
+        // 5. 组装安全规则（合并所有 security prompt 文件）
+        StringBuilder securityRules = new StringBuilder();
+        securityRules.append(promptLoader.load("security/tool-risk-rules.md")).append("\n\n");
+        securityRules.append(promptLoader.load("security/hard-block.md")).append("\n\n");
+        securityRules.append(promptLoader.load("security/soft-block.md")).append("\n\n");
+        securityRules.append(promptLoader.load("security/allow-exceptions.md")).append("\n\n");
+        securityRules.append(promptLoader.load("security/user-intent.md"));
+
+        // 6. 渲染角色 prompt
+        Map<String, String> vars = new LinkedHashMap<>();
+        vars.put("fileSystemSecurity", fileSystemSecurityPrompt(mode));
+        vars.put("skillIndex", skillIndex);
+        vars.put("memoryIndex", memoryIndex);
+        vars.put("knowledgeBaseIndex", "");
+        vars.put("workspaceInfo", "");
+        vars.put("securityRules", securityRules.toString());
+        String rendered = promptLoader.render("role.md", vars);
+        StringBuilder systemPrompt = new StringBuilder(rendered);
+
         if (!skillIndex.isEmpty()) {
             systemPrompt.append("\n\n## 可用技能\n").append(skillIndex)
                     .append("\n（需要详细指导时使用 use_skill 工具加载）");
@@ -184,7 +140,7 @@ public class ContextBuilder {
                     .append("\n（需要完整内容时使用 use_memory 工具查看）");
         }
 
-        // 4.5 工作空间
+        // 工作空间
         if (conversationId != null && !conversationId.isEmpty()) {
             ConversationEntity conv = chatDao.queryConversationById(conversationId);
             if (conv != null && conv.getWorkspaceId() != null && !conv.getWorkspaceId().isEmpty()) {
