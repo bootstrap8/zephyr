@@ -13,10 +13,12 @@ import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
 import com.github.hbq969.ai.zephyr.chat.service.BackgroundProcessManager;
 import com.github.hbq969.ai.zephyr.security.AuditLogger;
 import com.github.hbq969.ai.zephyr.security.SecurityEvaluator;
+import com.github.hbq969.ai.zephyr.security.SecurityEvaluator.WorkspaceBoundary;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.ai.zephyr.memory.service.MemoryService;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
 import com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao;
+import com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity;
 import com.github.hbq969.ai.zephyr.knowledge.dao.KnowledgeDao;
 import com.github.hbq969.ai.zephyr.knowledge.service.KnowledgeService;
 import com.google.gson.Gson;
@@ -398,17 +400,42 @@ public class ChatServiceImpl implements ChatService {
         return "请调用 " + cmdName;
     }
 
+    /**
+     * 根据 conversationId 解析对应 workspace 的文件系统边界。
+     * 返回 NONE 表示无有效边界（所有文件操作需确认）。
+     */
+    private WorkspaceBoundary resolveWorkspaceBoundary(String conversationId) {
+        if (conversationId == null) return WorkspaceBoundary.NONE;
+        try {
+            ConversationEntity conv = chatDao.queryConversationById(conversationId);
+            if (conv == null || conv.getWorkspaceId() == null) return WorkspaceBoundary.NONE;
+            WorkspaceEntity ws = workspaceDao.queryById(conv.getWorkspaceId());
+            if (ws == null || ws.getPath() == null) return WorkspaceBoundary.NONE;
+            Path wsPath = Path.of(ws.getPath());
+            if (!Files.exists(wsPath)) {
+                log.warn("[安全] workspace 路径不存在，使用规范化形式: {}", wsPath);
+                return new WorkspaceBoundary(wsPath.normalize().toAbsolutePath());
+            }
+            return new WorkspaceBoundary(wsPath.toRealPath());
+        } catch (IOException e) {
+            log.warn("[安全] 解析 workspace 路径失败 conv={}: {}", conversationId, e.getMessage());
+            return WorkspaceBoundary.NONE;
+        }
+    }
+
     private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls,
             String userName, List<String> enabledKbIds, String conversationId, String mode,
             SseEmitter emitter, ConversationSessionManager.SessionHandle handle) {
         List<Map<String, Object>> results = new ArrayList<>();
 
+        // === 一次性解析 workspace 边界（循环外，避免 N 次 DB 查询） ===
+        WorkspaceBoundary boundary = resolveWorkspaceBoundary(conversationId);
+
         for (LlmResult.ToolCall tc : toolCalls) {
 
-            // === 安全评估（新增） ===
+            // === 安全评估 ===
             SecurityEvaluator.Result secResult = securityEvaluator.evaluate(
-                    tc.getName(), tc.getArguments(), userName, mode,
-                    SecurityEvaluator.WorkspaceBoundary.NONE);
+                    tc.getName(), tc.getArguments(), userName, mode, boundary);
 
             if (secResult.decision() == SecurityEvaluator.Decision.BLOCK) {
                 // HARD BLOCK → 拒绝
