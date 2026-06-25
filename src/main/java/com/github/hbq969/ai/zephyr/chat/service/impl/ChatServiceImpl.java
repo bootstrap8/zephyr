@@ -11,6 +11,8 @@ import com.github.hbq969.ai.zephyr.chat.service.ChatService;
 import com.github.hbq969.ai.zephyr.chat.service.ContextBuilder;
 import com.github.hbq969.ai.zephyr.chat.service.ConversationSessionManager;
 import com.github.hbq969.ai.zephyr.chat.service.BackgroundProcessManager;
+import com.github.hbq969.ai.zephyr.security.AuditLogger;
+import com.github.hbq969.ai.zephyr.security.SecurityEvaluator;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.ai.zephyr.memory.service.MemoryService;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
@@ -65,6 +67,17 @@ public class ChatServiceImpl implements ChatService {
     private ConversationSessionManager sessionManager;
     @Resource
     private BackgroundProcessManager backgroundProcessManager;
+    @Resource
+    private SecurityEvaluator securityEvaluator;
+    @Resource
+    private AuditLogger auditLogger;
+
+    // 绕过重试计数器（会话级）
+    private final Map<String, Integer> bypassAttempts = new ConcurrentHashMap<>();
+    // 待确认请求池
+    private final Map<String, ConfirmResult> confirmResults = new ConcurrentHashMap<>();
+
+    private record ConfirmResult(boolean allowed) {}
 
     @Override
     public SseEmitter send(String userName, String conversationId, String workspaceId,
@@ -205,7 +218,7 @@ public class ChatServiceImpl implements ChatService {
                         persistAssistantMessage(cid, result, msgSeq++);
 
                         List<String> enabledKbIds = cid != null ? knowledgeDao.queryKbIdsByConversation(cid) : List.of();
-                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid);
+                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid, emitter, handle);
                         handle.touch();
 
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
@@ -385,9 +398,68 @@ public class ChatServiceImpl implements ChatService {
         return "请调用 " + cmdName;
     }
 
-    private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls, String userName, List<String> enabledKbIds, String conversationId) {
+    private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls,
+            String userName, List<String> enabledKbIds, String conversationId,
+            SseEmitter emitter, ConversationSessionManager.SessionHandle handle) {
         List<Map<String, Object>> results = new ArrayList<>();
+
         for (LlmResult.ToolCall tc : toolCalls) {
+
+            // === 安全评估（新增） ===
+            SecurityEvaluator.Result secResult = securityEvaluator.evaluate(
+                    tc.getName(), tc.getArguments(), userName);
+
+            if (secResult.decision() == SecurityEvaluator.Decision.BLOCK) {
+                // HARD BLOCK → 拒绝
+                log.warn("[安全] HARD_BLOCK cid={}, tool={}, rule={}",
+                        conversationId, tc.getName(), secResult.rule());
+                results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+                        "操作被拒绝（安全规则: " + secResult.rule() + "）— " + secResult.reason()));
+                continue;
+            }
+
+            if (secResult.decision() == SecurityEvaluator.Decision.CONFIRM) {
+                // SOFT BLOCK → 推送确认事件，等待用户
+                String confirmId = userName + ":" + cn.hutool.core.util.IdUtil.fastSimpleUUID().substring(0, 12);
+                try {
+                    emitter.send(SseEmitter.event().name("message")
+                            .data(ChatEvent.builder()
+                                    .type("confirm_action")
+                                    .toolName(tc.getName())
+                                    .content(gson.toJson(Map.of(
+                                            "confirmId", confirmId,
+                                            "toolName", tc.getName(),
+                                            "toolInput", tc.getArguments(),
+                                            "rule", secResult.rule(),
+                                            "ruleDetail", secResult.reason()
+                                    )))
+                                    .build()));
+                } catch (IOException e) {
+                    log.warn("推送 confirm_action 事件失败: {}", e.getMessage());
+                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+                            "操作需确认但推送失败: " + e.getMessage()));
+                    continue;
+                }
+
+                // 阻塞等待用户确认
+                ConfirmResult confirm = waitForUserConfirm(confirmId,
+                        cfg.getSecurity().getConfirmTimeoutSeconds());
+
+                if (confirm == null || !confirm.allowed()) {
+                    log.info("[安全] 用户拒绝 SOFT_BLOCK cid={}, tool={}",
+                            conversationId, tc.getName());
+                    auditLogger.log("USER_DENIED", tc.getName(), "DENIED",
+                            secResult.rule(), userName);
+                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+                            "操作已被用户拒绝: " + secResult.reason()));
+                    continue;
+                }
+
+                log.info("[安全] 用户确认 SOFT_BLOCK cid={}, tool={}",
+                        conversationId, tc.getName());
+            }
+
+            // === 执行工具（原有逻辑） ===
             String content;
             try {
                 content = switch (tc.getName()) {
@@ -404,9 +476,59 @@ public class ChatServiceImpl implements ChatService {
             }
             content = sanitizeToolOutput(content);
             results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
-                    content.length() > cfg.getChat().getToolOutput().getMaxLength() ? content.substring(0, cfg.getChat().getToolOutput().getMaxLength()) + "..." : content));
+                    content.length() > cfg.getChat().getToolOutput().getMaxLength()
+                            ? content.substring(0, cfg.getChat().getToolOutput().getMaxLength()) + "..."
+                            : content));
         }
+
+        // 检查绕过重试
+        String cid = conversationId;
+        if (!results.isEmpty()) {
+            boolean hasBlock = results.stream().anyMatch(r ->
+                    r.get("content").toString().contains("操作被拒绝（安全规则"));
+            if (hasBlock) {
+                int attempts = bypassAttempts.merge(cid, 1, Integer::sum);
+                if (attempts >= cfg.getSecurity().getMaxBypassAttempts()) {
+                    log.warn("[安全] 连续 {} 次 HARD_BLOCK 绕过尝试，强制终止 cid={}", attempts, cid);
+                    bypassAttempts.remove(cid);
+                    throw new ConversationSessionManager.CancelSessionException(cid);
+                }
+            } else {
+                bypassAttempts.remove(cid);
+            }
+        }
+
         return results;
+    }
+
+    /**
+     * 阻塞等待用户确认。前端通过 /confirm 端点写入结果。
+     */
+    private ConfirmResult waitForUserConfirm(String confirmId, int timeoutSeconds) {
+        try {
+            synchronized (confirmResults) {
+                long deadline = System.currentTimeMillis() + timeoutSeconds * 1000L;
+                while (System.currentTimeMillis() < deadline) {
+                    ConfirmResult r = confirmResults.remove(confirmId);
+                    if (r != null) return r;
+                    confirmResults.wait(Math.min(1000, deadline - System.currentTimeMillis()));
+                }
+            }
+            log.warn("[安全] 确认超时 confirmId={}", confirmId);
+            auditLogger.log("TIMEOUT", "", "DENIED", "确认超时", "");
+            return null; // 超时 = 拒绝
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
+    }
+
+    /** 供 ChatCtrl 调用，写入用户确认结果 */
+    public void confirm(String confirmId, boolean allowed) {
+        synchronized (confirmResults) {
+            confirmResults.put(confirmId, new ConfirmResult(allowed));
+            confirmResults.notifyAll();
+        }
     }
 
 
