@@ -113,6 +113,7 @@ const riskColor = (rule: string): string => {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 13px;
+  word-break: break-all;
 }
 .confirm-input pre {
   background: var(--el-fill-color-light);
@@ -122,10 +123,13 @@ const riskColor = (rule: string): string => {
   overflow-x: auto;
   max-height: 160px;
   margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 .confirm-reason {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+  word-break: break-all;
 }
 .label {
   color: var(--el-text-color-secondary);
