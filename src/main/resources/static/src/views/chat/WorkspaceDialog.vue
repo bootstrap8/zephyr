@@ -51,6 +51,7 @@ function loadRoot() {
         const rootPath = currentEntry ? currentEntry.path : '/'
         const items = body.filter((d: any) => d.name !== '.' && d.name !== '..').map(toDirNode)
         treeRoot.value = { name: rootPath, path: rootPath, children: items, expanded: true, loaded: true }
+        if (!path.value) path.value = rootPath
       }
     })
     .catch(() => msg('加载目录失败', 'error'))
