@@ -1,5 +1,6 @@
 package com.github.hbq969.ai.zephyr.mcp.utils;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 import com.github.hbq969.ai.zephyr.mcp.dao.McpDao;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
@@ -25,7 +26,7 @@ public class McpConnectionManager {
 
 
 
-    private static final Path PIDS_DIR = Paths.get(System.getProperty("user.home"), ".zephyr/mcp-pids");
+    private static final Path PIDS_DIR = Paths.get(System.getProperty("user.home"), MCP_PIDS_DIR);
 
     private final Map<String, McpConnection> connections = new ConcurrentHashMap<>();
 
@@ -53,7 +54,7 @@ public class McpConnectionManager {
         } catch (Exception e) {
             log.warn("创建 MCP PID 目录失败: {}", PIDS_DIR, e);
         }
-        File[] files = PIDS_DIR.toFile().listFiles((d, n) -> n.endsWith(".pid"));
+        File[] files = PIDS_DIR.toFile().listFiles((d, n) -> n.endsWith(EXT_PID));
         if (files == null || files.length == 0) {
             log.info("无孤儿 MCP 进程需要清理");
         } else {

@@ -28,6 +28,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Service
 @Slf4j
 public class SkillServiceImpl implements SkillService {
@@ -155,7 +157,7 @@ public class SkillServiceImpl implements SkillService {
         String source = body.get("source");
         String url = body.getOrDefault("url", "");
         String path = body.getOrDefault("path", "");
-        String branch = body.getOrDefault("branch", "main");
+        String branch = body.getOrDefault("branch", DEFAULT_GIT_BRANCH);
         String scope = body.getOrDefault("scope", SCOPE_USER);
         if (SCOPE_SHARED.equals(scope)) checkSharedManage(userName);
 
@@ -168,22 +170,21 @@ public class SkillServiceImpl implements SkillService {
                     break;
                 case "url":
                     tmpDir = Files.createTempDirectory("skill-url-");
-                    if (url.endsWith(".md")) {
+                    if (url.endsWith(EXT_MD)) {
                         downloadMd(url, tmpDir);
                     } else {
                         downloadAndExtract(url, tmpDir);
                     }
                     break;
                 case "local":
-                    if (path.endsWith(".md")) {
+                    if (path.endsWith(EXT_MD)) {
                         tmpDir = Files.createTempDirectory("skill-local-md-");
                         Path srcFile = Paths.get(path);
                         if (!Files.isRegularFile(srcFile)) {
                             throw new IllegalArgumentException("文件不存在: " + path);
                         }
                         Files.copy(srcFile, tmpDir.resolve("SKILL.md"));
-                    } else if (path.endsWith(".zip") || path.endsWith(".tar.gz")
-                            || path.endsWith(".tgz") || path.endsWith(".tar")) {
+                    } else if (ARCHIVE_EXTENSIONS.stream().anyMatch(ext -> path.endsWith(ext))) {
                         tmpDir = Files.createTempDirectory("skill-local-archive-");
                         extractArchive(Paths.get(path).toFile(), tmpDir);
                     } else {
@@ -224,10 +225,8 @@ public class SkillServiceImpl implements SkillService {
         if (originalFilename == null) {
             throw new IllegalArgumentException("文件名为空");
         }
-        boolean isArchive = originalFilename.endsWith(".zip")
-                || originalFilename.endsWith(".tar.gz") || originalFilename.endsWith(".tgz")
-                || originalFilename.endsWith(".tar");
-        boolean isSkillMd = originalFilename.endsWith(".md");
+        boolean isArchive = ARCHIVE_EXTENSIONS.stream().anyMatch(ext -> originalFilename.endsWith(ext));
+        boolean isSkillMd = originalFilename.endsWith(EXT_MD);
         if (!isArchive && !isSkillMd) {
             throw new IllegalArgumentException("仅支持 .zip、.tar、.tar.gz、.tgz、.md 格式");
         }
@@ -406,7 +405,7 @@ public class SkillServiceImpl implements SkillService {
         Map<String, String> meta = Files.exists(skillMd) ? parseSkillMd(skillMd) : Collections.emptyMap();
 
         SkillConfigEntity entity = new SkillConfigEntity();
-        entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
+        entity.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         entity.setUserName(userName);
         entity.setSkillName(skillName);
         entity.setDisplayName(meta.getOrDefault("name", skillName));
@@ -574,7 +573,7 @@ public class SkillServiceImpl implements SkillService {
 
     private void runGitClone(String url, String branch, Path targetDir) {
         try {
-            ProcessBuilder pb = new ProcessBuilder("git", "clone", "--depth", "1", "--branch", branch, url, targetDir.toString());
+            ProcessBuilder pb = new ProcessBuilder(GIT_COMMAND, "clone", "--depth", GIT_CLONE_DEPTH, "--branch", branch, url, targetDir.toString());
             pb.inheritIO();
             Process p = pb.start();
             int code = p.waitFor();
@@ -653,9 +652,9 @@ public class SkillServiceImpl implements SkillService {
 
     private void extractArchive(File archive, Path targetDir) {
         String name = archive.getName().toLowerCase();
-        if (name.endsWith(".zip")) {
+        if (name.endsWith(EXT_ZIP)) {
             ZipUtil.unzip(archive, targetDir.toFile());
-        } else if (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".tar")) {
+        } else if (name.endsWith(EXT_TAR_GZ) || name.endsWith(EXT_TGZ) || name.endsWith(EXT_TAR)) {
             try {
                 ProcessBuilder pb = new ProcessBuilder("tar", "-xf", archive.getAbsolutePath(), "-C", targetDir.toString());
                 pb.inheritIO();

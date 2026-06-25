@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.chat.service.impl;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import cn.hutool.core.lang.UUID;
 import com.github.hbq969.ai.zephyr.chat.client.LlmClient;
 import com.github.hbq969.ai.zephyr.chat.dao.ChatDao;
@@ -88,7 +90,7 @@ public class ChatServiceImpl implements ChatService {
         // === 同步阶段：解析 conversationId、注册 SessionHandle、创建 SseEmitter ===
         String cid = (conversationId != null && !conversationId.isEmpty())
                 ? conversationId
-                : UUID.fastUUID().toString(true).substring(0, 12);
+                : UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH);
 
         // 解析 workspace 路径
         String workspacePath;
@@ -141,7 +143,7 @@ public class ChatServiceImpl implements ChatService {
                     ConversationEntity conv = new ConversationEntity();
                     conv.setId(cid);
                     conv.setUserName(userName);
-                    conv.setTitle(message.length() > 30 ? message.substring(0, 30) : message);
+                    conv.setTitle(message.length() > TITLE_MAX_LENGTH ? message.substring(0, TITLE_MAX_LENGTH) : message);
                     conv.setWorkspaceId(workspaceId);
                     conv.setCreatedAt(now);
                     conv.setUpdatedAt(now);
@@ -191,7 +193,7 @@ public class ChatServiceImpl implements ChatService {
 
                 // 3. 持久化 user 消息
                 MessageEntity userMsg = new MessageEntity();
-                userMsg.setId(UUID.fastUUID().toString(true).substring(0, 12));
+                userMsg.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
                 userMsg.setConversationId(cid);
                 userMsg.setRole("user");
                 userMsg.setContent(message);
@@ -216,13 +218,13 @@ public class ChatServiceImpl implements ChatService {
 
                     if (result.hasToolCalls()) {
                         Map<String, Object> assistantMsg = new LinkedHashMap<>();
-                        assistantMsg.put("role", "assistant");
+                        assistantMsg.put("role", ROLE_ASSISTANT);
                         assistantMsg.put("content", result.getContent() != null ? result.getContent() : "");
                         if (result.getToolCalls() != null) {
                             assistantMsg.put("tool_calls", result.getToolCalls().stream().map(tc -> {
                                 Map<String, Object> m = new LinkedHashMap<>();
                                 m.put("id", tc.getId());
-                                m.put("type", "function");
+                                m.put("type", TOOL_CALL_TYPE_FUNCTION);
                                 m.put("function", Map.of("name", tc.getName(), "arguments", gson.toJson(tc.getArguments())));
                                 return m;
                             }).toList());
@@ -254,7 +256,7 @@ public class ChatServiceImpl implements ChatService {
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
                             LlmResult.ToolCall tc = result.getToolCalls().get(i);
                             MessageEntity toolMsg = new MessageEntity();
-                            toolMsg.setId(UUID.fastUUID().toString(true).substring(0, 12));
+                            toolMsg.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
                             toolMsg.setConversationId(cid);
                             toolMsg.setRole("tool");
                             toolMsg.setContent(toolResults.get(i).get("content").toString());
@@ -310,7 +312,7 @@ public class ChatServiceImpl implements ChatService {
 
     private void persistAssistantMessage(String cid, LlmResult result, long now) {
         MessageEntity msg = new MessageEntity();
-        msg.setId(cn.hutool.core.lang.UUID.fastUUID().toString(true).substring(0, 12));
+        msg.setId(cn.hutool.core.lang.UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         msg.setConversationId(cid);
         msg.setRole("assistant");
         msg.setContent(result.getContent() != null ? result.getContent().trim() : "");
@@ -460,11 +462,11 @@ public class ChatServiceImpl implements ChatService {
 
             if (secResult.decision() == SecurityEvaluator.Decision.CONFIRM) {
                 // SOFT BLOCK → 推送确认事件，等待用户
-                String confirmId = userName + ":" + cn.hutool.core.util.IdUtil.fastSimpleUUID().substring(0, 12);
+                String confirmId = userName + ":" + cn.hutool.core.util.IdUtil.fastSimpleUUID().substring(0, SHORT_ID_LENGTH);
                 try {
                     emitter.send(SseEmitter.event().name("message")
                             .data(ChatEvent.builder()
-                                    .type("confirm_action")
+                                    .type(SSE_EVENT_CONFIRM_ACTION)
                                     .toolName(tc.getName())
                                     .content(gson.toJson(Map.of(
                                             "confirmId", confirmId,
@@ -562,7 +564,7 @@ public class ChatServiceImpl implements ChatService {
                 while (System.currentTimeMillis() < deadline) {
                     ConfirmResult r = confirmResults.remove(confirmId);
                     if (r != null) return r;
-                    confirmResults.wait(Math.min(1000, deadline - System.currentTimeMillis()));
+                    confirmResults.wait(Math.min(WAIT_POLL_INTERVAL_MS, deadline - System.currentTimeMillis()));
                 }
             }
             log.warn("[安全] 确认超时 confirmId={}", confirmId);
@@ -598,7 +600,7 @@ public class ChatServiceImpl implements ChatService {
         for (int i = 0; i < sampleLen; i++) {
             char c = s.charAt(i);
             // 控制字符（排除常见的空白字符）视为二进制
-            if (c < 0x20 && c != '\t' && c != '\n' && c != '\r') {
+            if (c < MIN_PRINTABLE && c != '\t' && c != '\n' && c != '\r') {
                 binaryCount++;
             }
         }
@@ -611,14 +613,14 @@ public class ChatServiceImpl implements ChatService {
             int totalPrintable = 0;
             for (int i = 0; i < s.length(); i++) {
                 char c = s.charAt(i);
-                boolean printable = (c >= 0x20 && c <= 0x7E) || c == '\t' || c == '\n' || c == '\r'
-                        || (c >= 0x80 && c <= 0xFF)  // Latin-1 补充
+                boolean printable = (c >= MIN_PRINTABLE && c <= MAX_PRINTABLE) || c == '\t' || c == '\n' || c == '\r'
+                        || (c >= MIN_LATIN1 && c <= MAX_LATIN1)
                         || Character.isLetterOrDigit(c) || Character.getType(c) == Character.OTHER_PUNCTUATION;
                 if (printable) {
                     buf.append(c);
                     totalPrintable++;
                 } else {
-                    if (buf.length() >= 20) {
+                    if (buf.length() >= MIN_PRINTABLE_RUN_LENGTH) {
                         if (!result.isEmpty()) result.append("\n...\n");
                         result.append(buf);
                     }
@@ -649,7 +651,7 @@ public class ChatServiceImpl implements ChatService {
         if (result != null) return result;
 
         // 2. fallback 到共享 skill
-        Path sharedSkillMd = Paths.get(cfg.getSkills().getHome(), "share", relativePath, "SKILL.md");
+        Path sharedSkillMd = Paths.get(cfg.getSkills().getHome(), SHARE_DIR_NAME, relativePath, SKILL_FILE_NAME);
         result = readSkillFile(sharedSkillMd);
         if (result != null) return result;
 
@@ -660,7 +662,7 @@ public class ChatServiceImpl implements ChatService {
         if (Files.exists(skillMd)) {
             try {
                 String raw = Files.readString(skillMd);
-                return raw.replaceFirst("(?s)^---\\s*\\n.*?\\n---\\s*\\n", "");
+                return raw.replaceFirst(FRONTMATTER_REGEX.pattern(), "");
             } catch (IOException e) {
                 return "读取技能失败: " + e.getMessage();
             }
@@ -671,10 +673,10 @@ public class ChatServiceImpl implements ChatService {
                 java.io.File[] subDirs = parent.toFile().listFiles(java.io.File::isDirectory);
                 if (subDirs != null) {
                     for (java.io.File d : subDirs) {
-                        Path nested = d.toPath().resolve("SKILL.md");
+                        Path nested = d.toPath().resolve(SKILL_FILE_NAME);
                         if (Files.exists(nested)) {
                             String raw = Files.readString(nested);
-                            return raw.replaceFirst("(?s)^---\\s*\\n.*?\\n---\\s*\\n", "");
+                            return raw.replaceFirst(FRONTMATTER_REGEX.pattern(), "");
                         }
                     }
                 }
@@ -780,9 +782,9 @@ public class ChatServiceImpl implements ChatService {
         }
         String originalName = file.getOriginalFilename();
         if (originalName == null || originalName.isBlank()) {
-            originalName = "untitled";
+            originalName = DEFAULT_FILENAME;
         }
-        String safeName = originalName.replaceAll("[/\\\\:<>\"|?*]", "_");
+        String safeName = originalName.replaceAll(FILENAME_SANITIZE_REGEX.pattern(), "_");
         long ts = System.currentTimeMillis() / 1000;
         String filename = ts + "_" + safeName;
         Path uploadsDir = Paths.get(ws.getPath(), cfg.getChat().getUpload().getDirectoryName());
@@ -848,7 +850,7 @@ public class ChatServiceImpl implements ChatService {
 
     private String executeShell(Map<String, Object> args, String userName, String conversationId) {
         String mode = cfg.getShell().getMode();
-        if ("disabled".equals(mode)) {
+        if (SHELL_MODE_DISABLED.equals(mode)) {
             return "Shell 命令执行已禁用";
         }
 
@@ -860,7 +862,7 @@ public class ChatServiceImpl implements ChatService {
         boolean background = args.containsKey("background") && Boolean.TRUE.equals(args.get("background"));
 
         // 命令白名单校验（程序化硬约束）
-        if (!"allowAll".equals(mode)) {
+        if (!SHELL_MODE_ALLOW_ALL.equals(mode)) {
             String cmdName = command.split("\\s+", 2)[0];
             int lastSlash = cmdName.lastIndexOf('/');
             if (lastSlash >= 0) {
@@ -890,7 +892,7 @@ public class ChatServiceImpl implements ChatService {
             }
             try {
                 // 双引号包裹路径防空格，且允许 $$ 展开（单引号会阻止 shell 变量展开）
-                Process p = new ProcessBuilder("sh", "-c",
+                Process p = new ProcessBuilder(SHELL_COMMAND, SHELL_COMMAND_ARG,
                         "exec >\"" + workspacePath + "/.zephyr-logs/$$.log\" 2>&1; " + command)
                         .directory(new java.io.File(workspacePath))
                         .redirectErrorStream(false)
@@ -927,7 +929,7 @@ public class ChatServiceImpl implements ChatService {
                 if (truncated) {
                     output += "\n\n[输出已截断，超过 " + maxBytes + " 字节]";
                 }
-                return "退出码: " + p.exitValue() + "\n" + output;
+                return EXIT_CODE_PREFIX + p.exitValue() + "\n" + output;
             } catch (Exception e) {
                 slot.markFailed();
                 if (p != null) {

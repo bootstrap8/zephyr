@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Slf4j
 @Component
 public class BackgroundProcessManager {
@@ -134,10 +136,10 @@ public class BackgroundProcessManager {
     void cleanupStaleLogs() {
         // 清理所有 workspace 下的残留 .zephyr-logs 文件（进程已随上次 JVM 退出终止）
         try {
-            Path home = Paths.get(System.getProperty("user.home"), ".zephyr", "workspaces");
+            Path home = Paths.get(System.getProperty("user.home"), ZEPHYR_DIR, "workspaces");
             if (Files.isDirectory(home)) {
                 Files.list(home).forEach(wsDir -> {
-                    Path logsDir = wsDir.resolve(".zephyr-logs");
+                    Path logsDir = wsDir.resolve(ZEPHYR_LOGS_DIR);
                     if (Files.isDirectory(logsDir)) {
                         try (DirectoryStream<Path> ds = Files.newDirectoryStream(logsDir, "*.log")) {
                             for (Path f : ds) {
@@ -163,7 +165,7 @@ public class BackgroundProcessManager {
 
     private void cleanupLogFile(TrackedProcess tp) {
         try {
-            Path logFile = Paths.get(tp.getWorkspacePath(), ".zephyr-logs", tp.getPid() + ".log");
+            Path logFile = Paths.get(tp.getWorkspacePath(), ZEPHYR_LOGS_DIR, tp.getPid() + EXT_LOG);
             Files.deleteIfExists(logFile);
         } catch (Exception e) {
             log.debug("[后台进程] 清理日志文件失败 pid={}", tp.getPid());

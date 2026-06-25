@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,16 +18,16 @@ import java.util.stream.Collectors;
 public class TextCleaner {
 
     /** 控制字符正则（保留 \n \r \t），用于替换为空格 */
-    private static final Pattern CONTROL_CHAR = Pattern.compile("[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f-\\x9f]");
+    private static final Pattern CONTROL_CHAR = CONTROL_CHAR_PATTERN;
 
     /** 连续空白（空格/制表符） */
-    private static final Pattern MULTI_SPACE = Pattern.compile("[ \\t]+");
+    private static final Pattern MULTI_SPACE = MULTI_SPACE_PATTERN;
 
     /** 3 个及以上连续换行 */
-    private static final Pattern MULTI_NEWLINE = Pattern.compile("\\n{3,}");
+    private static final Pattern MULTI_NEWLINE = MULTI_NEWLINE_PATTERN;
 
     /** 纯标点/数字/空白行（\\p{P} 已覆盖中英文标点，\\p{Z} 覆盖全角空格） */
-    private static final Pattern MEANINGLESS_LINE = Pattern.compile("^[\\p{P}\\p{S}\\d\\s\\p{Z}]*$");
+    private static final Pattern MEANINGLESS_LINE = MEANINGLESS_LINE_PATTERN;
 
     /** 最短有效行长度 */
     private static final int MIN_LINE_LENGTH = 3;
@@ -80,7 +82,7 @@ public class TextCleaner {
                 .filter(c -> {
                     // 长度阈值：至少 20 字符
                     int len = c.codePointCount(0, c.length());
-                    if (len < 20) return false;
+                    if (len < MIN_CHUNK_CODE_POINTS) return false;
                     // 信息密度：有效字符（非标点非空白）/ 总长度 >= 40%
                     int meaningful = 0;
                     for (int i = 0; i < c.length(); ) {

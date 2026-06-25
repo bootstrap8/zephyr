@@ -1,5 +1,6 @@
 package com.github.hbq969.ai.zephyr.mcp.utils;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
 import com.google.gson.Gson;
@@ -83,20 +84,20 @@ public class McpClient {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
 
-            int timeoutSec = 30;
+            int timeoutSec = MCP_DISCOVER_TIMEOUT_SECONDS;
 
             // 1. send initialize
             JsonObject initReq = new JsonObject();
-            initReq.addProperty("jsonrpc", "2.0");
+            initReq.addProperty(JSONRPC_FIELD, JSONRPC_VERSION);
             initReq.addProperty("id", 1);
-            initReq.addProperty("method", "initialize");
+            initReq.addProperty("method", MCP_METHOD_INITIALIZE);
             JsonObject initParams = new JsonObject();
-            initParams.addProperty("protocolVersion", "2024-11-05");
+            initParams.addProperty("protocolVersion", MCP_PROTOCOL_VERSION);
             JsonObject capabilities = new JsonObject();
             initParams.add("capabilities", capabilities);
             JsonObject clientInfo = new JsonObject();
-            clientInfo.addProperty("name", "zephyr");
-            clientInfo.addProperty("version", "1.0.0");
+            clientInfo.addProperty("name", MCP_CLIENT_NAME);
+            clientInfo.addProperty("version", MCP_CLIENT_VERSION);
             initParams.add("clientInfo", clientInfo);
             initReq.add("params", initParams);
 
@@ -105,13 +106,13 @@ public class McpClient {
             if (resp == null) {
                 log.warn("stdio MCP initialize 超时({}s): server={}, pid={}, alive={}, stderrLen={}, stderr={}",
                         timeoutSec, server.getName(), proc.pid(), proc.isAlive(), stderrInfo.length(),
-                        stderrInfo.isEmpty() ? "(空)" : stderrInfo.substring(0, Math.min(500, stderrInfo.length())));
+                        stderrInfo.isEmpty() ? "(空)" : stderrInfo.substring(0, Math.min(MCP_STDERR_TRUNCATE, stderrInfo.length())));
                 return tools;
             }
             if (!resp.contains("\"id\":1")) {
                 if (!stderrInfo.isEmpty()) {
                     log.warn("stdio MCP initialize 响应异常: server={}, resp={}, stderr={}", server.getName(),
-                            resp.substring(0, Math.min(200, resp.length())),
+                            resp.substring(0, Math.min(MCP_RESP_TRUNCATE, resp.length())),
                             stderrInfo.substring(0, Math.min(300, stderrInfo.length())));
                 } else {
                     log.warn("stdio MCP initialize 响应异常: server={}, resp={}", server.getName(),
@@ -122,15 +123,15 @@ public class McpClient {
 
             // 2. send initialized notification
             JsonObject initialized = new JsonObject();
-            initialized.addProperty("jsonrpc", "2.0");
+            initialized.addProperty(JSONRPC_FIELD, JSONRPC_VERSION);
             initialized.addProperty("method", "notifications/initialized");
             writeMsg(writer, gson.toJson(initialized));
 
             // 3. send tools/list
             JsonObject listReq = new JsonObject();
-            listReq.addProperty("jsonrpc", "2.0");
+            listReq.addProperty(JSONRPC_FIELD, JSONRPC_VERSION);
             listReq.addProperty("id", 2);
-            listReq.addProperty("method", "tools/list");
+            listReq.addProperty("method", MCP_METHOD_TOOLS_LIST);
             listReq.add("params", new JsonObject());
 
             resp = sendAndReadJsonWithTimeout(reader, writer, gson.toJson(listReq), timeoutSec);
@@ -152,16 +153,16 @@ public class McpClient {
         try {
             // initialize
             JsonObject initReq = new JsonObject();
-            initReq.addProperty("jsonrpc", "2.0");
+            initReq.addProperty(JSONRPC_FIELD, JSONRPC_VERSION);
             initReq.addProperty("id", 1);
-            initReq.addProperty("method", "initialize");
+            initReq.addProperty("method", MCP_METHOD_INITIALIZE);
             JsonObject initParams = new JsonObject();
-            initParams.addProperty("protocolVersion", "2024-11-05");
+            initParams.addProperty("protocolVersion", MCP_PROTOCOL_VERSION);
             JsonObject capabilities = new JsonObject();
             initParams.add("capabilities", capabilities);
             JsonObject clientInfo = new JsonObject();
-            clientInfo.addProperty("name", "zephyr");
-            clientInfo.addProperty("version", "1.0.0");
+            clientInfo.addProperty("name", MCP_CLIENT_NAME);
+            clientInfo.addProperty("version", MCP_CLIENT_VERSION);
             initParams.add("clientInfo", clientInfo);
             initReq.add("params", initParams);
 
@@ -175,9 +176,9 @@ public class McpClient {
 
             // tools/list
             JsonObject listReq = new JsonObject();
-            listReq.addProperty("jsonrpc", "2.0");
+            listReq.addProperty(JSONRPC_FIELD, JSONRPC_VERSION);
             listReq.addProperty("id", 2);
-            listReq.addProperty("method", "tools/list");
+            listReq.addProperty("method", MCP_METHOD_TOOLS_LIST);
             listReq.add("params", new JsonObject());
 
             String[] listResult = httpPost(server.getUrl(), server.getHeaders(), gson.toJson(listReq), sessionId);
@@ -217,12 +218,12 @@ public class McpClient {
 
     private static String readMsgJson(BufferedReader reader) throws Exception {
         StringBuilder skipped = new StringBuilder();
-        for (int i = 0; i < 200; i++) {
+        for (int i = 0; i < MCP_READ_LOOP_MAX; i++) {
             String line = reader.readLine();
             if (line == null) return null;
             String trimmed = line.trim();
             if (trimmed.startsWith("{")) return trimmed;
-            if (!trimmed.isEmpty() && skipped.length() < 500) {
+            if (!trimmed.isEmpty() && skipped.length() < MCP_STDERR_TRUNCATE) {
                 if (!skipped.isEmpty()) skipped.append(" | ");
                 skipped.append(trimmed);
             }
@@ -250,15 +251,15 @@ public class McpClient {
         }
 
         conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept", "application/json, text/event-stream");
+        conn.setRequestProperty(CONTENT_TYPE_HEADER, APPLICATION_JSON);
+        conn.setRequestProperty("Accept", ACCEPT_SSE_HEADER);
         conn.setDoOutput(true);
         conn.setInstanceFollowRedirects(true);
-        conn.setConnectTimeout(8000);
-        conn.setReadTimeout(15000);
+        conn.setConnectTimeout(MCP_SSE_CONNECT_TIMEOUT_MS);
+        conn.setReadTimeout(MCP_SSE_READ_TIMEOUT_MS);
 
         if (sessionId != null && !sessionId.isEmpty()) {
-            conn.setRequestProperty("Mcp-Session-Id", sessionId);
+            conn.setRequestProperty(MCP_SESSION_ID_HEADER, sessionId);
         }
 
         if (headersStr != null && !headersStr.isEmpty()) {
@@ -303,7 +304,7 @@ public class McpClient {
         if (raw == null) return null;
         // SSE format: "data:{json}"
         for (String line : raw.split("\n")) {
-            if (line.startsWith("data:")) {
+            if (line.startsWith(SSE_DATA_PREFIX)) {
                 return line.substring(5).trim();
             }
         }

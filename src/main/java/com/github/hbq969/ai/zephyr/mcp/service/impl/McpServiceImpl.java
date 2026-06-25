@@ -1,5 +1,6 @@
 package com.github.hbq969.ai.zephyr.mcp.service.impl;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 import cn.hutool.core.lang.UUID;
 import com.github.hbq969.ai.zephyr.mcp.dao.McpDao;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
@@ -74,17 +75,17 @@ public class McpServiceImpl implements McpService {
         }
 
         McpServerEntity entity = new McpServerEntity();
-        entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
+        entity.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         entity.setUserName(userName);
         entity.setName(body.get("name"));
-        entity.setTransport(body.getOrDefault("transport", "stdio"));
+        entity.setTransport(body.getOrDefault("transport", TRANSPORT_STDIO));
         entity.setCommand(body.getOrDefault("command", ""));
         entity.setArgs(body.getOrDefault("args", ""));
         entity.setEnvVars(body.getOrDefault("envVars", ""));
         entity.setUrl(body.getOrDefault("url", ""));
         String headers = body.getOrDefault("headers", "");
         entity.setHeaders(headers.isEmpty() ? "" : encryptHeaders(headers));
-        entity.setStatus("disconnected");
+        entity.setStatus(STATUS_DISCONNECTED);
         entity.setScope(scope);
         long now = System.currentTimeMillis() / 1000;
         entity.setCreatedAt(now);
@@ -106,7 +107,7 @@ public class McpServiceImpl implements McpService {
         entity.setId(id);
         entity.setUserName(userName);
         entity.setName(body.get("name"));
-        entity.setTransport(body.getOrDefault("transport", "stdio"));
+        entity.setTransport(body.getOrDefault("transport", TRANSPORT_STDIO));
         entity.setCommand(body.getOrDefault("command", ""));
         entity.setArgs(body.getOrDefault("args", ""));
         entity.setEnvVars(body.getOrDefault("envVars", ""));
@@ -203,26 +204,26 @@ public class McpServiceImpl implements McpService {
 
             if (discovered.isEmpty()) {
                 log.warn("MCP 连接失败，未发现工具: server={}", server.getName());
-                mcpDao.updateServerStatus(id, "error", userName);
+                mcpDao.updateServerStatus(id, STATUS_ERROR, userName);
                 connectionManager.removeConnection(userName, id);
                 return;
             }
 
             long now = System.currentTimeMillis() / 1000;
             for (McpToolEntity t : discovered) {
-                t.setId(UUID.fastUUID().toString(true).substring(0, 12));
+                t.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
                 t.setUserName(server.getUserName());
                 t.setServerId(id);
                 t.setCreatedAt(now);
                 mcpDao.insertTool(t);
             }
 
-            mcpDao.updateServerStatus(id, "connected", userName);
+            mcpDao.updateServerStatus(id, STATUS_CONNECTED, userName);
             log.info("MCP 连接成功: name={}, 发现 {} 个工具, user={}",
                     server.getName(), discovered.size(), userName);
         } catch (RuntimeException e) {
             log.warn("MCP 连接失败: name={}, error={}", server.getName(), e.getMessage());
-            mcpDao.updateServerStatus(id, "error", userName);
+            mcpDao.updateServerStatus(id, STATUS_ERROR, userName);
             if (conn != null) {
                 connectionManager.removeConnection(userName, id);
             }
@@ -262,13 +263,13 @@ public class McpServiceImpl implements McpService {
         String toolUser = server != null ? server.getUserName() : userName;
 
         McpToolEntity entity = new McpToolEntity();
-        entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
+        entity.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         entity.setUserName(toolUser);
         entity.setServerId(serverId);
         entity.setToolName(body.get("toolName"));
         entity.setDescription(body.getOrDefault("description", ""));
         entity.setEnabled(1);
-        entity.setSource("manual");
+        entity.setSource(SOURCE_MANUAL);
         entity.setCreatedAt(System.currentTimeMillis() / 1000);
         mcpDao.insertTool(entity);
         log.info("MCP 工具已手动添加: toolName={}, serverId={}, user={}",
@@ -364,7 +365,7 @@ public class McpServiceImpl implements McpService {
     }
 
     private String maskHeaders(String encrypted) {
-        if (encrypted.length() <= 8) return "****";
-        return encrypted.substring(0, 4) + "****" + encrypted.substring(encrypted.length() - 4);
+        if (encrypted.length() <= MASK_THRESHOLD_LENGTH) return MASK_STRING;
+        return encrypted.substring(0, MASK_PREFIX_LENGTH) + MASK_STRING + encrypted.substring(encrypted.length() - MASK_SUFFIX_LENGTH);
     }
 }

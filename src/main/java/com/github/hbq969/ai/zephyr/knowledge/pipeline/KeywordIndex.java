@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

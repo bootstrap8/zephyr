@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import java.util.*;
 
 public class RrfMerger {
@@ -11,7 +13,7 @@ public class RrfMerger {
     }
 
     public RrfMerger() {
-        this(60);
+        this(RRF_DEFAULT_K);
     }
 
     /**

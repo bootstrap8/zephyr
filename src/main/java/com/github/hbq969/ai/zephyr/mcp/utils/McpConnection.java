@@ -1,5 +1,6 @@
 package com.github.hbq969.ai.zephyr.mcp.utils;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
 import com.google.gson.Gson;
@@ -26,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class McpConnection {
 
     private static final Gson gson = new Gson();
-    private static final AtomicInteger requestId = new AtomicInteger(100);
+    private static final AtomicInteger requestId = new AtomicInteger(MCP_REQUEST_ID_INIT);
 
     public enum Type { STDIO, HTTP }
 
@@ -280,7 +281,7 @@ public class McpConnection {
     private String readMsg() throws Exception {
         CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
             try {
-                for (int i = 0; i < 200; i++) {
+                for (int i = 0; i < MCP_READ_LOOP_MAX; i++) {
                     String line = reader.readLine();
                     if (line == null) return null;
                     String trimmed = line.trim();
@@ -311,11 +312,11 @@ public class McpConnection {
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Accept", "application/json, text/event-stream");
         conn.setDoOutput(true);
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(30000);
+        conn.setConnectTimeout(MCP_HTTP_CONNECT_TIMEOUT_MS);
+        conn.setReadTimeout(MCP_HTTP_READ_TIMEOUT_MS);
 
         if (sessionId != null) {
-            conn.setRequestProperty("Mcp-Session-Id", sessionId);
+            conn.setRequestProperty(MCP_SESSION_ID_HEADER, sessionId);
         }
         if (server.getHeaders() != null && !server.getHeaders().isEmpty()) {
             for (String line : server.getHeaders().split("\n")) {
@@ -345,8 +346,8 @@ public class McpConnection {
     }
 
     private Path pidFilePath() {
-        return Paths.get(System.getProperty("user.home"), ".zephyr/mcp-pids",
-                server.getUserName() + "-" + server.getId() + ".pid");
+        return Paths.get(System.getProperty("user.home"), MCP_PIDS_DIR,
+                server.getUserName() + "-" + server.getId() + EXT_PID);
     }
 
     private void touch() {

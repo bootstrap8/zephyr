@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.chat.service;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -81,7 +83,7 @@ public class ConversationSessionManager {
         sessions.values().forEach(SessionHandle::cancel);
         executor.shutdown();
         try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(SHUTDOWN_AWAIT_SECONDS, TimeUnit.SECONDS)) {
                 executor.shutdownNow();
             }
         } catch (InterruptedException e) {

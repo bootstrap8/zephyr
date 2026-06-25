@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 
 @Component
 @Slf4j
@@ -56,8 +57,8 @@ public class ContextBuilder {
     private com.github.hbq969.ai.zephyr.security.PromptLoader promptLoader;
 
     private String fileSystemSecurityPrompt(String mode) {
-        if ("bypass".equalsIgnoreCase(mode)) return promptLoader.load("modes/bypass.md");
-        if ("acceptEdits".equalsIgnoreCase(mode)) return promptLoader.load("modes/accept-edits.md");
+        if (MODE_BYPASS.equalsIgnoreCase(mode)) return promptLoader.load("modes/bypass.md");
+        if (MODE_ACCEPT_EDITS.equalsIgnoreCase(mode)) return promptLoader.load("modes/accept-edits.md");
         return promptLoader.load("modes/default.md");
     }
 
@@ -78,7 +79,7 @@ public class ContextBuilder {
 
         // 1.1 优先读用户偏好表
         ModelConfigEntity model = null;
-        String modelType = "llm";
+        String modelType = MODEL_TYPE_LLM;
         UserModelPreferenceEntity pref =
                 userModelPreferenceDao.queryByUserAndType(userName, modelType);
         if (pref != null) {
@@ -97,7 +98,7 @@ public class ContextBuilder {
         }
         if (model == null) {
             model = allModels.stream()
-                    .filter(m -> "llm".equals(m.getModelType()) || m.getModelType() == null)
+                    .filter(m -> MODEL_TYPE_LLM.equals(m.getModelType()) || m.getModelType() == null)
                     .findFirst()
                     .orElse(null);
         }
@@ -148,7 +149,7 @@ public class ContextBuilder {
                 if (ws != null) {
                     systemPrompt.append("\n\n## 工作空间\n")
                         .append("当前工作目录: ").append(ws.getPath()).append("\n");
-                    if (!"bypass".equalsIgnoreCase(mode)) {
+                    if (!MODE_BYPASS.equalsIgnoreCase(mode)) {
                         systemPrompt.append("此路径的父目录、兄弟目录均不属于工作空间，仅此目录及其子目录内的文件可以访问。\n");
                     }
                 }
@@ -200,13 +201,13 @@ public class ContextBuilder {
                         new TypeToken<Map<String, Object>>(){}.getType());
             } else {
                 params = new LinkedHashMap<>();
-                params.put("type", "object");
+                params.put("type", JSON_TYPE_OBJECT);
                 params.put("properties", new LinkedHashMap<>());
                 params.put("required", Collections.emptyList());
             }
 
             defs.add(ToolDef.builder()
-                    .type("function")
+                    .type(TOOL_CALL_TYPE_FUNCTION)
                     .function(ToolDef.FunctionDef.builder()
                             .name(t.getToolName())
                             .description(t.getDescription() != null ? t.getDescription() : "")
@@ -267,7 +268,7 @@ public class ContextBuilder {
         List<Map<String, Object>> messages = new ArrayList<>();
 
         Map<String, Object> systemMsg = new HashMap<>();
-        systemMsg.put("role", "system");
+        systemMsg.put("role", ROLE_SYSTEM);
         systemMsg.put("content", systemPrompt);
         messages.add(systemMsg);
 
@@ -293,7 +294,7 @@ public class ContextBuilder {
                     for (Map<String, Object> tc : stored) {
                         Map<String, Object> converted = new LinkedHashMap<>();
                         converted.put("id", tc.get("id"));
-                        converted.put("type", "function");
+                        converted.put("type", TOOL_CALL_TYPE_FUNCTION);
                         Map<String, Object> function = new LinkedHashMap<>();
                         function.put("name", tc.get("name"));
                         function.put("arguments", gson.toJson(tc.get("input")));
@@ -363,16 +364,16 @@ public class ContextBuilder {
 
     private ToolDef buildUseSkillTool() {
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("type", "object");
+        params.put("type", JSON_TYPE_OBJECT);
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("skill_name", Map.of("type", "string", "description", "技能名称"));
+        props.put(PARAM_SKILL_NAME, Map.of("type", "string", "description", "技能名称"));
         params.put("properties", props);
-        params.put("required", List.of("skill_name"));
+        params.put("required", List.of(PARAM_SKILL_NAME));
 
         return ToolDef.builder()
-                .type("function")
+                .type(TOOL_CALL_TYPE_FUNCTION)
                 .function(ToolDef.FunctionDef.builder()
-                        .name("use_skill")
+                        .name(TOOL_USE_SKILL)
                         .description("加载指定 skill 的完整指导内容到上下文")
                         .parameters(params)
                         .build())
@@ -381,16 +382,16 @@ public class ContextBuilder {
 
     private ToolDef buildUseMemoryTool() {
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("type", "object");
+        params.put("type", JSON_TYPE_OBJECT);
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("memory_name", Map.of("type", "string", "description", "记忆名称"));
+        props.put(PARAM_MEMORY_NAME, Map.of("type", "string", "description", "记忆名称"));
         params.put("properties", props);
-        params.put("required", List.of("memory_name"));
+        params.put("required", List.of(PARAM_MEMORY_NAME));
 
         return ToolDef.builder()
-                .type("function")
+                .type(TOOL_CALL_TYPE_FUNCTION)
                 .function(ToolDef.FunctionDef.builder()
-                        .name("use_memory")
+                        .name(TOOL_USE_MEMORY)
                         .description("查看指定记忆的完整内容")
                         .parameters(params)
                         .build())
@@ -399,55 +400,55 @@ public class ContextBuilder {
 
     private ToolDef buildSearchKnowledgeTool() {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("query", Map.of("type", "string", "description", "检索关键词或问题"));
-        props.put("top_k", Map.of("type", "integer", "description", "返回结果数量，默认 " + cfg.getKnowledge().getTopK()));
+        props.put(PARAM_QUERY, Map.of("type", "string", "description", "检索关键词或问题"));
+        props.put(PARAM_TOP_K, Map.of("type", "integer", "description", "返回结果数量，默认 " + cfg.getKnowledge().getTopK()));
 
         return ToolDef.builder()
-                .type("function")
+                .type(TOOL_CALL_TYPE_FUNCTION)
                 .function(ToolDef.FunctionDef.builder()
-                        .name("search_knowledge")
+                        .name(TOOL_SEARCH_KNOWLEDGE)
                         .description("从已勾选的知识库中检索相关文档片段")
-                        .parameters(Map.of("type", "object", "properties", props, "required", List.of("query")))
+                        .parameters(Map.of("type", JSON_TYPE_OBJECT, "properties", props, "required", List.of(PARAM_QUERY)))
                         .build())
                 .build();
     }
 
     private ToolDef buildExecuteShellTool() {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("command", Map.of("type", "string", "description", "要执行的完整命令字符串"));
-        props.put("background", Map.of("type", "boolean", "description", "是否后台运行，默认 false"));
+        props.put(PARAM_COMMAND, Map.of("type", "string", "description", "要执行的完整命令字符串"));
+        props.put(PARAM_BACKGROUND, Map.of("type", "boolean", "description", "是否后台运行，默认 false"));
 
         return ToolDef.builder()
-                .type("function")
+                .type(TOOL_CALL_TYPE_FUNCTION)
                 .function(ToolDef.FunctionDef.builder()
-                        .name("execute_shell")
+                        .name(TOOL_EXECUTE_SHELL)
                         .description("在工作空间目录执行 shell 命令。前台命令（默认）阻塞等待结果返回；后台命令（background=true）立即返回，进程跨会话存活。")
-                        .parameters(Map.of("type", "object", "properties", props, "required", List.of("command")))
+                        .parameters(Map.of("type", JSON_TYPE_OBJECT, "properties", props, "required", List.of(PARAM_COMMAND)))
                         .build())
                 .build();
     }
 
     private ToolDef buildListProcessesTool() {
         return ToolDef.builder()
-                .type("function")
+                .type(TOOL_CALL_TYPE_FUNCTION)
                 .function(ToolDef.FunctionDef.builder()
-                        .name("list_processes")
+                        .name(TOOL_LIST_PROCESSES)
                         .description("列出当前用户的所有后台进程")
-                        .parameters(Map.of("type", "object", "properties", new LinkedHashMap<>()))
+                        .parameters(Map.of("type", JSON_TYPE_OBJECT, "properties", new LinkedHashMap<>()))
                         .build())
                 .build();
     }
 
     private ToolDef buildKillProcessTool() {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("pid", Map.of("type", "integer", "description", "进程 PID"));
+        props.put(PARAM_PID, Map.of("type", "integer", "description", "进程 PID"));
 
         return ToolDef.builder()
-                .type("function")
+                .type(TOOL_CALL_TYPE_FUNCTION)
                 .function(ToolDef.FunctionDef.builder()
-                        .name("kill_process")
+                        .name(TOOL_KILL_PROCESS)
                         .description("终止指定后台进程")
-                        .parameters(Map.of("type", "object", "properties", props, "required", List.of("pid")))
+                        .parameters(Map.of("type", JSON_TYPE_OBJECT, "properties", props, "required", List.of(PARAM_PID)))
                         .build())
                 .build();
     }

@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 
 @Slf4j
 @Component
@@ -30,7 +31,7 @@ public class LlmClient {
 
 
     private static final Gson gson = new Gson();
-    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private static final MediaType JSON = MediaType.parse(MEDIA_TYPE_JSON_UTF8);
 
 
 
@@ -84,7 +85,7 @@ public class LlmClient {
         }
 
         JsonObject streamOpts = new JsonObject();
-        streamOpts.addProperty("include_usage", true);
+        streamOpts.addProperty(STREAM_INCLUDE_USAGE, true);
         bodyJson.add("stream_options", streamOpts);
 
         int timeout = getTimeoutSeconds(params);
@@ -93,9 +94,9 @@ public class LlmClient {
                 ? httpClient.newBuilder().readTimeout(timeout, TimeUnit.SECONDS).build()
                 : httpClient;
         Request request = new Request.Builder()
-                .url(baseUrl + "v1/chat/completions")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "application/json")
+                .url(baseUrl + CHAT_COMPLETIONS_PATH)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + apiKey)
+                .header(CONTENT_TYPE_HEADER, APPLICATION_JSON)
                 .post(reqBody)
                 .build();
 
@@ -117,11 +118,11 @@ public class LlmClient {
                 try {
                     if (response.body() != null) errorBody = response.body().string();
                 } catch (Exception ignored) {}
-                log.warn("LLM API 调用失败: {} {} - {}", baseUrl + "v1/chat/completions", code, errorBody);
+                log.warn("LLM API 调用失败: {} {} - {}", baseUrl + CHAT_COMPLETIONS_PATH, code, errorBody);
                 String errMsg = String.format("API 错误 [%d]: %s", code,
-                        errorBody.isEmpty() ? (code == 401 ? "API Key 无效" : code == 404 ? "接口不存在，请检查 Base URL" : "请求失败") : errorBody);
-                emitter.send(SseEmitter.event().name("message")
-                        .data(ChatEvent.builder().type("error").content(errMsg).build()));
+                        errorBody.isEmpty() ? (code == HTTP_STATUS_UNAUTHORIZED ? "API Key 无效" : code == HTTP_STATUS_NOT_FOUND ? "接口不存在，请检查 Base URL" : "请求失败") : errorBody);
+                emitter.send(SseEmitter.event().name(SSE_EVENT_MESSAGE)
+                        .data(ChatEvent.builder().type(SSE_EVENT_ERROR).content(errMsg).build()));
                 return LlmResult.builder().content("").build();
             }
 
@@ -130,9 +131,9 @@ public class LlmClient {
             String line;
             try {
             while ((line = reader.readLine()) != null) {
-                if (line.startsWith("data: ")) {
+                if (line.startsWith(SSE_DATA_PREFIX)) {
                     String data = line.substring(6).trim();
-                    if (data.equals("[DONE]")) break;
+                    if (data.equals(SSE_DONE_MARKER)) break;
 
                     handle.touch();
                     handle.checkCancel();
@@ -151,16 +152,16 @@ public class LlmClient {
                             if (delta.has("content") && !delta.get("content").isJsonNull()) {
                                 String token = delta.get("content").getAsString();
                                 fullContent.append(token);
-                                emitter.send(SseEmitter.event().name("message")
-                                        .data(ChatEvent.builder().type("token").content(token).build()));
+                                emitter.send(SseEmitter.event().name(SSE_EVENT_MESSAGE)
+                                        .data(ChatEvent.builder().type(SSE_EVENT_TOKEN).content(token).build()));
                             }
 
                             // thinking (DeepSeek)
                             if (delta.has("reasoning_content") && !delta.get("reasoning_content").isJsonNull()) {
                                 String thinking = delta.get("reasoning_content").getAsString();
                                 fullThinking.append(thinking);
-                                emitter.send(SseEmitter.event().name("message")
-                                        .data(ChatEvent.builder().type("thinking").content(thinking).build()));
+                                emitter.send(SseEmitter.event().name(SSE_EVENT_MESSAGE)
+                                        .data(ChatEvent.builder().type(SSE_EVENT_THINKING).content(thinking).build()));
                             }
 
                             // tool calls
@@ -186,9 +187,9 @@ public class LlmClient {
                                             // 首次解析到 name 时推送 tool_call 事件
                                             if (emittedNames.add(String.valueOf(idx) + ":" + name)) {
                                                 try {
-                                                    emitter.send(SseEmitter.event().name("message")
+                                                    emitter.send(SseEmitter.event().name(SSE_EVENT_MESSAGE)
                                                             .data(ChatEvent.builder()
-                                                                    .type("tool_call")
+                                                                    .type(SSE_EVENT_TOOL_CALL)
                                                                     .toolName(name)
                                                                     .build()));
                                                 } catch (IOException e) {
@@ -207,7 +208,7 @@ public class LlmClient {
                             // finish reason
                             if (choice.has("finish_reason") && !choice.get("finish_reason").isJsonNull()) {
                                 String finishReason = choice.get("finish_reason").getAsString();
-                                if ("tool_calls".equals(finishReason)) {
+                                if (FINISH_REASON_TOOL_CALLS.equals(finishReason)) {
                                     for (int i = 0; i < accumulatedToolCalls.size(); i++) {
                                         JsonObject tc = accumulatedToolCalls.get(i).getAsJsonObject();
                                         JsonObject func = tc.getAsJsonObject("function");
@@ -224,12 +225,12 @@ public class LlmClient {
                         }
 
                         // usage
-                        if (event.has("usage") && !event.get("usage").isJsonNull()) {
-                            JsonObject usage = event.getAsJsonObject("usage");
-                            if (usage.has("prompt_tokens")) usageResult.put("inputTokens", usage.get("prompt_tokens").getAsInt());
-                            if (usage.has("completion_tokens")) usageResult.put("outputTokens", usage.get("completion_tokens").getAsInt());
-                            emitter.send(SseEmitter.event().name("message")
-                                    .data(ChatEvent.builder().type("usage").usage(usageResult).build()));
+                        if (event.has(USAGE_KEY) && !event.get(USAGE_KEY).isJsonNull()) {
+                            JsonObject usage = event.getAsJsonObject(USAGE_KEY);
+                            if (usage.has("prompt_tokens")) usageResult.put(USAGE_INPUT_TOKENS, usage.get("prompt_tokens").getAsInt());
+                            if (usage.has("completion_tokens")) usageResult.put(USAGE_OUTPUT_TOKENS, usage.get("completion_tokens").getAsInt());
+                            emitter.send(SseEmitter.event().name(SSE_EVENT_MESSAGE)
+                                    .data(ChatEvent.builder().type(SSE_EVENT_USAGE).usage(usageResult).build()));
                         }
                     } catch (com.google.gson.JsonSyntaxException e) {
                         log.warn("解析 SSE 事件失败: {}", e.getMessage());
@@ -249,7 +250,7 @@ public class LlmClient {
         }
 
         if (!usageResult.isEmpty()) {
-            log.info("模型 {} 返回 — 输入: {} tokens, 输出: {} tokens", model.getName(), usageResult.getOrDefault("inputTokens", 0), usageResult.getOrDefault("outputTokens", 0));
+            log.info("模型 {} 返回 — 输入: {} tokens, 输出: {} tokens", model.getName(), usageResult.getOrDefault(USAGE_INPUT_TOKENS, 0), usageResult.getOrDefault(USAGE_OUTPUT_TOKENS, 0));
         } else {
             log.info("模型 {} 返回 — 内容长度: {} 字符", model.getName(), fullContent.length());
         }

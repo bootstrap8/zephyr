@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 
 import jakarta.annotation.Resource;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Service
 @Slf4j
 public class MemoryServiceImpl implements MemoryService {
@@ -36,7 +38,7 @@ public class MemoryServiceImpl implements MemoryService {
     public List<MemoryVO> list(String type, String userName) {
         Path dir = userDir(userName);
         List<MemoryVO> result = new ArrayList<>();
-        File[] files = dir.toFile().listFiles(f -> f.getName().endsWith(".md") && !f.getName().equals("MEMORY.md"));
+        File[] files = dir.toFile().listFiles(f -> f.getName().endsWith(EXT_MD) && !f.getName().equals(MEMORY_INDEX_FILE));
         if (files == null) return result;
 
         for (File file : files) {
@@ -86,7 +88,7 @@ public class MemoryServiceImpl implements MemoryService {
         boolean enabled = !"false".equals(body.get("enabled"));
 
         if (name == null || name.trim().isEmpty()) throw new IllegalArgumentException("名称不能为空");
-        if (!"user".equals(type) && !"project".equals(type)) throw new IllegalArgumentException("类型无效: " + type);
+        if (!MEMORY_TYPE_USER.equals(type) && !MEMORY_TYPE_PROJECT.equals(type)) throw new IllegalArgumentException("类型无效: " + type);
 
         name = name.trim();
         Path dir = userDir(userName);
@@ -110,7 +112,7 @@ public class MemoryServiceImpl implements MemoryService {
         boolean enabled = !"false".equals(body.getOrDefault("enabled", "true"));
 
         if (name == null || name.trim().isEmpty()) throw new IllegalArgumentException("名称不能为空");
-        if (!"user".equals(type) && !"project".equals(type)) throw new IllegalArgumentException("类型无效: " + type);
+        if (!MEMORY_TYPE_USER.equals(type) && !MEMORY_TYPE_PROJECT.equals(type)) throw new IllegalArgumentException("类型无效: " + type);
 
         name = name.trim();
         Path dir = userDir(userName);
@@ -157,7 +159,7 @@ public class MemoryServiceImpl implements MemoryService {
         String body = readBody(file);
 
         String memName = fm.getOrDefault("name", name);
-        String type = fm.getOrDefault("type", "user");
+        String type = fm.getOrDefault("type", MEMORY_TYPE_USER);
         String description = fm.getOrDefault("description", "");
         long createdAt = Long.parseLong(fm.getOrDefault("created_at", String.valueOf(System.currentTimeMillis() / 1000)));
         long now = System.currentTimeMillis() / 1000;
@@ -172,14 +174,14 @@ public class MemoryServiceImpl implements MemoryService {
     }
 
     private Path resolveFile(Path dir, String name) {
-        File[] files = dir.toFile().listFiles(f -> f.getName().endsWith(".md") && !f.getName().equals("MEMORY.md"));
+        File[] files = dir.toFile().listFiles(f -> f.getName().endsWith(EXT_MD) && !f.getName().equals(MEMORY_INDEX_FILE));
         if (files != null) {
             for (File f : files) {
                 Map<String, String> fm = parseFrontmatter(f.toPath());
                 if (name.equals(fm.get("name"))) return f.toPath();
             }
         }
-        return dir.resolve(sanitize(name) + ".md");
+        return dir.resolve(sanitize(name) + EXT_MD);
     }
 
     private void writeMemoryFile(Path file, String name, String type, String description, String content, long createdAt, long updatedAt, boolean enabled) {
@@ -260,11 +262,11 @@ public class MemoryServiceImpl implements MemoryService {
     // === MEMORY.md index helpers ===
 
     private Path indexPath(Path dir) {
-        return dir.resolve("MEMORY.md");
+        return dir.resolve(MEMORY_INDEX_FILE);
     }
 
     private void appendToIndex(Path dir, String name, String description, String type) {
-        String line = "- [" + name + "](" + sanitize(name) + ".md) — " + description + "\n";
+        String line = "- [" + name + "](" + sanitize(name) + EXT_MD + ") — " + description + "\n";
         try {
             Files.writeString(indexPath(dir), line, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
@@ -279,7 +281,7 @@ public class MemoryServiceImpl implements MemoryService {
             List<String> lines = Files.readAllLines(idx, StandardCharsets.UTF_8);
             String sanitized = sanitize(name);
             List<String> filtered = lines.stream()
-                    .filter(l -> !l.contains("(" + sanitized + ".md)"))
+                    .filter(l -> !l.contains("(" + sanitized + EXT_MD + ")"))
                     .collect(Collectors.toList());
             Files.writeString(idx, String.join("\n", filtered) + "\n", StandardCharsets.UTF_8);
         } catch (IOException e) {

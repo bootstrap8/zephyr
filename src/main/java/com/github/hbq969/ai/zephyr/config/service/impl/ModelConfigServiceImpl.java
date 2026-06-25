@@ -16,6 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Service
 @Slf4j
 public class ModelConfigServiceImpl implements ModelConfigService {
@@ -44,9 +46,9 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         }
 
         com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity llmPref =
-                userModelPreferenceDao.queryByUserAndType(userName, "llm");
+                userModelPreferenceDao.queryByUserAndType(userName, MODEL_TYPE_LLM);
         com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity embPref =
-                userModelPreferenceDao.queryByUserAndType(userName, "embedding");
+                userModelPreferenceDao.queryByUserAndType(userName, MODEL_TYPE_EMBEDDING);
 
         List<ModelConfigEntity> result = new ArrayList<>(dedup.values());
         for (ModelConfigEntity e : result) {
@@ -54,10 +56,10 @@ public class ModelConfigServiceImpl implements ModelConfigService {
             if (key != null && !key.isEmpty()) {
                 e.setApiKeyEncrypted(maskApiKey(key));
             }
-            String mt = e.getModelType() != null ? e.getModelType() : "llm";
-            if ("llm".equals(mt) && llmPref != null && llmPref.getModelId().equals(e.getId())) {
+            String mt = e.getModelType() != null ? e.getModelType() : MODEL_TYPE_LLM;
+            if (MODEL_TYPE_LLM.equals(mt) && llmPref != null && llmPref.getModelId().equals(e.getId())) {
                 e.setIsDefault(1);
-            } else if ("embedding".equals(mt) && embPref != null && embPref.getModelId().equals(e.getId())) {
+            } else if (MODEL_TYPE_EMBEDDING.equals(mt) && embPref != null && embPref.getModelId().equals(e.getId())) {
                 e.setIsDefault(1);
             }
         }
@@ -69,7 +71,7 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         List<ModelConfigEntity> all = list(userName);
         List<ModelConfigEntity> filtered = new ArrayList<>();
         for (ModelConfigEntity e : all) {
-            String mt = e.getModelType() != null ? e.getModelType() : "llm";
+            String mt = e.getModelType() != null ? e.getModelType() : MODEL_TYPE_LLM;
             if (modelType.equals(mt)) {
                 filtered.add(e);
             }
@@ -81,7 +83,7 @@ public class ModelConfigServiceImpl implements ModelConfigService {
     @Transactional
     public ModelConfigEntity create(Map<String, String> body, String userName) {
         ModelConfigEntity entity = new ModelConfigEntity();
-        entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
+        entity.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         entity.setUserName(userName);
         entity.setName(body.get("name"));
         entity.setBaseUrl(body.getOrDefault("baseUrl", ""));
@@ -93,7 +95,7 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         }
         String params = body.get("params");
         entity.setParams(params != null && !params.isBlank() ? params : null);
-        entity.setModelType(body.getOrDefault("modelType", "llm"));
+        entity.setModelType(body.getOrDefault("modelType", MODEL_TYPE_LLM));
         String dimensions = body.get("dimensions");
         if (dimensions != null && !dimensions.isBlank()) {
             entity.setDimensions(Integer.parseInt(dimensions));
@@ -173,16 +175,16 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         ModelConfigEntity entity = modelConfigDao.queryById(id);
         if (entity == null) throw new RuntimeException("模型不存在");
 
-        if (!"shared".equals(entity.getScope()) && !userName.equals(entity.getUserName())) {
+        if (!SCOPE_SHARED.equals(entity.getScope()) && !userName.equals(entity.getUserName())) {
             throw new RuntimeException("无权访问此模型");
         }
 
-        String modelType = entity.getModelType() != null ? entity.getModelType() : "llm";
+        String modelType = entity.getModelType() != null ? entity.getModelType() : MODEL_TYPE_LLM;
         modelConfigDao.clearDefault(userName);
 
         com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity pref =
                 new com.github.hbq969.ai.zephyr.config.dao.entity.UserModelPreferenceEntity();
-        pref.setId(java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        pref.setId(java.util.UUID.randomUUID().toString().replace("-", "").substring(0, SHORT_ID_LENGTH));
         pref.setUserName(userName);
         pref.setModelType(modelType);
         pref.setModelId(id);
@@ -200,7 +202,7 @@ public class ModelConfigServiceImpl implements ModelConfigService {
 
         modelConfigDao.toggleScope(id, scope, System.currentTimeMillis() / 1000);
 
-        if ("user".equals(scope)) {
+        if (SCOPE_USER.equals(scope)) {
             userModelPreferenceDao.deleteByModelId(id);
         }
     }
@@ -215,8 +217,8 @@ public class ModelConfigServiceImpl implements ModelConfigService {
     }
 
     private String maskApiKey(String key) {
-        if (key.length() <= 8) return "****";
-        return key.substring(0, 3) + "****" + key.substring(key.length() - 4);
+        if (key.length() <= MASK_THRESHOLD_LENGTH) return MASK_STRING;
+        return key.substring(0, MASK_PREFIX_LENGTH) + MASK_STRING + key.substring(key.length() - MASK_SUFFIX_LENGTH);
     }
 
     @Override
@@ -240,14 +242,14 @@ public class ModelConfigServiceImpl implements ModelConfigService {
             return List.of();
         }
         try {
-            String url = baseUrl.replaceAll("/$", "") + "/v1/models";
+            String url = baseUrl.replaceAll("/$", "") + MODELS_API_PATH;
             okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
                     .connectTimeout(cfg.getModelConfig().getApi().getConnectTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(cfg.getModelConfig().getApi().getReadTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
                     .build();
             okhttp3.Request req = new okhttp3.Request.Builder()
                     .url(url)
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", BEARER_PREFIX + apiKey)
                     .get()
                     .build();
             okhttp3.Response resp = client.newCall(req).execute();
@@ -277,14 +279,14 @@ public class ModelConfigServiceImpl implements ModelConfigService {
         if (entity.getBaseUrl() == null || entity.getBaseUrl().isBlank()) return null;
         if (apiKey == null || apiKey.isBlank()) return null;
         try {
-            String url = entity.getBaseUrl().replaceAll("/$", "") + "/v1/models";
+            String url = entity.getBaseUrl().replaceAll("/$", "") + MODELS_API_PATH;
             okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
                     .connectTimeout(cfg.getModelConfig().getApi().getConnectTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(cfg.getModelConfig().getApi().getReadTimeoutSeconds(), java.util.concurrent.TimeUnit.SECONDS)
                     .build();
             okhttp3.Request req = new okhttp3.Request.Builder()
                     .url(url)
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", BEARER_PREFIX + apiKey)
                     .get()
                     .build();
             okhttp3.Response resp = client.newCall(req).execute();

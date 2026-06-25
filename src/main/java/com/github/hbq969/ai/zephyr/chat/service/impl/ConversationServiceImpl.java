@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Slf4j
 @Service
 public class ConversationServiceImpl implements ConversationService {
@@ -55,10 +57,10 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional
     public ConversationVO create(Map<String, String> body, String userName) {
-        String title = body.getOrDefault("title", "新对话");
+        String title = body.getOrDefault("title", DEFAULT_CONVERSATION_TITLE);
         long now = System.currentTimeMillis() / 1000;
         ConversationEntity entity = new ConversationEntity();
-        entity.setId(UUID.fastUUID().toString(true).substring(0, 12));
+        entity.setId(UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         entity.setUserName(userName);
         entity.setTitle(title);
         entity.setWorkspaceId(body.get("workspaceId"));

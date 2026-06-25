@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Component
 public class InitialServiceImpl extends AbstractScriptInitialAware {
 
@@ -76,7 +78,7 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
                 () -> userModelPreferenceDao.createUserModelPrefsTable());
 
         // 建表完成后重连之前处于 connected 状态的 MCP 服务器
-        asyncScriptInitialDone(30, java.util.concurrent.TimeUnit.SECONDS, () -> {
+        asyncScriptInitialDone(MCP_DISCOVER_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS, () -> {
             mcpService.reconnectOnStartup();
         });
     }
@@ -84,7 +86,7 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
     @Override
     protected void scriptInitial0() {
         String lang = I18nUtils.getFullLanguage(context);
-        String filename = String.join("", "zephyr-", lang, ".sql");
+        String filename = String.join("", "zephyr-", lang, EXT_SQL);
         InitScriptUtils.initial(context, filename, StandardCharsets.UTF_8, null,
                 () -> loginService.loadSMInfo());
     }

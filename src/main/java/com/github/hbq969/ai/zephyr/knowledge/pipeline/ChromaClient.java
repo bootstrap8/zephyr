@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.Resource;
@@ -25,8 +27,8 @@ public class ChromaClient implements InitializingBean {
     private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
     private final OkHttpClient client = new OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(CHROMA_CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(CHROMA_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build();
 
     private String baseUrl;
@@ -46,11 +48,11 @@ public class ChromaClient implements InitializingBean {
     private void startEmbeddedChroma() {
         var chromaCfg = cfg.getKnowledge().getChroma();
         try {
-            new ProcessBuilder(chromaCfg.getBinPath(), "run", "--path", chromaCfg.getDataDir(),
-                    "--port", String.valueOf(chromaCfg.getPort()))
+            new ProcessBuilder(chromaCfg.getBinPath(), CHROMA_RUN_COMMAND, CHROMA_PATH_ARG, chromaCfg.getDataDir(),
+                    CHROMA_PORT_ARG, String.valueOf(chromaCfg.getPort()))
                     .inheritIO()
                     .start();
-            Thread.sleep(2000);
+            Thread.sleep(CHROMA_STARTUP_DELAY_MS);
             log.info("Embedded Chroma 已启动, path={}, port={}, bin={}", chromaCfg.getDataDir(), chromaCfg.getPort(), chromaCfg.getBinPath());
         } catch (Exception e) {
             log.warn("Chroma 子进程启动失败，请确保已安装: pip install chromadb。将尝试连接已有实例。");

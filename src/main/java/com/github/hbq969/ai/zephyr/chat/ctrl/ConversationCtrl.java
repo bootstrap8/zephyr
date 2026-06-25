@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 @Tag(name = "会话接口")
 @RestController
 @RequestMapping(path = "/zephyr-ui/conversations")
@@ -23,7 +25,7 @@ public class ConversationCtrl {
 
     private String userName() {
         UserInfo ui = UserContext.getNoCheck();
-        return ui != null ? ui.getUserName() : "admin";
+        return ui != null ? ui.getUserName() : DEFAULT_USERNAME;
     }
 
     @Operation(summary = "获取会话列表")
@@ -48,7 +50,7 @@ public class ConversationCtrl {
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "conversations_rename", apiDesc = "会话管理_重命名会话")
     public ReturnMessage<?> rename(@RequestBody Map<String, String> body) {
         conversationService.rename(body, userName());
-        return ReturnMessage.success("ok");
+        return ReturnMessage.success(RESPONSE_SUCCESS);
     }
 
     @Operation(summary = "删除会话")
@@ -57,7 +59,7 @@ public class ConversationCtrl {
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "conversations_delete", apiDesc = "会话管理_删除会话")
     public ReturnMessage<?> delete(@RequestBody Map<String, String> body) {
         conversationService.delete(body.get("id"), userName());
-        return ReturnMessage.success("ok");
+        return ReturnMessage.success(RESPONSE_SUCCESS);
     }
 
     @Operation(summary = "更新对话工作空间")
@@ -66,7 +68,7 @@ public class ConversationCtrl {
     @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "conversations_updateWorkspace", apiDesc = "会话管理_更新对话工作空间")
     public ReturnMessage<?> updateWorkspace(@RequestBody Map<String, String> body) {
         conversationService.updateWorkspace(body.get("conversationId"), body.get("workspaceId"), userName());
-        return ReturnMessage.success("ok");
+        return ReturnMessage.success(RESPONSE_SUCCESS);
     }
 
     @Operation(summary = "获取会话历史消息")

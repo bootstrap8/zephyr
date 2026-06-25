@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.workspace.service.impl;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import cn.hutool.core.lang.UUID;
 import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
 import com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao;

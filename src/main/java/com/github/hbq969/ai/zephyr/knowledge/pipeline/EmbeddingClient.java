@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import com.github.hbq969.ai.zephyr.config.dao.entity.ModelConfigEntity;
 import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
 import com.google.gson.Gson;
@@ -18,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class EmbeddingClient {
 
     private static final Gson gson = new Gson();
-    private static final MediaType JSON = MediaType.get("application/json");
+    private static final MediaType JSON = MediaType.get(APPLICATION_JSON);
 
     @Resource
     private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
@@ -35,9 +37,9 @@ public class EmbeddingClient {
         body.put("input", texts);
 
         Request request = new Request.Builder()
-                .url(model.getBaseUrl() + "/v1/embeddings")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "application/json")
+                .url(model.getBaseUrl() + EMBEDDINGS_API_PATH)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + apiKey)
+                .header(CONTENT_TYPE_HEADER, APPLICATION_JSON)
                 .post(RequestBody.create(gson.toJson(body), JSON))
                 .build();
 

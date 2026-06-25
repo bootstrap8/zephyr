@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.service.impl;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
 import com.github.hbq969.ai.zephyr.config.dao.ModelConfigDao;
 import com.github.hbq969.ai.zephyr.config.dao.entity.ModelConfigEntity;
@@ -417,7 +419,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         allVecResults.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
 
-        RrfMerger merger = new RrfMerger(60);
+        RrfMerger merger = new RrfMerger(RRF_DEFAULT_K);
         List<String> mergedIds = merger.merge(allVecResults, kwResults, topK);
 
         Map<String, ChromaClient.QueryResult> vecMap = new HashMap<>();
@@ -435,7 +437,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                 sr.setVecScore(vr.getScore());
                 sr.setKwScore(kwResults.getOrDefault(chunkId, 0f).doubleValue());
                 int rank = mergedIds.indexOf(chunkId) + 1;
-                sr.setRrfScore(1.0 / (60 + rank));
+                sr.setRrfScore(1.0 / (RRF_DEFAULT_K + rank));
                 results.add(sr);
             } else {
                 String text = keywordIndex.getChunkText(chunkId);
@@ -445,7 +447,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                     sr.setVecScore(0);
                     sr.setKwScore(kwScore);
                     int rank = mergedIds.indexOf(chunkId) + 1;
-                    sr.setRrfScore(1.0 / (60 + rank));
+                    sr.setRrfScore(1.0 / (RRF_DEFAULT_K + rank));
                     results.add(sr);
                 }
             }
@@ -530,7 +532,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
             text = textCleaner.clean(text);
 
-            TextSplitter splitter = new TextSplitter(800, 150);
+            TextSplitter splitter = new TextSplitter(DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP);
             List<String> chunks = splitter.split(text);
             chunks = textCleaner.filterLowQualityChunks(chunks);
             if (chunks.isEmpty()) {
@@ -548,7 +550,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             String collection = "kb_" + kbId;
             String collId = chromaClient.getOrCreateCollection(collection);
 
-            int batchSize = 100;
+            int batchSize = CHROMA_BATCH_SIZE;
             for (int batchStart = 0; batchStart < chunks.size(); batchStart += batchSize) {
                 int batchEnd = Math.min(batchStart + batchSize, chunks.size());
                 List<String> batchChunks = chunks.subList(batchStart, batchEnd);

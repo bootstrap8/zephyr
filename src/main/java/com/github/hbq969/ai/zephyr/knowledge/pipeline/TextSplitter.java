@@ -1,5 +1,7 @@
 package com.github.hbq969.ai.zephyr.knowledge.pipeline;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,7 +31,7 @@ public class TextSplitter {
     }
 
     public TextSplitter() {
-        this(800, 150);
+        this(DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP);
     }
 
     public List<String> split(String text) {

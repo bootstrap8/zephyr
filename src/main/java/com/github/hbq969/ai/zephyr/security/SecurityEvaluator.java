@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
 /**
  * Java 层安全评估器，在 LLM 自评估之外做模式匹配防御。
  * <p>
@@ -257,9 +259,10 @@ public class SecurityEvaluator {
         }
 
         // HARD BLOCK：修改 application.yml（含路径遍历绕过检测）
-        if (lowerPath.contains("application.yml") || lowerPath.contains("application-me.yml")
-                || lowerPath.contains("application-prod.yml") || lowerPath.contains("application-test.yml")) {
-            return Result.block("HARD_BLOCK", "禁止修改应用配置文件: " + filePath);
+        for (String configFile : APP_CONFIG_FILES) {
+            if (lowerPath.contains(configFile)) {
+                return Result.block("HARD_BLOCK", "禁止修改应用配置文件: " + filePath);
+            }
         }
 
         // bypass 模式：放行
