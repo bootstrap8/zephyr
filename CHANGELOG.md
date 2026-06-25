@@ -2,6 +2,16 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
 
+## [1.2.1] - 2026-06-25
+
+### 修复
+
+- **新建对话竞态条件**：`newChat()` 主动 abort 旧 SSE fetch 并重置 streaming，`.catch()` 校验 AbortController 身份防止过期回调覆写状态
+- **前端对话切换状态混乱**：侧边栏点击对话改用 sessionStorage + `location.reload()`，`onMounted` 恢复选中状态，删除/重命名后页面刷新保持一致性
+- **SSE 空闲超时**：SSE 连接空闲 30 分钟自动取消，工具执行后 touch 保持活跃，读超时 5 分钟
+- **MCP 连接管理**：移除 `@Scheduled cleanupIdle` 定时清理和 LRU 淘汰，连接满直接拒绝，`@PreDestroy` 统一关闭
+- **硬编码配置值**：`LlmClient` 超时 300 改为从 `ZephyrConfigProperties` 读取，确保配置单一数据源
+
 ## [1.2.0] - 2026-06-24
 
 ### 新增
