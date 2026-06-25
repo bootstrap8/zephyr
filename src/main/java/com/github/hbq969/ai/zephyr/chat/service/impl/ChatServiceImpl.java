@@ -218,7 +218,7 @@ public class ChatServiceImpl implements ChatService {
                         persistAssistantMessage(cid, result, msgSeq++);
 
                         List<String> enabledKbIds = cid != null ? knowledgeDao.queryKbIdsByConversation(cid) : List.of();
-                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid, emitter, handle);
+                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid, mode, emitter, handle);
                         handle.touch();
 
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
@@ -399,7 +399,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls,
-            String userName, List<String> enabledKbIds, String conversationId,
+            String userName, List<String> enabledKbIds, String conversationId, String mode,
             SseEmitter emitter, ConversationSessionManager.SessionHandle handle) {
         List<Map<String, Object>> results = new ArrayList<>();
 
@@ -407,7 +407,7 @@ public class ChatServiceImpl implements ChatService {
 
             // === 安全评估（新增） ===
             SecurityEvaluator.Result secResult = securityEvaluator.evaluate(
-                    tc.getName(), tc.getArguments(), userName);
+                    tc.getName(), tc.getArguments(), userName, mode);
 
             if (secResult.decision() == SecurityEvaluator.Decision.BLOCK) {
                 // HARD BLOCK → 拒绝
@@ -784,6 +784,21 @@ public class ChatServiceImpl implements ChatService {
         return (int) Math.ceil(text.length() * cfg.getChat().getContext().getTokenEstimationRatio());
     }
 
+    private Set<String> shellWhitelist = Set.of();
+
+    @jakarta.annotation.PostConstruct
+    void initShellWhitelist() {
+        String raw = cfg.getShell().getAllowedCommands();
+        if (raw == null || raw.isBlank()) {
+            shellWhitelist = Set.of();
+        } else {
+            shellWhitelist = Arrays.stream(raw.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+    }
+
     private boolean isNotBlank(String s) {
         return s != null && !s.isBlank();
     }
@@ -808,7 +823,7 @@ public class ChatServiceImpl implements ChatService {
             if (lastSlash >= 0) {
                 cmdName = cmdName.substring(lastSlash + 1);
             }
-            if (!cfg.getShell().getAllowedCommands().contains(cmdName)) {
+            if (!shellWhitelist.contains(cmdName)) {
                 String msg = "命令 '" + cmdName + "' 不在白名单中，拒绝执行";
                 log.info(msg);
                 return msg;

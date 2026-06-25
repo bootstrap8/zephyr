@@ -147,6 +147,8 @@
           <include>*.*</include>
           <include>static/zephyr-ui/</include>
           <include>static/ui/</include>
+          <include>prompts/**</include>
+          <include>i18n/**</include>
         </includes>
       </resource>
       <resource>

@@ -61,7 +61,7 @@ public class PromptLoader {
         if (vars == null || vars.isEmpty()) return template;
         return VAR_PATTERN.matcher(template).replaceAll(match -> {
             String varName = match.group(1);
-            return vars.getOrDefault(varName, "");
+            return java.util.regex.Matcher.quoteReplacement(vars.getOrDefault(varName, ""));
         });
     }
 

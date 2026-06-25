@@ -298,115 +298,8 @@ zephyr:
         iv: ${encrypt.restful.aes.iv}
   shell:
     mode: whitelist  # disabled | whitelist | allowAll，默认 whitelist
-    # whitelist 模式下允许执行的命令（仅命令名，不含参数），默认值如下：
-    allowed-commands:
-      # 解释器
-      - python3
-      - python
-      - node
-      - ruby
-      - perl
-      - php
-      - lua
-      - deno
-      - bun
-      # 包管理
-      - npm
-      - npx
-      - yarn
-      - pnpm
-      - pip
-      - pip3
-      - gem
-      - composer
-      - cargo
-      - go
-      # 版本控制
-      - git
-      - hg
-      # 编译构建
-      - javac
-      - java
-      - mvn
-      - gradle
-      - make
-      - cmake
-      - gcc
-      - g++
-      - clang
-      - clang++
-      - rustc
-      - dotnet
-      # 文件操作（不含 rm/rmdir，防止误删）
-      - ls
-      - cat
-      - head
-      - tail
-      - wc
-      - find
-      - grep
-      - egrep
-      - awk
-      - sed
-      - mkdir
-      - touch
-      - cp
-      - mv
-      - ln
-      - stat
-      - file
-      - du
-      - df
-      - tree
-      - realpath
-      - basename
-      - dirname
-      # 文本处理
-      - sort
-      - uniq
-      - cut
-      - tr
-      - tee
-      - diff
-      - patch
-      - echo
-      - printf
-      - xargs
-      - envsubst
-      - column
-      - jq
-      - yq
-      - iconv
-      - strings
-      - od
-      - hexdump
-      - xxd
-      # 压缩归档
-      - tar
-      - gzip
-      - gunzip
-      - zip
-      - unzip
-      - bzip2
-      - bunzip2
-      - xz
-      - unxz
-      - zstd
-      - unzstd
-      # 网络（仅安全工具）
-      - curl
-      # 系统信息
-      - date
-      - env
-      - which
-      - whoami
-      - uname
-      - hostname
-      - uptime
-      - free
-      - vmstat
-      - iostat
-      - ulimit
+    # whitelist 模式下允许执行的命令（仅命令名，不含参数），逗号分隔
+    allowed-commands: python3,python,node,ruby,perl,php,lua,deno,bun,npm,npx,yarn,pnpm,pip,pip3,gem,composer,cargo,go,git,hg,javac,java,mvn,gradle,make,cmake,gcc,g++,clang,clang++,rustc,dotnet,ls,cat,head,tail,wc,find,grep,egrep,awk,sed,mkdir,touch,cp,mv,ln,stat,file,du,df,tree,realpath,basename,dirname,sort,uniq,cut,tr,tee,diff,patch,echo,printf,xargs,envsubst,column,jq,yq,iconv,strings,od,hexdump,xxd,tar,gzip,gunzip,zip,unzip,bzip2,bunzip2,xz,unxz,zstd,unzstd,curl,date,env,which,whoami,uname,hostname,uptime,free,vmstat,iostat,ulimit
     max-background-processes: 5  # 每用户最大后台进程数
     max-background-lifetime-seconds: 3600  # 后台进程最大存活时间（秒）
     cleanup-interval-seconds: 60  # 后台进程超时扫描间隔（秒）
@@ -417,7 +310,9 @@ zephyr:
   security:
     enabled: true  # 是否启用安全评估
     confirm-timeout-seconds: 300  # 用户确认超时秒数
-    max-bypass-attempts: 3  # 连续绕过 HARD BLOCK 最大次数
+    max-bypass-attempts: 1  # 连续绕过 HARD BLOCK 最大次数
+    # default 模式下无需确认的只读 shell 命令，逗号分隔（仅命令名，不含参数）
+    default-allow-commands: ls,cat,head,tail,less,more,file,stat,tree,od,hexdump,find,grep,egrep,fgrep,locate,which,whereis,type,wc,sort,uniq,cut,tr,diff,cmp,comm,join,paste,expand,unexpand,fmt,fold,iconv,nl,rev,tac,pwd,whoami,id,groups,users,who,w,last,lastlog,date,uname,hostname,hostid,arch,nproc,df,du,free,uptime,dmesg,ps,pgrep,top,env,printenv,ulimit,umask,getconf,basename,dirname,realpath,readlink,echo,printf,man,whatis,apropos,info,cal,clear,reset,tty,sleep,test,expr,true,false,yes,command,builtin,hash,tsort
     audit:
       enabled: true  # 是否启用审计日志
       log-path: ${user.home}/.zephyr/audit.log  # 审计日志路径

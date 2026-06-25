@@ -5,9 +5,12 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Java 层安全评估器，在 LLM 自评估之外做模式匹配防御。
@@ -69,15 +72,17 @@ public class SecurityEvaluator {
     /**
      * 评估工具调用。仅对 execute_shell 和文件写入类工具做模式匹配，
      * 其余工具调用返回 ALLOW（由 LLM 自评估负责）。
+     *
+     * @param mode 权限模式：default | acceptEdits | bypass
      */
-    public Result evaluate(String toolName, Map<String, Object> arguments, String userName) {
+    public Result evaluate(String toolName, Map<String, Object> arguments, String userName, String mode) {
         if (!cfg.getSecurity().isEnabled()) {
             return Result.allow();
         }
 
         Result result = switch (toolName) {
-            case "execute_shell" -> evaluateShell(arguments);
-            case "write_file", "edit_file" -> evaluateFileWrite(arguments);
+            case "execute_shell" -> evaluateShell(arguments, mode);
+            case "write_file", "edit_file" -> evaluateFileWrite(arguments, mode);
             default -> Result.allow();
         };
 
@@ -90,7 +95,22 @@ public class SecurityEvaluator {
         return result;
     }
 
-    private Result evaluateShell(Map<String, Object> arguments) {
+    private Set<String> readOnlyCommands;
+
+    @jakarta.annotation.PostConstruct
+    void initReadOnlyCommands() {
+        readOnlyCommands = parseCommandList(cfg.getSecurity().getDefaultAllowCommands());
+    }
+
+    private static Set<String> parseCommandList(String raw) {
+        if (raw == null || raw.isBlank()) return Set.of();
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+    }
+
+    private Result evaluateShell(Map<String, Object> arguments, String mode) {
         if (arguments == null || !arguments.containsKey("command")) {
             return Result.allow();
         }
@@ -98,24 +118,46 @@ public class SecurityEvaluator {
         if (cmdObj == null) return Result.allow();
         String command = cmdObj.toString().trim();
 
-        // 1. HARD BLOCK 检查
+        // 1. HARD BLOCK 检查（所有模式强制执行）
         for (Pattern p : HARD_BLOCK_SHELL_PATTERNS) {
             if (p.matcher(command).matches()) {
                 return Result.block("HARD_BLOCK", "命令匹配安全红线规则，禁止执行");
             }
         }
 
-        // 2. SOFT BLOCK 检查
+        // 2. bypass 模式：放行
+        if ("bypass".equalsIgnoreCase(mode)) {
+            return Result.allow();
+        }
+
+        // 3. SOFT BLOCK 检查（default / acceptEdits 模式）
         for (Pattern p : SOFT_BLOCK_SHELL_PATTERNS) {
             if (p.matcher(command).matches()) {
                 return Result.confirm("SOFT_BLOCK", "该命令具有破坏性，需要用户确认");
             }
         }
 
+        // 4. default 模式：只读命令放行，其余需确认
+        if (!"acceptEdits".equalsIgnoreCase(mode) && !"bypass".equalsIgnoreCase(mode)) {
+            // 复合命令（含 ; && || 或换行），无法仅凭第一个 token 判断安全性
+            if (command.contains("&&") || command.contains("||")
+                    || command.contains(";") || command.contains("\n")) {
+                return Result.confirm("MODE_DEFAULT", "复合命令需用户确认");
+            }
+            String cmdName = command.split("\\s+", 2)[0];
+            int lastSlash = cmdName.lastIndexOf('/');
+            if (lastSlash >= 0) {
+                cmdName = cmdName.substring(lastSlash + 1);
+            }
+            if (!readOnlyCommands.contains(cmdName)) {
+                return Result.confirm("MODE_DEFAULT", "Default 模式下 shell 命令需要用户确认");
+            }
+        }
+
         return Result.allow();
     }
 
-    private Result evaluateFileWrite(Map<String, Object> arguments) {
+    private Result evaluateFileWrite(Map<String, Object> arguments, String mode) {
         String filePath = arguments.getOrDefault("file_path", "").toString();
         if (filePath.isEmpty()) {
             filePath = arguments.getOrDefault("filePath", "").toString();
@@ -135,6 +177,17 @@ public class SecurityEvaluator {
             return Result.block("HARD_BLOCK", "禁止修改应用配置文件: " + filePath);
         }
 
+        // bypass 模式：放行
+        if ("bypass".equalsIgnoreCase(mode)) {
+            return Result.allow();
+        }
+
+        // default 模式：所有文件编辑需确认
+        if (!"acceptEdits".equalsIgnoreCase(mode)) {
+            return Result.confirm("MODE_DEFAULT", "Default 模式下文件写入需要用户确认");
+        }
+
+        // acceptEdits 模式：文件编辑自动放行
         return Result.allow();
     }
 }
