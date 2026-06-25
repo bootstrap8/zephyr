@@ -524,6 +524,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /** 供 ChatCtrl 调用，写入用户确认结果 */
+    @Override
     public void confirm(String confirmId, boolean allowed) {
         synchronized (confirmResults) {
             confirmResults.put(confirmId, new ConfirmResult(allowed));

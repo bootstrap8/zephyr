@@ -10,6 +10,7 @@ import com.github.hbq969.code.sm.perm.api.SMRequiresPermissions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -105,6 +106,25 @@ public class ChatCtrl {
                                          @RequestParam(required = false) String mode) {
         return ReturnMessage.success(chatService.contextUsage(
                 userName(), conversationId, mode));
+    }
+
+    @Operation(summary = "用户确认/拒绝操作")
+    @RequestMapping(path = "/confirm", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体", apiKey = "chat_confirm", apiDesc = "聊天接口_确认操作")
+    public ReturnMessage<?> confirm(@RequestBody Map<String, Object> body) {
+        String confirmId = body.get("confirmId").toString();
+        String action = body.get("action").toString(); // "allow" | "deny"
+
+        // 身份校验：confirmId 格式为 "userName:randomId"，校验当前用户是否匹配
+        int colonIdx = confirmId.indexOf(':');
+        if (colonIdx < 0 || !userName().equals(confirmId.substring(0, colonIdx))) {
+            return ReturnMessage.fail("无权操作此确认请求");
+        }
+
+        boolean allowed = "allow".equals(action);
+        chatService.confirm(confirmId, allowed);
+        return ReturnMessage.success(Map.of("confirmId", confirmId, "action", action));
     }
 
 }

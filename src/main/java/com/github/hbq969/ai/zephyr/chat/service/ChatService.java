@@ -12,4 +12,5 @@ public interface ChatService {
     void cancelByConversationId(String conversationId);
     Map<String, Object> contextUsage(String userName, String conversationId, String mode);
     Map<String, Object> upload(MultipartFile file, String workspaceId, String userName);
+    void confirm(String confirmId, boolean allowed);
 }
