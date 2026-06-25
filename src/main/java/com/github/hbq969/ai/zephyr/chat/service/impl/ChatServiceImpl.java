@@ -429,6 +429,7 @@ public class ChatServiceImpl implements ChatService {
             String userName, List<String> enabledKbIds, String conversationId, String mode,
             SseEmitter emitter, ConversationSessionManager.SessionHandle handle) {
         List<Map<String, Object>> results = new ArrayList<>();
+        boolean rejected = false;
 
         // === 一次性解析 workspace 边界（循环外，避免 N 次 DB 查询） ===
         WorkspaceBoundary boundary = resolveWorkspaceBoundary(conversationId);
@@ -441,6 +442,7 @@ public class ChatServiceImpl implements ChatService {
 
             if (secResult.decision() == SecurityEvaluator.Decision.BLOCK) {
                 // HARD BLOCK → 拒绝
+                rejected = true;
                 log.warn("[安全] HARD_BLOCK cid={}, tool={}, rule={}",
                         conversationId, tc.getName(), secResult.rule());
                 results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
@@ -476,6 +478,7 @@ public class ChatServiceImpl implements ChatService {
                         cfg.getSecurity().getConfirmTimeoutSeconds());
 
                 if (confirm == null || !confirm.allowed()) {
+                    rejected = true;
                     log.info("[安全] 用户拒绝 SOFT_BLOCK cid={}, tool={}",
                             conversationId, tc.getName());
                     auditLogger.log("USER_DENIED", tc.getName(), "DENIED",
@@ -511,21 +514,18 @@ public class ChatServiceImpl implements ChatService {
                             : content));
         }
 
-        // 检查绕过重试
+        // 检查绕过重试：HARD BLOCK 或用户拒绝均计入连续尝试次数
         String cid = conversationId;
-        if (!results.isEmpty()) {
-            boolean hasBlock = results.stream().anyMatch(r ->
-                    r.get("content").toString().contains("操作被拒绝（安全规则"));
-            if (hasBlock) {
-                int attempts = bypassAttempts.merge(cid, 1, Integer::sum);
-                if (attempts >= cfg.getSecurity().getMaxBypassAttempts()) {
-                    log.warn("[安全] 连续 {} 次 HARD_BLOCK 绕过尝试，强制终止 cid={}", attempts, cid);
-                    bypassAttempts.remove(cid);
-                    throw new ConversationSessionManager.CancelSessionException(cid);
-                }
-            } else {
+        if (rejected) {
+            int attempts = bypassAttempts.merge(cid, 1, Integer::sum);
+            if (attempts >= cfg.getSecurity().getMaxBypassAttempts()) {
+                log.warn("[安全] 连续 {} 次被拒绝，强制终止 cid={}", attempts, cid);
                 bypassAttempts.remove(cid);
+                throw new ConversationSessionManager.CancelSessionException(cid);
             }
+        } else {
+            // 本轮全部放行，重置连续计数
+            bypassAttempts.remove(cid);
         }
 
         return results;
