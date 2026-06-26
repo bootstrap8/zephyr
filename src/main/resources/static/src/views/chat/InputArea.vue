@@ -335,17 +335,16 @@ function loadKbData() {
 }
 
 function toggleKb(kbId: string) {
-  const convId = convStore.currentId
-  if (!convId) return
   const idx = selectedKbIds.value.indexOf(kbId)
   if (idx >= 0) { selectedKbIds.value.splice(idx, 1) }
   else { selectedKbIds.value.push(kbId) }
+  const convId = convStore.currentId
+  if (!convId) return
   axios({ url: '/knowledge/conversation/kb/save', method: 'post', data: { conversationId: convId, kbIds: [...selectedKbIds.value] } })
     .catch(() => msg(langData.axiosRequestErr, 'error'))
 }
 
 function toggleKbList() {
-  if (!convStore.currentId) return
   loadKbData()
   closeAll(); showKbList.value = !showKbList.value
 }
@@ -625,7 +624,7 @@ function closeAll() {
           </div>
 
           <!-- 知识库选择 -->
-          <div class="tool-pick" :class="{ dim: !convStore.currentId }" @click.stop="toggleKbList()">
+          <div class="tool-pick" @click.stop="toggleKbList()">
             <Icon icon="lucide:library" class="pick-icon" />
             <span>{{ selectedKbIds.length > 0 ? selectedKbIds.length + ' 知识库' : langData.settingsPanel_kbSelect }}</span>
             <Icon icon="lucide:chevron-down" class="pick-arrow" />

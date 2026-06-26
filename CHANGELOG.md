@@ -1,5 +1,7 @@
 # Changelog
 
+本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
+
 ## [1.3.1] - 2026-06-26
 
 ### 新增
@@ -11,9 +13,9 @@
 - **ADMIN 权限控制**：安全规则配置仅 ADMIN 角色可访问，非管理员入口隐藏且页面重定向
 - **设置面板安全入口**：SettingsPanel 新增安全规则行，显示各类型规则计数
 
+### 修复
 
-
-本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)，格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
+- **新建对话知识库不可选**：输入区知识库下拉移除 `currentId` 前置检查，允许在未关联对话时选择知识库
 
 ## [1.3.0] - 2026-06-25
 
