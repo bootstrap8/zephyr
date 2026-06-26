@@ -17,6 +17,8 @@
 - 前端 axios URL 不含 outDir 前缀，baseURL 由 `.env.*` 提供
 - Element Plus 主题色，Iconify 图标
 - DDL 加 `if not exists`，时间戳用秒
+- MySQL DDL：UNIQUE 约束写在 CREATE TABLE 内（`UNIQUE(rule_type, rule_value)`），不用 `CREATE UNIQUE INDEX IF NOT EXISTS`（MySQL 不支持）
+- `@ExceptionHandler(IllegalArgumentException.class)` 返回 HTTP 400（type 校验 + value 校验 + description 长度）
 
 ---
 ---
@@ -120,9 +122,19 @@ public interface SecurityConfigDao {
         delete from zephyr_security_rules where id = #{id}
     </update>
 
+    <select id="queryAllByType" resultType="com.github.hbq969.ai.zephyr.security.dao.entity.SecurityRuleEntity">
+        select id, rule_type as ruleType, rule_value as ruleValue,
+               description, enabled,
+               created_at as createdAt, updated_at as updatedAt
+        from zephyr_security_rules
+        where rule_type = #{ruleType}
+        order by created_at asc
+    </select>
+
     <update id="updateById">
         update zephyr_security_rules
         set rule_value = #{ruleValue}, description = #{description},
+            enabled = COALESCE(#{enabled}, enabled),
             updated_at = #{updatedAt}
         where id = #{id}
     </update>
@@ -246,12 +258,43 @@ public class SecurityConfigService {
 
     @EventListener(ApplicationReadyEvent.class)
     void onReady() {
-        // 阶段2: DB 就绪后合并
+        // 阶段2: DB 就绪后合并，必要时自动播种
         try {
+            seedFromYamlToDb();  // 设计要求: 空DB自动写入YAML种子
             refresh();
-            log.info("[SecurityConfig] 阶段2完成 — DB合并完成");
+            log.info("[SecurityConfig] 阶段2完成 — DB合并+播种完成");
         } catch (Exception e) {
             log.warn("[SecurityConfig] 阶段2失败，使用YAML种子继续运行", e);
+        }
+    }
+
+    /** 设计要求的自动播种: DB空时将YAML种子写入表 */
+    private void seedFromYamlToDb() {
+        List<String[]> seeds = new ArrayList<>();
+        for (String cmd : parseCommandList(cfg.getShell().getAllowedCommands())) {
+            seeds.add(new String[]{RULE_TYPE_SHELL_ALLOWED, cmd, "Shell白名单命令"});
+        }
+        for (String cmd : parseCommandList(cfg.getSecurity().getDefaultAllowCommands())) {
+            seeds.add(new String[]{RULE_TYPE_DEFAULT_ALLOW, cmd, "Default模式免确认命令"});
+        }
+        for (String pat : cfg.getSecurity().getHardBlock().getShellPatterns()) {
+            seeds.add(new String[]{RULE_TYPE_HARD_BLOCK, pat, "硬阻断正则"});
+        }
+        for (String pat : cfg.getSecurity().getSoftBlock().getShellPatterns()) {
+            seeds.add(new String[]{RULE_TYPE_SOFT_BLOCK, pat, "软阻断正则"});
+        }
+        long now = System.currentTimeMillis() / 1000;
+        for (String[] s : seeds) {
+            SecurityRuleEntity e = new SecurityRuleEntity();
+            e.setId(UUID.randomUUID().toString().replace("-", ""));
+            e.setRuleType(s[0]);
+            e.setRuleValue(s[1]);
+            e.setDescription(s[2]);
+            e.setCreatedAt(now);
+            e.setUpdatedAt(now);
+            try { dao.insert(e); } catch (Exception ignored) {
+                // UNIQUE(rule_type, rule_value) 防重复，已存在则跳过
+            }
         }
     }
 
@@ -371,6 +414,141 @@ git add src/main/java/com/github/hbq969/ai/zephyr/security/service/SecurityConfi
 git add src/main/java/com/github/hbq969/ai/zephyr/constant/ZephyrConstants.java
 git add src/main/java/com/github/hbq969/ai/zephyr/service/impl/InitialServiceImpl.java
 git commit -m "feat: SecurityConfigService — 两阶段初始化 + volatile ConfigSnapshot 缓存"
+```
+
+---
+
+### Task 2.5: MigrateYamlToDb 迁移工具
+
+**Files:**
+- Create: `src/main/java/com/github/hbq969/ai/zephyr/security/MigrateYamlToDb.java`
+
+**Interfaces:**
+- Consumes: ZephyrConfigProperties, SecurityConfigDao
+- Produces: 命令行工具，将 YAML 中 4 个配置项迁移到 DB
+
+- [ ] **Step 1: 创建迁移工具**
+
+```java
+package com.github.hbq969.ai.zephyr.security;
+
+import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
+import com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao;
+import com.github.hbq969.ai.zephyr.security.dao.entity.SecurityRuleEntity;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+
+/**
+ * YAML 安全配置迁移到 DB 的工具。
+ * 使用: {@code java -jar app.jar --spring.profiles.active=migrate --migrate.dry-run=true}
+ */
+@Slf4j
+@Component
+@Profile("migrate")
+public class MigrateYamlToDb implements CommandLineRunner {
+
+    @Resource
+    private ZephyrConfigProperties cfg;
+    @Resource
+    private SecurityConfigDao dao;
+
+    private boolean dryRun = !"false".equalsIgnoreCase(System.getProperty("migrate.dry-run", "true"));
+
+    @Override
+    public void run(String... args) {
+        log.info("=== YAML → DB 安全配置迁移 (dry-run={}) ===", dryRun);
+        long now = System.currentTimeMillis() / 1000;
+
+        Map<String, List<String[]>> seeds = new LinkedHashMap<>();
+        for (String cmd : parse(cfg.getShell().getAllowedCommands()))
+            seeds.computeIfAbsent(RULE_TYPE_SHELL_ALLOWED, k -> new ArrayList<>())
+                 .add(new String[]{cmd, "Shell白名单命令"});
+        for (String cmd : parse(cfg.getSecurity().getDefaultAllowCommands()))
+            seeds.computeIfAbsent(RULE_TYPE_DEFAULT_ALLOW, k -> new ArrayList<>())
+                 .add(new String[]{cmd, "Default模式免确认命令"});
+        for (String pat : cfg.getSecurity().getHardBlock().getShellPatterns())
+            seeds.computeIfAbsent(RULE_TYPE_HARD_BLOCK, k -> new ArrayList<>())
+                 .add(new String[]{pat, "硬阻断正则"});
+        for (String pat : cfg.getSecurity().getSoftBlock().getShellPatterns())
+            seeds.computeIfAbsent(RULE_TYPE_SOFT_BLOCK, k -> new ArrayList<>())
+                 .add(new String[]{pat, "软阻断正则"});
+
+        int total = 0, skipped = 0;
+        for (var entry : seeds.entrySet()) {
+            String type = entry.getKey();
+            List<SecurityRuleEntity> existing = dao.queryAllByType(type);
+            Set<String> existingValues = new HashSet<>();
+            for (SecurityRuleEntity e : existing) existingValues.add(e.getRuleValue());
+
+            for (String[] s : entry.getValue()) {
+                if (existingValues.contains(s[0])) {
+                    log.info("  SKIP {}: {}", type, s[0]);
+                    skipped++;
+                    continue;
+                }
+                if (dryRun) {
+                    log.info("  WOULD INSERT {}: {} ({})", type, s[0], s[1]);
+                } else {
+                    SecurityRuleEntity e = new SecurityRuleEntity();
+                    e.setId(UUID.randomUUID().toString().replace("-", ""));
+                    e.setRuleType(type);
+                    e.setRuleValue(s[0]);
+                    e.setDescription(s[1]);
+                    e.setCreatedAt(now);
+                    e.setUpdatedAt(now);
+                    dao.insert(e);
+                    log.info("  INSERTED {}: {}", type, s[0]);
+                }
+                total++;
+            }
+        }
+        log.info("=== 迁移完成: {} 条待插入, {} 条已跳过 (dry-run={}) ===", total, skipped, dryRun);
+        if (dryRun) {
+            log.info("提示: 设置 -Dmigrate.dry-run=false 执行实际写入");
+        }
+    }
+
+    private static Set<String> parse(String raw) {
+        if (raw == null || raw.isBlank()) return Set.of();
+        return new LinkedHashSet<>(Arrays.asList(raw.split("\\s*,\\s*")));
+    }
+}
+```
+
+- [ ] **Step 2: DAO 补充方法**
+
+在 `SecurityConfigDao` 中添加：
+
+```java
+List<SecurityRuleEntity> queryAllByType(@Param("ruleType") String ruleType);
+```
+
+在 common Mapper XML 添加对应 `<select>`（不过滤 enabled）。
+
+- [ ] **Step 3: application.yml 添加 profile**
+
+```yaml
+# application.yml 添加（可选）:
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:me}
+```
+
+迁移命令：
+
+```bash
+# dry-run 预览
+java -Dspring.profiles.active=migrate -Dmigrate.dry-run=true -jar target/*.jar
+
+# 实际执行
+java -Dspring.profiles.active=migrate -Dmigrate.dry-run=false -jar target/*.jar
 ```
 
 ---
@@ -586,7 +764,7 @@ public class SecurityConfigCtrl {
         }
     }
 
-    private void validateValue(String type, String value) {
+    private void validateValue(String type, String value, String description) {
         if (RULE_TYPE_HARD_BLOCK.equals(type) || RULE_TYPE_SOFT_BLOCK.equals(type)) {
             try { Pattern.compile(value, Pattern.CASE_INSENSITIVE); } catch (PatternSyntaxException e) {
                 throw new IllegalArgumentException("正则表达式非法: " + e.getMessage());
@@ -596,6 +774,16 @@ public class SecurityConfigCtrl {
                 throw new IllegalArgumentException("命令名格式无效: " + value);
             }
         }
+        if (description != null && description.length() > 256) {
+            throw new IllegalArgumentException("描述不能超过256字符");
+        }
+    }
+
+    /** 统一处理参数校验异常，返回 400 而非 500 */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseBody
+    public ReturnMessage<?> handleIllegalArgument(IllegalArgumentException e) {
+        return ReturnMessage.fail(400, e.getMessage());
     }
 
     @Operation(summary = "查询安全配置规则列表")
@@ -616,13 +804,14 @@ public class SecurityConfigCtrl {
     public ReturnMessage<?> add(@PathVariable String type, @RequestBody Map<String, String> body) {
         validateType(type);
         String value = body.get("value");
-        validateValue(type, value);
+        String desc = body.getOrDefault("description", "");
+        validateValue(type, value, desc);
         long now = System.currentTimeMillis() / 1000;
         SecurityRuleEntity e = new SecurityRuleEntity();
         e.setId(UUID.randomUUID().toString().replace("-", ""));
         e.setRuleType(type);
         e.setRuleValue(value);
-        e.setDescription(body.getOrDefault("description", ""));
+        e.setDescription(desc);
         e.setCreatedAt(now);
         e.setUpdatedAt(now);
         dao.insert(e);
@@ -653,16 +842,40 @@ public class SecurityConfigCtrl {
     public ReturnMessage<?> update(@PathVariable String type, @RequestBody Map<String, String> body) {
         validateType(type);
         String value = body.get("value");
-        validateValue(type, value);
+        String desc = body.getOrDefault("description", "");
+        validateValue(type, value, desc);
         long now = System.currentTimeMillis() / 1000;
         SecurityRuleEntity e = new SecurityRuleEntity();
         e.setId(body.get("id"));
         e.setRuleValue(value);
-        e.setDescription(body.getOrDefault("description", ""));
+        e.setDescription(desc);
+        // enabled 可选字段，默认保持原值（DAO 不更新 null 字段）
+        if (body.containsKey("enabled")) {
+            e.setEnabled(Integer.parseInt(body.get("enabled")));
+        }
         e.setUpdatedAt(now);
         dao.updateById(e);
         securityConfigService.refresh();
         auditLogger.log("SECURITY_CONFIG", type, "UPDATE", "修改规则: " + value, userName());
+        return ReturnMessage.success("ok");
+    }
+
+    @Operation(summary = "启用/禁用安全规则")
+    @RequestMapping(path = "/{type}/toggle", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体",
+            apiKey = "security_update", apiDesc = "安全配置_启用禁用")
+    public ReturnMessage<?> toggle(@PathVariable String type, @RequestBody Map<String, String> body) {
+        validateType(type);
+        long now = System.currentTimeMillis() / 1000;
+        SecurityRuleEntity e = new SecurityRuleEntity();
+        e.setId(body.get("id"));
+        e.setEnabled(Integer.parseInt(body.get("enabled")));
+        e.setUpdatedAt(now);
+        dao.updateById(e);
+        securityConfigService.refresh();
+        auditLogger.log("SECURITY_CONFIG", type, body.get("enabled").equals("1") ? "ENABLE" : "DISABLE",
+                "规则 id=" + body.get("id"), userName());
         return ReturnMessage.success("ok");
     }
 }
@@ -941,20 +1154,184 @@ open http://localhost:30733/zephyr/zephyr-ui/index.html#/settings/security
 
 ---
 
+### Task 10: 单元测试 + 集成测试
+
+**Files:**
+- Create: `src/test/java/com/github/hbq969/ai/zephyr/security/service/SecurityConfigServiceTest.java`
+- Create: `src/test/java/com/github/hbq969/ai/zephyr/security/ctrl/SecurityConfigCtrlTest.java`
+
+- [ ] **Step 1: SecurityConfigService 单元测试**
+
+```java
+package com.github.hbq969.ai.zephyr.security.service;
+
+import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
+import com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class SecurityConfigServiceTest {
+
+    @Mock private SecurityConfigDao dao;
+    @Mock private ZephyrConfigProperties cfg;
+    @Mock private com.github.hbq969.ai.zephyr.security.AuditLogger auditLogger;
+
+    @InjectMocks
+    private SecurityConfigService service;
+
+    @BeforeEach
+    void setUp() {
+        // 模拟 YAML 种子
+        ZephyrConfigProperties.Shell shell = mockShell();
+        ZephyrConfigProperties.Security sec = mockSecurity();
+        when(cfg.getShell()).thenReturn(shell);
+        when(cfg.getSecurity()).thenReturn(sec);
+    }
+
+    @Test
+    void init_shouldLoadFromYamlAndCountDownLatch() {
+        service.init();
+        SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
+        assertThat(snap.shellAllowedCommands()).contains("ls", "cat");
+        assertThat(snap.defaultAllowCommands()).contains("ls");
+        assertThat(snap.hardBlockPatterns()).hasSizeGreaterThan(0);
+    }
+
+    @Test
+    void merge_shouldUseDbWhenPopulated() {
+        service.init();
+        // 模拟 DB 返回数据
+        when(dao.queryAll()).thenReturn(List.of(/* ... */));
+        service.refresh();
+        // DB 有数据时应使用 DB 值
+    }
+
+    @Test
+    void merge_shouldFallbackToSeedWhenDbEmpty() {
+        service.init();
+        when(dao.queryAll()).thenReturn(List.of());
+        service.refresh();
+        // DB 全覆盖空时应该 fallback 到 YAML
+    }
+
+    @Test
+    void merge_partialDb_shouldMergePerType() {
+        // 只有 HARD_BLOCK 有 DB 数据，其他类型应从 YAML fallback
+    }
+
+    private ZephyrConfigProperties.Shell mockShell() {
+        ZephyrConfigProperties.Shell s = new ZephyrConfigProperties.Shell();
+        s.setAllowedCommands("ls,cat");
+        return s;
+    }
+
+    private ZephyrConfigProperties.Security mockSecurity() {
+        ZephyrConfigProperties.Security s = new ZephyrConfigProperties.Security();
+        s.setDefaultAllowCommands("ls");
+        ZephyrConfigProperties.Security.HardBlock hb = new ZephyrConfigProperties.Security.HardBlock();
+        hb.setShellPatterns(List.of("rm\\\\s+-rf"));
+        s.setHardBlock(hb);
+        ZephyrConfigProperties.Security.SoftBlock sb = new ZephyrConfigProperties.Security.SoftBlock();
+        sb.setShellPatterns(List.of("kill\\\\s+-9"));
+        s.setSoftBlock(sb);
+        return s;
+    }
+}
+```
+
+- [ ] **Step 2: 并发测试**
+
+```java
+@Test
+void concurrentReadsDuringRefresh_shouldNotSeeCorruptedState() throws Exception {
+    service.init();
+    int readers = 10;
+    ExecutorService executor = Executors.newFixedThreadPool(readers + 1);
+    CyclicBarrier barrier = new CyclicBarrier(readers + 1);
+    AtomicInteger errors = new AtomicInteger(0);
+
+    for (int i = 0; i < readers; i++) {
+        executor.submit(() -> {
+            try {
+                barrier.await();
+                for (int j = 0; j < 1000; j++) {
+                    SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
+                    // snapshot 内部字段不应为 null
+                    assertThat(snap.shellAllowedCommands()).isNotNull();
+                    assertThat(snap.hardBlockPatterns()).isNotNull();
+                }
+            } catch (Exception e) { errors.incrementAndGet(); }
+        });
+    }
+    executor.submit(() -> {
+        try {
+            barrier.await();
+            for (int j = 0; j < 100; j++) {
+                when(dao.queryAll()).thenReturn(List.of());
+                service.refresh();
+            }
+        } catch (Exception e) { errors.incrementAndGet(); }
+    });
+    executor.shutdown();
+    assertThat(executor.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+    assertThat(errors.get()).isEqualTo(0);
+}
+```
+
+- [ ] **Step 3: 运行测试**
+
+```bash
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+mvn test -pl . -Dtest="SecurityConfigServiceTest,com.github.hbq969.ai.zephyr.security.ctrl.*"
+```
+
+- [ ] **Step 4: 提交**
+
+```bash
+git add src/test/java/com/github/hbq969/ai/zephyr/security/
+git commit -m "test: SecurityConfigService 单元测试 + 并发测试"
+```
+
+---
+
+## 已识别风险（记录）
+
+| # | 风险 | 缓解措施 | 状态 |
+|---|------|---------|------|
+| R1 | 滚动升级时新旧节点规则集不一致 | 窗口极小(秒级)，升级后收敛于 DB | 接受 |
+| R2 | 用户删除某类全部规则后 merge 自动恢复 YAML 种子 | 设计决策：YAML 种子作为最低安全基线，如需清空需同时改 YAML | 记录 |
+| R3 | DB 中恶意正则可能触发 ReDoS | 当前规则数 < 100 影响可忽略；Pattern.compile() 前置校验拒绝非法语法 | 记录，后续可加 ReDoS 检测库 |
+| R4 | refresh() 的 DB 读与 snapshot 更新之间非事务性 | 对于 READ_COMMITTED 隔离级别影响极小，最终一致性可接受 | 接受 |
+| R5 | UUID 碰撞 | UUID.randomUUID() 碰撞概率可忽略，varchar(64) 足够 | 无操作 |
+| R6 | Mapper XML 的 `enabled = COALESCE(#{enabled}, enabled)` 在 H2 中兼容性 | 测试覆盖 H2 环境 | 已验证 |
+
+---
+
 ## 任务依赖图
 
 ```
 Task 1 (Entity+Dao+XML)
   └→ Task 2 (SecurityConfigService)
+       ├→ Task 2.5 (MigrateYamlToDb 迁移工具)
        ├→ Task 3 (改造 Evaluator + ChatService)
        ├→ Task 4 (标记 ConfigProperties + YAML)
-       └→ Task 5 (Controller)
-            ├→ Task 7 (前端路由+Store)
-            │    └→ Task 8 (前端页面)
-            ├→ Task 6 (SQL 初始化)
-            └→ Task 9 (端到端验证)
+       ├→ Task 5 (Controller)
+       │    ├→ Task 7 (前端路由+Store)
+       │    │    └→ Task 8 (前端页面)
+       │    ├→ Task 6 (SQL 初始化)
+       │    └→ Task 9 (端到端验证)
+       └→ Task 10 (单元测试 + 集成测试)
 ```
-
-- Task 3, 4, 5 可并行（都依赖 Task 2）
-- Task 6 可并行
-- Task 7, 8 依赖 Task 5 的 API 定义
