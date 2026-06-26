@@ -36,7 +36,7 @@ const isPatternTab = computed(() => !COMMAND_TABS.includes(activeTab.value))
 const rules = computed(() => settingsStore.securityRules[activeTab.value] || [])
 
 const filteredRules = computed(() => {
-  if (!isPatternTab.value || statusFilter.value === 'all') return rules.value
+  if (statusFilter.value === 'all') return rules.value
   const enabled = statusFilter.value === 'enabled'
   return rules.value.filter((r: any) => !!r.enabled === enabled)
 })
@@ -169,6 +169,31 @@ async function onToggle(rule: any, val: any) {
   if (!rule.id) return
   await settingsStore.toggleSecurityRule(activeTab.value, rule.id, val ? 1 : 0)
 }
+
+function confirmBatchEnable() {
+  const count = selectedRows.value.length
+  ElMessageBox.confirm(
+    (langData as any).securityMgmt_confirmBatchEnableMsg.replace('{count}', String(count)),
+    (langData as any).securityMgmt_batchEnable,
+    { confirmButtonText: (langData as any).securityMgmt_enabled, cancelButtonText: langData.btnCancel, type: 'warning' }
+  ).then(() => doBatchToggle(1)).catch(() => {})
+}
+
+function confirmBatchDisable() {
+  const count = selectedRows.value.length
+  ElMessageBox.confirm(
+    (langData as any).securityMgmt_confirmBatchDisableMsg.replace('{count}', String(count)),
+    (langData as any).securityMgmt_batchDisable,
+    { confirmButtonText: (langData as any).securityMgmt_disabled, cancelButtonText: langData.btnCancel, type: 'warning' }
+  ).then(() => doBatchToggle(0)).catch(() => {})
+}
+
+async function doBatchToggle(enabled: number) {
+  const ids = selectedRows.value.map((r: any) => r.id)
+  await settingsStore.batchToggleSecurityRules(activeTab.value, ids, enabled)
+  selectedRows.value = []
+  currentPage.value = 1
+}
 </script>
 
 <template>
@@ -213,14 +238,22 @@ async function onToggle(rule: any, val: any) {
                 <Icon icon="lucide:trash-2" />
               </el-button>
             </el-tooltip>
-            <template v-if="isPatternTab">
-              <el-divider direction="vertical" />
-              <el-select v-model="statusFilter" size="small" style="width: 100px" @change="currentPage = 1">
-                <el-option label="全部" value="all" />
-                <el-option :label="langData.securityMgmt_enabled" value="enabled" />
-                <el-option :label="langData.securityMgmt_disabled" value="disabled" />
-              </el-select>
-            </template>
+            <el-tooltip :content="(langData as any).securityMgmt_batchEnable" placement="top">
+              <el-button link :disabled="!hasSelection" @click="confirmBatchEnable">
+                <Icon icon="lucide:check-circle" />
+              </el-button>
+            </el-tooltip>
+            <el-tooltip :content="(langData as any).securityMgmt_batchDisable" placement="top">
+              <el-button link :disabled="!hasSelection" @click="confirmBatchDisable">
+                <Icon icon="lucide:ban" />
+              </el-button>
+            </el-tooltip>
+            <span style="flex: 1" />
+            <el-radio-group v-model="statusFilter" size="small" @change="currentPage = 1">
+              <el-radio-button value="all">{{ (langData as any).securityMgmt_all }}</el-radio-button>
+              <el-radio-button :value="'enabled'">{{ langData.securityMgmt_enabled }}</el-radio-button>
+              <el-radio-button :value="'disabled'">{{ langData.securityMgmt_disabled }}</el-radio-button>
+            </el-radio-group>
           </div>
 
           <el-table
@@ -247,7 +280,6 @@ async function onToggle(rule: any, val: any) {
             </el-table-column>
 
             <el-table-column
-              v-if="isPatternTab"
               :label="langData.securityMgmt_statusLabel"
               width="90"
               align="center"
@@ -262,7 +294,6 @@ async function onToggle(rule: any, val: any) {
             <el-table-column :label="langData.tableHeaderOp" width="170" align="center">
               <template #default="{ row }">
                 <el-switch
-                  v-if="isPatternTab"
                   :model-value="!!row.enabled"
                   size="small"
                   style="margin-right: 6px"

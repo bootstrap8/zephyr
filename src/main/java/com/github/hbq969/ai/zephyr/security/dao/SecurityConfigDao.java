@@ -24,4 +24,6 @@ public interface SecurityConfigDao {
     List<Map<String, Object>> queryCounts();
 
     void batchDelete(@Param("ids") List<String> ids);
+
+    void batchUpdateEnabled(@Param("ids") List<String> ids, @Param("enabled") Integer enabled, @Param("updatedAt") Long updatedAt);
 }

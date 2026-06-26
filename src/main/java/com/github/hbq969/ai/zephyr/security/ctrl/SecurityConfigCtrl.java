@@ -172,6 +172,36 @@ public class SecurityConfigCtrl {
         return ReturnMessage.success("ok");
     }
 
+    @Operation(summary = "批量启用/禁用安全规则")
+    @RequestMapping(path = "/{type}/batch-toggle", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体",
+            apiKey = "security_update", apiDesc = "安全配置_批量启用禁用")
+    public ReturnMessage<?> batchToggle(@PathVariable String type, @RequestBody Map<String, Object> body) {
+        validateType(type);
+        @SuppressWarnings("unchecked")
+        java.util.List<String> ids = (java.util.List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("ids 不能为空");
+        }
+        if (ids.size() > 1000) {
+            throw new IllegalArgumentException("单次批量操作不能超过 1000 条");
+        }
+        Object enabledObj = body.get("enabled");
+        if (enabledObj == null) {
+            throw new IllegalArgumentException("enabled 不能为空");
+        }
+        Integer enabled = enabledObj instanceof Number
+                ? ((Number) enabledObj).intValue()
+                : Integer.parseInt(enabledObj.toString());
+        long now = System.currentTimeMillis() / 1000;
+        dao.batchUpdateEnabled(ids, enabled, now);
+        securityConfigService.refresh();
+        auditLogger.log("SECURITY_CONFIG", type, enabled == 1 ? "BATCH_ENABLE" : "BATCH_DISABLE",
+                "批量操作规则 count=" + ids.size(), userName());
+        return ReturnMessage.success("ok");
+    }
+
     @Operation(summary = "统计各类型安全规则数量")
     @RequestMapping(path = "/stats", method = RequestMethod.GET)
     @ResponseBody

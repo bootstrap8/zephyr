@@ -384,6 +384,11 @@ export const useSettingsStore = defineStore('settings', () => {
     await loadSecurityStats()
   }
 
+  async function batchToggleSecurityRules(type: string, ids: string[], enabled: number) {
+    await axios({ url: `/security/${type}/batch-toggle`, method: 'post', data: { ids, enabled } })
+    await loadSecurityRules(type)
+  }
+
   async function loadUserInfo() {
     try {
       const res = await axios({ url: '/chat/whoami', method: 'get' })
@@ -414,6 +419,6 @@ export const useSettingsStore = defineStore('settings', () => {
     toggleKbScope,
     securityRules, securityStats,
     loadSecurityRules, addSecurityRule, deleteSecurityRule, updateSecurityRule, toggleSecurityRule,
-    loadSecurityStats, batchDeleteSecurityRules
+    loadSecurityStats, batchDeleteSecurityRules, batchToggleSecurityRules
   }
 })

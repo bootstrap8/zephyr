@@ -59,4 +59,13 @@
         </foreach>
     </update>
 
+    <update id="batchUpdateEnabled">
+        update zephyr_security_rules
+        set enabled = #{enabled}, updated_at = #{updatedAt}
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
 </mapper>

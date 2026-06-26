@@ -450,6 +450,11 @@ const locale: any = {
         "securityMgmt_index": "序号",
         "securityMgmt_selectAll": "全选",
         "securityMgmt_confirmBatchDeleteMsg": "确定删除选中的 {count} 条规则？",
+        "securityMgmt_all": "全部",
+        "securityMgmt_batchEnable": "批量启用",
+        "securityMgmt_batchDisable": "批量禁用",
+        "securityMgmt_confirmBatchEnableMsg": "确认批量启用选中的 {count} 条规则？",
+        "securityMgmt_confirmBatchDisableMsg": "确认批量禁用选中的 {count} 条规则？",
 
         // 暗黑模式
         "darkMode_on": "暗黑模式",
@@ -896,6 +901,11 @@ const locale: any = {
         "securityMgmt_index": "#",
         "securityMgmt_selectAll": "Select All",
         "securityMgmt_confirmBatchDeleteMsg": "Delete {count} selected rule(s)?",
+        "securityMgmt_all": "All",
+        "securityMgmt_batchEnable": "Batch Enable",
+        "securityMgmt_batchDisable": "Batch Disable",
+        "securityMgmt_confirmBatchEnableMsg": "Enable {count} selected rule(s)?",
+        "securityMgmt_confirmBatchDisableMsg": "Disable {count} selected rule(s)?",
 
         // Dark mode
         "darkMode_on": "Dark mode",
@@ -1332,6 +1342,11 @@ const locale: any = {
         "securityMgmt_index": "#",
         "securityMgmt_selectAll": "すべて選択",
         "securityMgmt_confirmBatchDeleteMsg": "選択した {count} 件のルールを削除しますか？",
+        "securityMgmt_all": "すべて",
+        "securityMgmt_batchEnable": "一括有効化",
+        "securityMgmt_batchDisable": "一括無効化",
+        "securityMgmt_confirmBatchEnableMsg": "選択した {count} 件のルールを有効にしますか？",
+        "securityMgmt_confirmBatchDisableMsg": "選択した {count} 件のルールを無効にしますか？",
 
         // Dark mode
         "darkMode_on": "ダークモード",
