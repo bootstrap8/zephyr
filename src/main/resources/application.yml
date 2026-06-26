@@ -316,9 +316,6 @@ zephyr:
     default-allow-commands: ls,cat,head,tail,less,more,file,stat,tree,od,hexdump,find,grep,egrep,fgrep,locate,which,whereis,type,wc,sort,uniq,cut,tr,diff,cmp,comm,join,paste,expand,unexpand,fmt,fold,iconv,nl,rev,tac,pwd,whoami,id,groups,users,who,w,last,lastlog,date,uname,hostname,hostid,arch,nproc,df,du,free,uptime,dmesg,ps,pgrep,top,env,printenv,ulimit,umask,getconf,basename,dirname,realpath,readlink,echo,printf,man,whatis,apropos,info,cal,clear,reset,tty,sleep,test,expr,true,false,yes,command,builtin,hash,tsort
     # === HARD BLOCK 规则（命中即禁止执行） ===
     hard-block:
-      # 合并模式：EXTEND=与代码默认规则合并（推荐），REPLACE=完全覆盖默认规则
-      merge-mode: EXTEND
-      path-merge-mode: EXTEND
       # shell 命令 HARD BLOCK 正则，大小写不敏感，使用 find() 部分匹配
       shell-patterns:
         # --- 系统/数据毁灭 ---
@@ -360,7 +357,6 @@ zephyr:
         - "prompts/tools/"
     # === SOFT BLOCK 规则（命中即需用户确认） ===
     soft-block:
-      merge-mode: EXTEND
       shell-patterns:
         - "\\brm\\s+(-[a-zA-Z]*[rf][a-zA-Z]*\\s+)+"                                    # rm -rf 变体
         - "git\\s+push\\s+.*(?:--force|--force-with-lease)"                             # git force push

@@ -359,14 +359,6 @@ public class ZephyrConfigProperties {
         /** SOFT BLOCK 规则配置 */
         private SoftBlock softBlock = new SoftBlock();
 
-        /** 规则合并模式 */
-        public enum MergeMode {
-            /** 用户配置与代码默认规则合并（追加），默认 */
-            EXTEND,
-            /** 用户配置完全替代代码默认规则 */
-            REPLACE
-        }
-
         @Data
         public static class Audit {
             /** 是否启用审计日志，默认 true */
@@ -387,10 +379,6 @@ public class ZephyrConfigProperties {
              * 匹配使用 {@code String.contains()} 语义（子串包含，非前缀匹配）。
              */
             private List<String> pathPrefixes = new ArrayList<>();
-            /** 规则合并模式，默认 EXTEND（与代码默认规则合并） */
-            private MergeMode mergeMode = MergeMode.EXTEND;
-            /** pathPrefixes 的合并模式，默认 EXTEND */
-            private MergeMode pathMergeMode = MergeMode.EXTEND;
         }
 
         @Data
@@ -400,8 +388,6 @@ public class ZephyrConfigProperties {
              * 正则大小写不敏感（代码中已强制 CASE_INSENSITIVE），使用 {@code find()} 部分匹配。
              */
             private List<String> shellPatterns = new ArrayList<>();
-            /** 规则合并模式，默认 EXTEND（与代码默认规则合并） */
-            private MergeMode mergeMode = MergeMode.EXTEND;
         }
     }
 }

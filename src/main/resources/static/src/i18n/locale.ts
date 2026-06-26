@@ -94,9 +94,9 @@ const locale: any = {
         "inputArea_newWorkspace": "新建工作空间",
         "inputArea_workspaceLocked": "对话已绑定工作空间，新建对话可切换",
         "inputArea_noWorkspace": "无工作空间",
-        "inputArea_modeDefault": "默认 — 工作空间外操作每次确认",
-        "inputArea_modeAcceptEdits": "Accept Edits — 同一文件确认后不再提示",
-        "inputArea_modeBypass": "Bypass — 完整文件系统权限，无限制",
+        "inputArea_modeDefault": "默认 — 文件编辑和 Shell 命令均需逐条确认",
+        "inputArea_modeAcceptEdits": "Accept Edits — 文件编辑自动执行，Shell 破坏性操作需确认",
+        "inputArea_modeBypass": "Bypass — 所有操作自动执行，无安全闸门（仅限 CI/CD）",
 
         // 消息气泡
         "msgBubble_copy": "复制",
@@ -524,9 +524,9 @@ const locale: any = {
         "inputArea_newWorkspace": "New Workspace",
         "inputArea_workspaceLocked": "Workspace is locked to this conversation. Start a new chat to switch.",
         "inputArea_noWorkspace": "No workspace",
-        "inputArea_modeDefault": "Default — confirm every operation outside workspace",
-        "inputArea_modeAcceptEdits": "Accept Edits — same file confirmed once, no re-prompt",
-        "inputArea_modeBypass": "Bypass — full filesystem access, no restrictions",
+        "inputArea_modeDefault": "Default — confirm every file edit and shell command",
+        "inputArea_modeAcceptEdits": "Accept Edits — file edits auto-approved, destructive shell commands require confirmation",
+        "inputArea_modeBypass": "Bypass — all operations auto-approved, no safety gates (CI/CD only)",
 
         // Message bubble
         "msgBubble_copy": "Copy",
@@ -934,9 +934,9 @@ const locale: any = {
         "inputArea_newWorkspace": "新規ワークスペース",
         "inputArea_workspaceLocked": "会話にワークスペースが固定されています。新しい会話で切り替え可能です。",
         "inputArea_noWorkspace": "ワークスペースなし",
-        "inputArea_modeDefault": "デフォルト — ワークスペース外の操作は毎回確認",
-        "inputArea_modeAcceptEdits": "Accept Edits — 同じファイルは一度確認すれば再確認不要",
-        "inputArea_modeBypass": "バイパス — ファイルシステム完全アクセス、制限なし",
+        "inputArea_modeDefault": "デフォルト — ファイル編集・シェルコマンドともに毎回確認",
+        "inputArea_modeAcceptEdits": "Accept Edits — ファイル編集は自動実行、破壊的シェルコマンドは確認",
+        "inputArea_modeBypass": "バイパス — 全操作自動実行、安全ゲートなし（CI/CD 限定）",
 
         // Message bubble
         "msgBubble_copy": "コピー",
