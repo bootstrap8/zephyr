@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 @DS
@@ -19,4 +20,8 @@ public interface SecurityConfigDao {
     void deleteById(@Param("id") String id);
     void updateById(SecurityRuleEntity entity);
     void updateEnabled(SecurityRuleEntity entity);
+
+    List<Map<String, Object>> queryCounts();
+
+    void batchDelete(@Param("ids") List<String> ids);
 }

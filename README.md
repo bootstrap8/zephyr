@@ -111,6 +111,26 @@ Think of it as a personal AI workbench: configure your models once, connect MCP 
       </ul>
     </td>
   </tr>
+  <tr>
+    <td>
+      <h3>Security Rules</h3>
+      <ul>
+        <li>Command whitelist — allow approved shell commands to execute</li>
+        <li>Default allowed commands — commands that don't require explicit whitelisting</li>
+        <li>Hard block rules — regex patterns that unconditionally block execution</li>
+        <li>Soft block rules — regex patterns that trigger confirmation prompts</li>
+        <li>Admin-only access — security configuration restricted to ADMIN role</li>
+      </ul>
+    </td>
+    <td>
+      <h3>Knowledge Base</h3>
+      <ul>
+        <li>Create and manage knowledge bases with document uploads</li>
+        <li>Recall testing — verify retrieval quality against queries</li>
+        <li>Scope management — shared across users or kept personal</li>
+      </ul>
+    </td>
+  </tr>
 </table>
 
 ## Quick Start

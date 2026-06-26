@@ -21,6 +21,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const contextLoaded = ref(false)
   const contextDetail = ref<Record<string, any> | null>(null)
   const securityRules = ref<Record<string, any[]>>({})
+  const securityStats = ref<Record<string, number>>({})
 
   const contextTotal = computed(() => {
     const def = models.value.find(m => m.name === currentModel.value)
@@ -368,6 +369,21 @@ export const useSettingsStore = defineStore('settings', () => {
     await loadSecurityRules(type)
   }
 
+  async function loadSecurityStats() {
+    try {
+      const res = await axios({ url: '/security/stats', method: 'get' })
+      if (res.data.state === 'OK') {
+        securityStats.value = res.data.body
+      }
+    } catch (_) {}
+  }
+
+  async function batchDeleteSecurityRules(type: string, ids: string[]) {
+    await axios({ url: `/security/${type}/batch-delete`, method: 'post', data: { ids } })
+    await loadSecurityRules(type)
+    await loadSecurityStats()
+  }
+
   async function loadUserInfo() {
     try {
       const res = await axios({ url: '/chat/whoami', method: 'get' })
@@ -396,7 +412,8 @@ export const useSettingsStore = defineStore('settings', () => {
     loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory,
     loadKnowledgeBases,
     toggleKbScope,
-    securityRules,
-    loadSecurityRules, addSecurityRule, deleteSecurityRule, updateSecurityRule, toggleSecurityRule
+    securityRules, securityStats,
+    loadSecurityRules, addSecurityRule, deleteSecurityRule, updateSecurityRule, toggleSecurityRule,
+    loadSecurityStats, batchDeleteSecurityRules
   }
 })

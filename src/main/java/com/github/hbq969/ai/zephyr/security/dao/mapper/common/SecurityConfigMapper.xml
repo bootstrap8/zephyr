@@ -45,4 +45,18 @@
         where id = #{id}
     </update>
 
+    <select id="queryCounts" resultType="java.util.HashMap">
+        select rule_type as "ruleType", count(*) as "cnt"
+        from zephyr_security_rules
+        group by rule_type
+    </select>
+
+    <update id="batchDelete">
+        delete from zephyr_security_rules
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
 </mapper>

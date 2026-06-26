@@ -171,4 +171,42 @@ public class SecurityConfigCtrl {
                 "规则 id=" + body.get("id"), userName());
         return ReturnMessage.success("ok");
     }
+
+    @Operation(summary = "统计各类型安全规则数量")
+    @RequestMapping(path = "/stats", method = RequestMethod.GET)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体",
+            apiKey = "security_list", apiDesc = "安全配置_规则列表")
+    public ReturnMessage<?> stats() {
+        java.util.List<Map<String, Object>> rows = dao.queryCounts();
+        Map<String, Long> result = new java.util.HashMap<>();
+        for (String t : VALID_TYPES) {
+            result.put(t, 0L);
+        }
+        for (Map<String, Object> row : rows) {
+            String rt = (String) row.get("ruleType");
+            Object cnt = row.get("cnt");
+            result.put(rt, cnt instanceof Number ? ((Number) cnt).longValue() : 0L);
+        }
+        return ReturnMessage.success(result);
+    }
+
+    @Operation(summary = "批量删除安全规则")
+    @RequestMapping(path = "/{type}/batch-delete", method = RequestMethod.POST)
+    @ResponseBody
+    @SMRequiresPermissions(menu = "zephyr_api", menuDesc = "zephyr智能体",
+            apiKey = "security_delete", apiDesc = "安全配置_删除规则")
+    public ReturnMessage<?> batchDelete(@PathVariable String type, @RequestBody Map<String, Object> body) {
+        validateType(type);
+        @SuppressWarnings("unchecked")
+        java.util.List<String> ids = (java.util.List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("ids 不能为空");
+        }
+        dao.batchDelete(ids);
+        securityConfigService.refresh();
+        auditLogger.log("SECURITY_CONFIG", type, "BATCH_DELETE",
+                "批量删除规则 count=" + ids.size(), userName());
+        return ReturnMessage.success("ok");
+    }
 }

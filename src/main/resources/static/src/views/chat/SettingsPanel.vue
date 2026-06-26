@@ -16,7 +16,7 @@ const workspaceStore = useWorkspaceStore()
 
 watch(() => props.visible, (v) => {
   if (v) {
-    settingsStore.loadMcpServers(); settingsStore.loadSkills(); settingsStore.loadMemories(); settingsStore.loadKnowledgeBases()
+    settingsStore.loadMcpServers(); settingsStore.loadSkills(); settingsStore.loadMemories(); settingsStore.loadKnowledgeBases(); settingsStore.loadSecurityStats(); settingsStore.loadUserInfo()
     axios({ url: '/workspace/list', method: 'get' }).then(res => {
       if (res.data.state === 'OK') workspaceStore.setWorkspaces(res.data.body || [])
     }).catch(() => {})
@@ -83,6 +83,14 @@ function toggleDark() {
           <Icon icon="lucide:folder-open" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_workspace }}</span>
           <span class="sp-value">{{ workspaceStore.workspaces.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', workspaceStore.workspaces.length) : langData.settingsPanel_noMcp }}</span>
+          <Icon icon="lucide:chevron-right" class="sp-arrow" />
+        </div>
+        <div v-if="settingsStore.isAdmin" class="sp-item" @click="goTo('/settings/security')">
+          <Icon icon="lucide:shield" class="sp-item-icon" />
+          <span>{{ langData.settingsPanel_securityMgmt }}</span>
+          <span class="sp-value">
+            白({{ settingsStore.securityStats.SHELL_ALLOWED || 0 }}) 查({{ settingsStore.securityStats.DEFAULT_ALLOW || 0 }}) 硬({{ settingsStore.securityStats.HARD_BLOCK || 0 }}) 软({{ settingsStore.securityStats.SOFT_BLOCK || 0 }})
+          </span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
         <div class="sp-divider"></div>

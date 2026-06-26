@@ -132,6 +132,7 @@ const locale: any = {
         "settingsPanel_noMemory": "无",
         "settingsPanel_memorySummary": "用户 {user}  项目 {project}",
         "settingsPanel_workspace": "工作空间",
+        "settingsPanel_securityMgmt": "安全规则配置",
 
         // 模型配置
         "modelConfig_title": "模型配置",
@@ -444,6 +445,11 @@ const locale: any = {
         "securityMgmt_confirmDeleteMsg": "确定删除此规则？",
         "securityMgmt_noRules": "暂无规则",
         "securityMgmt_addFirstRule": "创建第一个规则",
+        "securityMgmt_refresh": "刷新",
+        "securityMgmt_batchDelete": "批量删除",
+        "securityMgmt_index": "序号",
+        "securityMgmt_selectAll": "全选",
+        "securityMgmt_confirmBatchDeleteMsg": "确定删除选中的 {count} 条规则？",
 
         // 暗黑模式
         "darkMode_on": "暗黑模式",
@@ -582,6 +588,7 @@ const locale: any = {
         "settingsPanel_noMemory": "None",
         "settingsPanel_memorySummary": "User {user}  Project {project}",
         "settingsPanel_workspace": "Workspace",
+        "settingsPanel_securityMgmt": "Security Rules",
 
         // Model config
         "modelConfig_title": "Model Configuration",
@@ -884,6 +891,11 @@ const locale: any = {
         "securityMgmt_confirmDeleteMsg": "Delete this rule?",
         "securityMgmt_noRules": "No rules",
         "securityMgmt_addFirstRule": "Create first rule",
+        "securityMgmt_refresh": "Refresh",
+        "securityMgmt_batchDelete": "Batch Delete",
+        "securityMgmt_index": "#",
+        "securityMgmt_selectAll": "Select All",
+        "securityMgmt_confirmBatchDeleteMsg": "Delete {count} selected rule(s)?",
 
         // Dark mode
         "darkMode_on": "Dark mode",
@@ -1012,6 +1024,7 @@ const locale: any = {
         "settingsPanel_noMemory": "なし",
         "settingsPanel_memorySummary": "ユーザー {user}  プロジェクト {project}",
         "settingsPanel_workspace": "ワークスペース",
+        "settingsPanel_securityMgmt": "セキュリティルール",
 
         // Model config
         "modelConfig_title": "モデル設定",
@@ -1314,6 +1327,11 @@ const locale: any = {
         "securityMgmt_confirmDeleteMsg": "このルールを削除しますか？",
         "securityMgmt_noRules": "ルールがありません",
         "securityMgmt_addFirstRule": "最初のルールを作成",
+        "securityMgmt_refresh": "リフレッシュ",
+        "securityMgmt_batchDelete": "一括削除",
+        "securityMgmt_index": "#",
+        "securityMgmt_selectAll": "すべて選択",
+        "securityMgmt_confirmBatchDeleteMsg": "選択した {count} 件のルールを削除しますか？",
 
         // Dark mode
         "darkMode_on": "ダークモード",
