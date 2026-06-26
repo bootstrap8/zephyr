@@ -8,6 +8,7 @@ public class WorkspaceEntity {
     private String name;
     private String path;
     private String userName;
+    private Integer isSystem; // 0=用户创建, 1=系统创建
     private Long createdAt;
     private Long updatedAt;
 }
