@@ -85,7 +85,7 @@ function doDelete(id: string) {
           </div>
           <div class="ws-actions">
             <button
-              v-if="ws.isSystem != 1"
+              v-if="ws.isSystem !== 1"
               class="btn-icon"
               @click="confirmDelete(ws)"
               :title="langData.btnDelete"

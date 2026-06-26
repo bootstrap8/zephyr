@@ -37,7 +37,12 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         String tmpPath = java.nio.file.Path.of(System.getProperty("user.home"),
             cfg.getWorkspace().getBrowseRoot(), tmpName).toString();
         WorkspaceEntity existing = workspaceDao.queryByPath(tmpPath, SYSTEM_USERNAME);
-        if (existing != null) return;
+        if (existing != null) {
+            if (existing.getIsSystem() == null || existing.getIsSystem() != 1) {
+                workspaceDao.updateIsSystem(existing.getId(), 1);
+            }
+            return;
+        }
         Map<String, String> body = new java.util.HashMap<>();
         body.put("name", tmpName);
         body.put("path", tmpPath);

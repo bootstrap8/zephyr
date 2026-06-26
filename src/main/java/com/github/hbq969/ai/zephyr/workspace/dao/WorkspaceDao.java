@@ -18,4 +18,5 @@ public interface WorkspaceDao {
     void delete(@Param("id") String id, @Param("userName") String userName);
     WorkspaceEntity queryById(@Param("id") String id);
     WorkspaceEntity queryByPath(@Param("path") String path, @Param("userName") String userName);
+    void updateIsSystem(@Param("id") String id, @Param("isSystem") Integer isSystem);
 }

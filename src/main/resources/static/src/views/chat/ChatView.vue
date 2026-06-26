@@ -94,7 +94,7 @@ function newChat() {
   chatStore.mode = 'default'
 
   // 默认选中系统 workspace
-  const sysWs = workspaceStore.workspaces.find(w => w.isSystem == 1)
+  const sysWs = workspaceStore.workspaces.find(w => w.isSystem === 1)
   if (sysWs) workspaceStore.selectWorkspace(sysWs.id)
 }
 
@@ -128,7 +128,7 @@ function onSend(text: string, filePaths?: string[]) {
 
   // 兜底：newChat 时 workspace 列表可能尚未加载完，发送前再检查一次
   if (!workspaceStore.currentId) {
-    const sysWs = workspaceStore.workspaces.find(w => w.isSystem == 1)
+    const sysWs = workspaceStore.workspaces.find(w => w.isSystem === 1)
     if (sysWs) workspaceStore.selectWorkspace(sysWs.id)
   }
 
