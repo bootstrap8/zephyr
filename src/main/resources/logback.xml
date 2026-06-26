@@ -117,11 +117,6 @@
         <appender-ref ref="debug-console"/>
         <appender-ref ref="debug-file"/>
     </logger>
-    <logger name="com.github.hbq969" level="DEBUG">
-        <appender-ref ref="ibatis-file"/>
-        <appender-ref ref="debug-console"/>
-        <appender-ref ref="debug-file"/>
-    </logger>
     <!-- hibernate -->
     <logger name="org.hibernate.SQL" level="DEBUG">
         <appender-ref ref="debug-console"/>
