@@ -4,7 +4,7 @@
 <mapper namespace="com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao">
 
     <select id="queryByUserName" resultType="com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity">
-        select id, name, path, is_system as isSystem,
+        select id, name, path, is_system as "isSystem",
                user_name as userName,
                created_at as createdAt, updated_at as updatedAt
         from zephyr_workspaces
@@ -13,7 +13,7 @@
     </select>
 
     <insert id="insert">
-        insert into zephyr_workspaces (id, name, path, is_system as isSystem, user_name, created_at, updated_at)
+        insert into zephyr_workspaces (id, name, path, is_system as "isSystem", user_name, created_at, updated_at)
         values (#{id}, #{name}, #{path}, #{isSystem}, #{userName}, #{createdAt}, #{updatedAt})
     </insert>
 
@@ -22,7 +22,7 @@
     </delete>
 
     <select id="queryByPath" resultType="com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity">
-        select id, name, path, is_system as isSystem,
+        select id, name, path, is_system as "isSystem",
                user_name as userName,
                created_at as createdAt, updated_at as updatedAt
         from zephyr_workspaces
@@ -30,7 +30,7 @@
     </select>
 
     <select id="queryById" resultType="com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity">
-        select id, name, path, is_system as isSystem,
+        select id, name, path, is_system as "isSystem",
                user_name as userName,
                created_at as createdAt, updated_at as updatedAt
         from zephyr_workspaces where id = #{id}
