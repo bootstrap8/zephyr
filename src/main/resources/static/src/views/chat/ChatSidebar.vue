@@ -122,10 +122,10 @@ function selectAndCloseSidebar(id: string) {
     </div>
 
     <div class="sidebar-footer">
-      <div class="user-row" @click="$emit('openSettings')">
+      <div class="user-row" @click="settingsStore.isAdmin && $emit('openSettings')">
         <div class="avatar">{{ avatarText }}</div>
         <span class="uname">{{ username }}</span>
-        <Icon icon="lucide:ellipsis" class="chevron-icon" />
+        <Icon v-if="settingsStore.isAdmin" icon="lucide:ellipsis" class="chevron-icon" />
       </div>
     </div>
     <Teleport to="body">

@@ -303,6 +303,7 @@ onMounted(() => {
     })
   settingsStore.loadModels()
   settingsStore.loadMcpServers()
+  settingsStore.loadUserInfo()
   axios({ url: '/workspace/list', method: 'get' })
     .then(res => {
       if (res.data.state === 'OK') {
