@@ -209,22 +209,16 @@ git commit -m "feat: 新增 SecurityRuleEntity + Dao + Mapper XML (zephyr_securi
 ```java
 package com.github.hbq969.ai.zephyr.security.service;
 
-import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
-import com.github.hbq969.ai.zephyr.security.AuditLogger;
 import com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao;
 import com.github.hbq969.ai.zephyr.security.dao.entity.SecurityRuleEntity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import java.util.stream.Collectors;
 
 import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 
@@ -235,91 +229,22 @@ public class SecurityConfigService {
     @Resource
     private SecurityConfigDao dao;
 
-    @Resource
-    private ZephyrConfigProperties cfg;
-
-    @Resource
-    private AuditLogger auditLogger;
-
-    private final CountDownLatch latch = new CountDownLatch(1);
-
     private volatile ConfigSnapshot snapshot;
 
     @PostConstruct
     void init() {
-        // 阶段1: 从 YAML 同步加载种子，保证启动时安全
-        ConfigSnapshot seed = loadFromYaml();
-        this.snapshot = seed;
-        latch.countDown();
-        log.info("[SecurityConfig] 阶段1完成 — YAML种子已加载, shellAllowed={}, defaultAllow={}, hardBlock={}, softBlock={}",
-                seed.shellAllowedCommands.size(), seed.defaultAllowCommands.size(),
-                seed.hardBlockPatterns.size(), seed.softBlockPatterns.size());
-    }
-
-    @EventListener(ApplicationReadyEvent.class)
-    void onReady() {
-        // 阶段2: DB 就绪后合并，必要时自动播种
-        try {
-            seedFromYamlToDb();  // 设计要求: 空DB自动写入YAML种子
-            refresh();
-            log.info("[SecurityConfig] 阶段2完成 — DB合并+播种完成");
-        } catch (Exception e) {
-            log.warn("[SecurityConfig] 阶段2失败，使用YAML种子继续运行", e);
-        }
-    }
-
-    /** 设计要求的自动播种: DB空时将YAML种子写入表 */
-    private void seedFromYamlToDb() {
-        List<String[]> seeds = new ArrayList<>();
-        for (String cmd : parseCommandList(cfg.getShell().getAllowedCommands())) {
-            seeds.add(new String[]{RULE_TYPE_SHELL_ALLOWED, cmd, "Shell白名单命令"});
-        }
-        for (String cmd : parseCommandList(cfg.getSecurity().getDefaultAllowCommands())) {
-            seeds.add(new String[]{RULE_TYPE_DEFAULT_ALLOW, cmd, "Default模式免确认命令"});
-        }
-        for (String pat : cfg.getSecurity().getHardBlock().getShellPatterns()) {
-            seeds.add(new String[]{RULE_TYPE_HARD_BLOCK, pat, "硬阻断正则"});
-        }
-        for (String pat : cfg.getSecurity().getSoftBlock().getShellPatterns()) {
-            seeds.add(new String[]{RULE_TYPE_SOFT_BLOCK, pat, "软阻断正则"});
-        }
-        long now = System.currentTimeMillis() / 1000;
-        for (String[] s : seeds) {
-            SecurityRuleEntity e = new SecurityRuleEntity();
-            e.setId(UUID.randomUUID().toString().replace("-", ""));
-            e.setRuleType(s[0]);
-            e.setRuleValue(s[1]);
-            e.setDescription(s[2]);
-            e.setCreatedAt(now);
-            e.setUpdatedAt(now);
-            try { dao.insert(e); } catch (Exception ignored) {
-                // UNIQUE(rule_type, rule_value) 防重复，已存在则跳过
-            }
-        }
+        refresh();
     }
 
     public ConfigSnapshot getSnapshot() {
-        try { latch.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         return snapshot;
     }
 
     public synchronized void refresh() {
-        ConfigSnapshot dbSnap = loadFromDb();
-        ConfigSnapshot seed = loadFromYaml();
-        // DB 与 YAML 合并: DB 优先; 若 DB 某类为空则用 YAML 种子
-        ConfigSnapshot merged = merge(seed, dbSnap);
-        this.snapshot = merged;
+        snapshot = loadFromDb();
         log.info("[SecurityConfig] 刷新完成 — shellAllowed={}, defaultAllow={}, hardBlock={}, softBlock={}",
-                merged.shellAllowedCommands.size(), merged.defaultAllowCommands.size(),
-                merged.hardBlockPatterns.size(), merged.softBlockPatterns.size());
-    }
-
-    private ConfigSnapshot loadFromYaml() {
-        Set<String> shellAllowed = parseCommandList(cfg.getShell().getAllowedCommands());
-        Set<String> defaultAllow = parseCommandList(cfg.getSecurity().getDefaultAllowCommands());
-        List<Pattern> hardBlock = compilePatterns(cfg.getSecurity().getHardBlock().getShellPatterns());
-        List<Pattern> softBlock = compilePatterns(cfg.getSecurity().getSoftBlock().getShellPatterns());
-        return new ConfigSnapshot(shellAllowed, defaultAllow, hardBlock, softBlock);
+                snapshot.shellAllowedCommands().size(), snapshot.defaultAllowCommands().size(),
+                snapshot.hardBlockPatterns().size(), snapshot.softBlockPatterns().size());
     }
 
     private ConfigSnapshot loadFromDb() {
@@ -340,28 +265,14 @@ public class SecurityConfigService {
                 compilePatterns(hardBlockRaw), compilePatterns(softBlockRaw));
     }
 
-    private ConfigSnapshot merge(ConfigSnapshot seed, ConfigSnapshot db) {
-        return new ConfigSnapshot(
-                db.shellAllowedCommands.isEmpty() ? seed.shellAllowedCommands : db.shellAllowedCommands,
-                db.defaultAllowCommands.isEmpty() ? seed.defaultAllowCommands : db.defaultAllowCommands,
-                db.hardBlockPatterns.isEmpty() ? seed.hardBlockPatterns : db.hardBlockPatterns,
-                db.softBlockPatterns.isEmpty() ? seed.softBlockPatterns : db.softBlockPatterns
-        );
-    }
-
-    private static Set<String> parseCommandList(String raw) {
-        if (raw == null || raw.isBlank()) return Set.of();
-        return Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
-    }
-
     private static List<Pattern> compilePatterns(List<String> patterns) {
         if (patterns == null) return List.of();
         List<Pattern> result = new ArrayList<>();
         for (String raw : patterns) {
             try {
-                result.add(java.util.regex.Pattern.compile(raw, java.util.regex.Pattern.CASE_INSENSITIVE));
+                result.add(Pattern.compile(raw, Pattern.CASE_INSENSITIVE));
             } catch (PatternSyntaxException e) {
-                log.warn("[SecurityConfig] 种子正则非法，已跳过: [{}], 错误: {}", raw, e.getMessage());
+                log.warn("[SecurityConfig] 跳过非法正则: [{}], 错误: {}", raw, e.getMessage());
             }
         }
         return result;
@@ -414,141 +325,6 @@ git add src/main/java/com/github/hbq969/ai/zephyr/security/service/SecurityConfi
 git add src/main/java/com/github/hbq969/ai/zephyr/constant/ZephyrConstants.java
 git add src/main/java/com/github/hbq969/ai/zephyr/service/impl/InitialServiceImpl.java
 git commit -m "feat: SecurityConfigService — 两阶段初始化 + volatile ConfigSnapshot 缓存"
-```
-
----
-
-### Task 2.5: MigrateYamlToDb 迁移工具
-
-**Files:**
-- Create: `src/main/java/com/github/hbq969/ai/zephyr/security/MigrateYamlToDb.java`
-
-**Interfaces:**
-- Consumes: ZephyrConfigProperties, SecurityConfigDao
-- Produces: 命令行工具，将 YAML 中 4 个配置项迁移到 DB
-
-- [ ] **Step 1: 创建迁移工具**
-
-```java
-package com.github.hbq969.ai.zephyr.security;
-
-import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
-import com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao;
-import com.github.hbq969.ai.zephyr.security.dao.entity.SecurityRuleEntity;
-import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
-
-import java.util.*;
-
-import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
-
-/**
- * YAML 安全配置迁移到 DB 的工具。
- * 使用: {@code java -jar app.jar --spring.profiles.active=migrate --migrate.dry-run=true}
- */
-@Slf4j
-@Component
-@Profile("migrate")
-public class MigrateYamlToDb implements CommandLineRunner {
-
-    @Resource
-    private ZephyrConfigProperties cfg;
-    @Resource
-    private SecurityConfigDao dao;
-
-    private boolean dryRun = !"false".equalsIgnoreCase(System.getProperty("migrate.dry-run", "true"));
-
-    @Override
-    public void run(String... args) {
-        log.info("=== YAML → DB 安全配置迁移 (dry-run={}) ===", dryRun);
-        long now = System.currentTimeMillis() / 1000;
-
-        Map<String, List<String[]>> seeds = new LinkedHashMap<>();
-        for (String cmd : parse(cfg.getShell().getAllowedCommands()))
-            seeds.computeIfAbsent(RULE_TYPE_SHELL_ALLOWED, k -> new ArrayList<>())
-                 .add(new String[]{cmd, "Shell白名单命令"});
-        for (String cmd : parse(cfg.getSecurity().getDefaultAllowCommands()))
-            seeds.computeIfAbsent(RULE_TYPE_DEFAULT_ALLOW, k -> new ArrayList<>())
-                 .add(new String[]{cmd, "Default模式免确认命令"});
-        for (String pat : cfg.getSecurity().getHardBlock().getShellPatterns())
-            seeds.computeIfAbsent(RULE_TYPE_HARD_BLOCK, k -> new ArrayList<>())
-                 .add(new String[]{pat, "硬阻断正则"});
-        for (String pat : cfg.getSecurity().getSoftBlock().getShellPatterns())
-            seeds.computeIfAbsent(RULE_TYPE_SOFT_BLOCK, k -> new ArrayList<>())
-                 .add(new String[]{pat, "软阻断正则"});
-
-        int total = 0, skipped = 0;
-        for (var entry : seeds.entrySet()) {
-            String type = entry.getKey();
-            List<SecurityRuleEntity> existing = dao.queryAllByType(type);
-            Set<String> existingValues = new HashSet<>();
-            for (SecurityRuleEntity e : existing) existingValues.add(e.getRuleValue());
-
-            for (String[] s : entry.getValue()) {
-                if (existingValues.contains(s[0])) {
-                    log.info("  SKIP {}: {}", type, s[0]);
-                    skipped++;
-                    continue;
-                }
-                if (dryRun) {
-                    log.info("  WOULD INSERT {}: {} ({})", type, s[0], s[1]);
-                } else {
-                    SecurityRuleEntity e = new SecurityRuleEntity();
-                    e.setId(UUID.randomUUID().toString().replace("-", ""));
-                    e.setRuleType(type);
-                    e.setRuleValue(s[0]);
-                    e.setDescription(s[1]);
-                    e.setCreatedAt(now);
-                    e.setUpdatedAt(now);
-                    dao.insert(e);
-                    log.info("  INSERTED {}: {}", type, s[0]);
-                }
-                total++;
-            }
-        }
-        log.info("=== 迁移完成: {} 条待插入, {} 条已跳过 (dry-run={}) ===", total, skipped, dryRun);
-        if (dryRun) {
-            log.info("提示: 设置 -Dmigrate.dry-run=false 执行实际写入");
-        }
-    }
-
-    private static Set<String> parse(String raw) {
-        if (raw == null || raw.isBlank()) return Set.of();
-        return new LinkedHashSet<>(Arrays.asList(raw.split("\\s*,\\s*")));
-    }
-}
-```
-
-- [ ] **Step 2: DAO 补充方法**
-
-在 `SecurityConfigDao` 中添加：
-
-```java
-List<SecurityRuleEntity> queryAllByType(@Param("ruleType") String ruleType);
-```
-
-在 common Mapper XML 添加对应 `<select>`（不过滤 enabled）。
-
-- [ ] **Step 3: application.yml 添加 profile**
-
-```yaml
-# application.yml 添加（可选）:
-spring:
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:me}
-```
-
-迁移命令：
-
-```bash
-# dry-run 预览
-java -Dspring.profiles.active=migrate -Dmigrate.dry-run=true -jar target/*.jar
-
-# 实际执行
-java -Dspring.profiles.active=migrate -Dmigrate.dry-run=false -jar target/*.jar
 ```
 
 ---
@@ -661,40 +437,43 @@ git commit -m "refactor: SecurityEvaluator + ChatServiceImpl 改为从 SecurityC
 
 ---
 
-### Task 4: ZephyrConfigProperties + application.yml 标记保留
+### Task 4: ZephyrConfigProperties + application.yml 清理
 
 **Files:**
 - Modify: `src/main/java/com/github/hbq969/ai/zephyr/config/ZephyrConfigProperties.java`
 - Modify: `src/main/resources/application.yml`
 
 **Interfaces:**
-- Produces: 4 个字段保留并加注释说明，运行时以 DB 为准
+- Produces: 4 个字段完全删除，DB 是唯一数据源
 
-- [ ] **Step 1: 标记 ZephyrConfigProperties 字段**
+- [ ] **Step 1: 删除 ZephyrConfigProperties 字段**
 
-在 `Shell.allowedCommands`、`Security.defaultAllowCommands`、`HardBlock.shellPatterns`、`SoftBlock.shellPatterns` 字段上添加 Javadoc 注释：
+删除以下 4 个字段（只删字段，Shell/Security 嵌套类和其余字段保留）：
 
-```java
-/**
- * whitelist 模式下允许的命令（仅命令名，不含参数），逗号分隔。
- * @deprecated 运行时以 DB (zephyr_security_rules, rule_type=SHELL_ALLOWED) 为准，
- *             此字段仅作为冷启动种子。请通过管理页面修改。
- */
-private String allowedCommands = "";
+- `Shell.allowedCommands`（ZephyrConfigProperties.java 第311行）
+- `Security.defaultAllowCommands`（第352行）
+- `HardBlock.shellPatterns`（第376行）
+- `SoftBlock.shellPatterns`（第389行）
+
+保留：`Shell.mode`, `Shell.maxBackgroundProcesses`, `Security.enabled`, `Security.audit` 等。
+
+- [ ] **Step 2: 删除 application.yml 中对应 key**
+
+移除 `zephyr.shell.allowed-commands`、`zephyr.security.default-allow-commands`、`zephyr.security.hard-block.shell-patterns`、`zephyr.security.soft-block.shell-patterns` 四个 key 及其值和注释。
+
+- [ ] **Step 3: 编译验证**
+
+```bash
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+mvn clean compile -q
 ```
 
-同理标记其他三个字段。
-
-- [ ] **Step 2: application.yml 添加注释**
-
-在受影响的 key 上方添加注释说明运行时以 DB 为准。
-
-- [ ] **Step 3: 提交**
+- [ ] **Step 4: 提交**
 
 ```bash
 git add src/main/java/com/github/hbq969/ai/zephyr/config/ZephyrConfigProperties.java
 git add src/main/resources/application.yml
-git commit -m "docs: 标记 YAML 安全配置字段为冷启动种子，运行时以 DB 为准"
+git commit -m "refactor: 移除 YAML 安全配置 — 4 项已迁移至 DB (zephyr_security_rules)"
 ```
 
 ---
@@ -1311,12 +1090,10 @@ git commit -m "test: SecurityConfigService 单元测试 + 并发测试"
 
 | # | 风险 | 缓解措施 | 状态 |
 |---|------|---------|------|
-| R1 | 滚动升级时新旧节点规则集不一致 | 窗口极小(秒级)，升级后收敛于 DB | 接受 |
-| R2 | 用户删除某类全部规则后 merge 自动恢复 YAML 种子 | 设计决策：YAML 种子作为最低安全基线，如需清空需同时改 YAML | 记录 |
-| R3 | DB 中恶意正则可能触发 ReDoS | 当前规则数 < 100 影响可忽略；Pattern.compile() 前置校验拒绝非法语法 | 记录，后续可加 ReDoS 检测库 |
-| R4 | refresh() 的 DB 读与 snapshot 更新之间非事务性 | 对于 READ_COMMITTED 隔离级别影响极小，最终一致性可接受 | 接受 |
-| R5 | UUID 碰撞 | UUID.randomUUID() 碰撞概率可忽略，varchar(64) 足够 | 无操作 |
-| R6 | Mapper XML 的 `enabled = COALESCE(#{enabled}, enabled)` 在 H2 中兼容性 | 测试覆盖 H2 环境 | 已验证 |
+| R1 | DB 中恶意正则可能触发 ReDoS | 当前规则数 < 100 影响可忽略；Pattern.compile() 前置校验拒绝非法语法 | 记录 |
+| R2 | refresh() 的 DB 读与 snapshot 更新之间非事务性 | READ_COMMITTED 隔离级别影响极小，最终一致性可接受 | 接受 |
+| R3 | SQL 脚本未执行导致 DB 为空（首次启动无规则） | SQL 脚本在 `scriptInitial0()` 中自动执行，表创建和播种在框架管控下 | 低风险，用 curl 验证 |
+| R4 | `enabled = COALESCE(#{enabled}, enabled)` 在 H2 中兼容性 | 测试覆盖 H2 环境 | 已验证 |
 
 ---
 
@@ -1325,13 +1102,12 @@ git commit -m "test: SecurityConfigService 单元测试 + 并发测试"
 ```
 Task 1 (Entity+Dao+XML)
   └→ Task 2 (SecurityConfigService)
-       ├→ Task 2.5 (MigrateYamlToDb 迁移工具)
        ├→ Task 3 (改造 Evaluator + ChatService)
-       ├→ Task 4 (标记 ConfigProperties + YAML)
+       ├→ Task 4 (清理 ConfigProperties + YAML)
        ├→ Task 5 (Controller)
        │    ├→ Task 7 (前端路由+Store)
        │    │    └→ Task 8 (前端页面)
-       │    ├→ Task 6 (SQL 初始化)
        │    └→ Task 9 (端到端验证)
-       └→ Task 10 (单元测试 + 集成测试)
+       ├→ Task 6 (SQL 初始化)
+       └→ Task 10 (单元测试)
 ```
