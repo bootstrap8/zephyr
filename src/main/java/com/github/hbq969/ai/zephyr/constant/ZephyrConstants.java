@@ -125,6 +125,12 @@ public final class ZephyrConstants {
     /** Shell 白名单分隔符（逗号） */
     public static final String SHELL_WHITELIST_DELIMITER = ",";
 
+    // === 安全规则类型 ===
+    public static final String RULE_TYPE_SHELL_ALLOWED = "SHELL_ALLOWED";
+    public static final String RULE_TYPE_DEFAULT_ALLOW = "DEFAULT_ALLOW";
+    public static final String RULE_TYPE_HARD_BLOCK = "HARD_BLOCK";
+    public static final String RULE_TYPE_SOFT_BLOCK = "SOFT_BLOCK";
+
     // === 文件扩展名 ===
     public static final String EXT_PDF = ".pdf";
     public static final String EXT_XLSX = ".xlsx";

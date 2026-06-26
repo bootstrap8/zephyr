@@ -55,6 +55,12 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
     @Resource
     private com.github.hbq969.ai.zephyr.mcp.service.McpService mcpService;
 
+    @Resource
+    private com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao securityConfigDao;
+
+    @Resource
+    private com.github.hbq969.ai.zephyr.security.service.SecurityConfigService securityConfigService;
+
     @Override
     protected void tableCreate0() {
         com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_model_configs",
@@ -79,6 +85,8 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
                 () -> knowledgeDao.createConversationKbTable());
         com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_user_model_prefs",
                 () -> userModelPreferenceDao.createUserModelPrefsTable());
+        com.github.hbq969.code.common.utils.ThrowUtils.call("zephyr_security_rules",
+                () -> securityConfigDao.createSecurityRulesTable());
 
         // 建表完成后重连之前处于 connected 状态的 MCP 服务器
         asyncScriptInitialDone(MCP_DISCOVER_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS, () -> {
@@ -97,6 +105,11 @@ public class InitialServiceImpl extends AbstractScriptInitialAware {
         String filename = String.join("", "zephyr-", lang, EXT_SQL);
         InitScriptUtils.initial(context, filename, StandardCharsets.UTF_8, null,
                 () -> loginService.loadSMInfo());
+
+        // SQL 播种后刷新安全配置快照
+        asyncScriptInitialDone(5, java.util.concurrent.TimeUnit.SECONDS, () -> {
+            securityConfigService.refresh();
+        });
     }
 
     @Override
