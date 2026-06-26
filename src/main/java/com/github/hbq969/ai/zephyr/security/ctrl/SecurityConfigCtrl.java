@@ -11,6 +11,7 @@ import com.github.hbq969.code.sm.perm.api.SMRequiresPermissions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -70,6 +71,7 @@ public class SecurityConfigCtrl {
 
     /** 统一处理参数校验异常，返回 400 而非 500 */
     @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     public ReturnMessage<?> handleIllegalArgument(IllegalArgumentException e) {
         return ReturnMessage.fail(e.getMessage());
