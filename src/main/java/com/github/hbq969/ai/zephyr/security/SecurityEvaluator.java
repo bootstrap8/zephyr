@@ -23,9 +23,7 @@ import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 /**
  * Java 层安全评估器，在 LLM 自评估之外做模式匹配防御。
  * <p>
- * HARD/SOFT BLOCK 规则从 {@code application.yml} 的 {@code zephyr.security.hard-block} /
- * {@code zephyr.security.soft-block} 读取，规则变更后需重启生效。
- * 配置为空或缺失时 fallback 到代码内置默认规则。
+ * HARD/SOFT BLOCK 规则全部从 {@code application.yml} 的 {@code zephyr.security} 读取，规则变更后需重启生效。
  */
 @Slf4j
 @Component
@@ -36,36 +34,6 @@ public class SecurityEvaluator {
 
     @Resource
     private AuditLogger auditLogger;
-
-    // === 代码内置默认规则（配置为空时 fallback） ===
-
-    private static final List<String> DEFAULT_HARD_BLOCK_SHELL_PATTERNS = List.of(
-            ".*(?:cat|head|tail|read).*(?:\\.env|credentials|private.?key|secret|token|password).*(?:\\||>|curl|http|nc ).*",
-            ".*chmod\\s+777.*",
-            ".*--no-verify.*",
-            ".*--insecure.*",
-            ".*Set-ExecutionPolicy\\s+Bypass.*",
-            ".*sudoers.*",
-            ".*kubectl\\s+delete\\s+(?:secret|configmap).*"
-    );
-
-    private static final List<String> DEFAULT_HARD_BLOCK_PATH_PREFIXES = List.of(
-            "prompts/security/",
-            "prompts/modes/",
-            "prompts/tools/"
-    );
-
-    private static final List<String> DEFAULT_SOFT_BLOCK_SHELL_PATTERNS = List.of(
-            ".*\\brm\\s+(-[a-zA-Z]*[rf][a-zA-Z]*\\s+)+.*",
-            ".*git\\s+push\\s+.*(?:--force|--force-with-lease).*",
-            ".*git\\s+(?:reset\\s+--hard|clean\\s+-fdx).*",
-            ".*(?:curl|wget).*(?:\\||>|bash|sh|python|eval|exec).*",
-            ".*(?:DROP\\s+(?:TABLE|DATABASE)|TRUNCATE|DELETE\\s+FROM).*",
-            ".*kubectl\\s+delete.*",
-            ".*docker\\s+(?:rm|stop|kill).*",
-            ".*(?:kill\\s+-9|pkill).*",
-            ".*>\\s*\\S+.*"
-    );
 
     // === 运行时编译后的 Pattern 缓存 ===
 
@@ -121,46 +89,25 @@ public class SecurityEvaluator {
         ZephyrConfigProperties.Security.HardBlock hb = cfg.getSecurity().getHardBlock();
         ZephyrConfigProperties.Security.SoftBlock sb = cfg.getSecurity().getSoftBlock();
 
-        hardBlockShellPatterns = compileShellPatterns(
-                hb.getShellPatterns(), hb.getMergeMode(), DEFAULT_HARD_BLOCK_SHELL_PATTERNS, "HARD_BLOCK");
-        hardBlockPathPrefixes = mergePathPrefixes(
-                hb.getPathPrefixes(), hb.getPathMergeMode(), DEFAULT_HARD_BLOCK_PATH_PREFIXES, "HARD_BLOCK");
-        softBlockShellPatterns = compileShellPatterns(
-                sb.getShellPatterns(), sb.getMergeMode(), DEFAULT_SOFT_BLOCK_SHELL_PATTERNS, "SOFT_BLOCK");
+        hardBlockShellPatterns = compileShellPatterns(hb.getShellPatterns(), "HARD_BLOCK");
+        hardBlockPathPrefixes = new ArrayList<>(hb.getPathPrefixes() != null ? hb.getPathPrefixes() : List.of());
+        softBlockShellPatterns = compileShellPatterns(sb.getShellPatterns(), "SOFT_BLOCK");
 
         log.info("规则加载完成 — HARD_BLOCK shell: {} 条, path: {} 条; SOFT_BLOCK shell: {} 条",
                 hardBlockShellPatterns.size(), hardBlockPathPrefixes.size(), softBlockShellPatterns.size());
     }
 
-    private List<Pattern> compileShellPatterns(List<String> configPatterns, ZephyrConfigProperties.Security.MergeMode mode,
-                                                List<String> defaults, String ruleType) {
-        List<String> merged = mergeLists(configPatterns, mode, defaults);
+    private List<Pattern> compileShellPatterns(List<String> patterns, String ruleType) {
+        if (patterns == null) return List.of();
         List<Pattern> result = new ArrayList<>();
-        for (String raw : merged) {
+        for (String raw : patterns) {
             try {
-                Pattern p = PatternPool.get(raw, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                result.add(p);
+                result.add(PatternPool.get(raw, Pattern.CASE_INSENSITIVE));
             } catch (PatternSyntaxException e) {
                 log.warn("{} 规则正则非法，已跳过: [{}], 错误: {}", ruleType, raw, e.getMessage());
             }
         }
         return result;
-    }
-
-    private List<String> mergePathPrefixes(List<String> configPaths, ZephyrConfigProperties.Security.MergeMode mode,
-                                            List<String> defaults, String ruleType) {
-        return mergeLists(configPaths, mode, defaults);
-    }
-
-    private List<String> mergeLists(List<String> configList, ZephyrConfigProperties.Security.MergeMode mode,
-                                     List<String> defaults) {
-        if (mode == ZephyrConfigProperties.Security.MergeMode.REPLACE) {
-            return configList.isEmpty() ? new ArrayList<>(defaults) : new ArrayList<>(configList);
-        }
-        // EXTEND: 默认规则 + 用户配置追加
-        List<String> merged = new ArrayList<>(defaults);
-        merged.addAll(configList);
-        return merged;
     }
 
     public static Set<String> parseCommandList(String raw) {
@@ -208,6 +155,7 @@ public class SecurityEvaluator {
         // 1. HARD BLOCK 检查（所有模式强制执行）
         for (Pattern p : hardBlockShellPatterns) {
             if (ReUtil.contains(p, command)) {
+                log.info("[安全] HARD_BLOCK 触发拒绝 — 命令: {}, 命中规则: {}", command, p.pattern());
                 return Result.block("HARD_BLOCK", "命令匹配安全红线规则，禁止执行");
             }
         }
@@ -217,23 +165,31 @@ public class SecurityEvaluator {
             return Result.allow();
         }
 
-        // 3. SOFT BLOCK 检查
+        // 3. workspace 边界检查：命令中的绝对路径必须在 workspace 内
+        if (boundary.isPresent() && hasPathOutsideWorkspace(command, boundary)) {
+            log.info("[安全] WORKSPACE_BOUNDARY 触发确认 — shell 命令: {}", command);
+            return Result.confirm(RULE_WORKSPACE_BOUNDARY,
+                    "shell 命令中的路径超出工作空间范围");
+        }
+
+        // 4. SOFT BLOCK 检查
         for (Pattern p : softBlockShellPatterns) {
             if (!ReUtil.contains(p, command)) continue;
 
             // acceptEdits 模式：shell 重定向到 workspace 内文件应免批（文件编辑语义）
             if ("acceptEdits".equalsIgnoreCase(mode) && isRedirectPattern(p.pattern())
-                    && boundary.isPresent() && isRedirectTargetInsideWorkspace(command, boundary)) {
+                    && boundary.isPresent() && !hasPathOutsideWorkspace(command, boundary)) {
                 continue;
             }
-
+            log.info("[安全] SOFT_BLOCK 触发确认 — 命令: {}, 命中规则: {}", command, p.pattern());
             return Result.confirm("SOFT_BLOCK", "该命令具有破坏性，需要用户确认");
         }
 
-        // 4. default 模式：只读命令放行，其余需确认
+        // 5. default 模式：只读命令放行，其余需确认
         if (!"acceptEdits".equalsIgnoreCase(mode) && !"bypass".equalsIgnoreCase(mode)) {
             if (command.contains("&&") || command.contains("||")
                     || command.contains(";") || command.contains("\n")) {
+                log.info("[安全] MODE_DEFAULT 触发确认 — 复合命令: {}", command);
                 return Result.confirm("MODE_DEFAULT", "复合命令需用户确认");
             }
             String cmdName = command.split("\\s+", 2)[0];
@@ -242,6 +198,7 @@ public class SecurityEvaluator {
                 cmdName = cmdName.substring(lastSlash + 1);
             }
             if (!readOnlyCommands.contains(cmdName)) {
+                log.info("[安全] MODE_DEFAULT 触发确认 — 非只读命令: {} (主命令: {})", command, cmdName);
                 return Result.confirm("MODE_DEFAULT", "Default 模式下 shell 命令需要用户确认");
             }
         }
@@ -255,26 +212,32 @@ public class SecurityEvaluator {
                 || rawPattern.contains("redirect") || rawPattern.contains("overwrite"));
     }
 
-    /** 检查 shell 命令中重定向的目标路径是否全部在 workspace 内 */
-    private boolean isRedirectTargetInsideWorkspace(String command, WorkspaceBoundary boundary) {
-        // 匹配 > file 或 >> file（file 可能是带引号的路径）
+    /** 检查 shell 命令中是否有绝对路径指向 workspace 外部 */
+    private boolean hasPathOutsideWorkspace(String command, WorkspaceBoundary boundary) {
+        // 提取命令名，如果是绝对路径则跳过（如 /usr/bin/mkdir）
+        String cmdName = command.split("\\s+", 2)[0];
+        boolean cmdIsAbsPath = cmdName.startsWith("/");
+
+        // 提取命令中所有绝对路径
         java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("[12]?>>?\\s*['\"]?([^'\"\\s;|&]+)")
+                .compile("/(?:[^\\s;|&<>\"'`$()\\\\]+/)*[^\\s;|&<>\"'`$()\\\\]+")
                 .matcher(command);
-        boolean hasRedirect = false;
         while (m.find()) {
-            hasRedirect = true;
-            String target = m.group(1);
+            String pathStr = m.group();
+            // 跳过命令名本身
+            if (cmdIsAbsPath && pathStr.equals(cmdName)) continue;
+            // 跳过已知的非文件系统路径
+            if (pathStr.startsWith("/dev/") || pathStr.startsWith("/proc/") || pathStr.startsWith("/sys/")) continue;
             try {
-                Path targetPath = boundary.resolveTarget(target);
+                Path targetPath = boundary.resolveTarget(pathStr);
                 if (!boundary.contains(targetPath)) {
-                    return false;
+                    return true;
                 }
             } catch (Exception ignored) {
-                return false;
+                return true;
             }
         }
-        return hasRedirect;
+        return false;
     }
 
     private Result evaluateFileWrite(Map<String, Object> arguments, String mode, WorkspaceBoundary boundary) {
@@ -288,6 +251,7 @@ public class SecurityEvaluator {
         String lowerPath = normalizedPath.toLowerCase();
         for (String prefix : hardBlockPathPrefixes) {
             if (lowerPath.contains(prefix)) {
+                log.info("[安全] HARD_BLOCK 触发拒绝 — 文件: {}, 命中路径前缀: {}", filePath, prefix);
                 return Result.block("HARD_BLOCK", "禁止修改安全规则文件: " + filePath);
             }
         }
@@ -295,6 +259,7 @@ public class SecurityEvaluator {
         // HARD BLOCK：修改 application.yml（含路径遍历绕过检测）
         for (String configFile : APP_CONFIG_FILES) {
             if (lowerPath.contains(configFile)) {
+                log.info("[安全] HARD_BLOCK 触发拒绝 — 文件: {}, 命中配置保护: {}", filePath, configFile);
                 return Result.block("HARD_BLOCK", "禁止修改应用配置文件: " + filePath);
             }
         }
@@ -312,12 +277,15 @@ public class SecurityEvaluator {
             }
 
             if (!boundary.contains(targetPath)) {
+                log.info("[安全] WORKSPACE_BOUNDARY 触发确认 — 目标: {} (规范化: {}), workspace: {}",
+                        filePath, targetPath, boundary.path());
                 return Result.confirm(RULE_WORKSPACE_BOUNDARY,
                         "目标路径 " + filePath + " 不在工作空间 " + boundary.path() + " 内");
             }
         }
 
         if (!"acceptEdits".equalsIgnoreCase(mode)) {
+            log.info("[安全] MODE_DEFAULT 触发确认 — 文件写入: {}, mode: {}", filePath, mode);
             return Result.confirm(RULE_MODE_DEFAULT, "Default 模式下文件写入需要用户确认");
         }
 
