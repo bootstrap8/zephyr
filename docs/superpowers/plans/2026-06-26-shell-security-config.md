@@ -4,7 +4,7 @@
 
 **Goal:** 将 4 个 YAML 安全配置项迁移到 DB 表 `zephyr_security_rules`，提供管理页面，修改后即时刷新内存缓存。
 
-**Architecture:** 新建 `SecurityConfigService` 统一管理内存缓存（volatile ConfigSnapshot），两阶段初始化（YAML 种子 → DB 合并），1 张统一表 + type 鉴别器。SecurityEvaluator 和 ChatServiceImpl 改为从 SecurityConfigService 读取。前端单页面 4 Tab 管理。
+**Architecture:** 新建 `SecurityConfigService` 统一管理内存缓存（volatile ConfigSnapshot），DB 为唯一数据源（SQL 脚本播种），@PostConstruct 时 loadFromDb() 捕获缺失表异常返回空快照，InitialServiceImpl.scriptInitial0() 后显式 refresh()。SecurityEvaluator 和 ChatServiceImpl 改为从 SecurityConfigService 读取。前端单页面 4 Tab 管理。
 
 **Tech Stack:** Java 17, SpringBoot 3.5.4, MyBatis, H2/PostgreSQL, Vue3 + TS + Element Plus + Iconify
 
@@ -77,6 +77,7 @@ public interface SecurityConfigDao {
     void createSecurityRulesTable();
 
     List<SecurityRuleEntity> queryByType(@Param("ruleType") String ruleType);
+    List<SecurityRuleEntity> queryAllByType(@Param("ruleType") String ruleType);
     List<SecurityRuleEntity> queryAll();
     void insert(SecurityRuleEntity entity);
     void deleteById(@Param("id") String id);
@@ -248,21 +249,27 @@ public class SecurityConfigService {
     }
 
     private ConfigSnapshot loadFromDb() {
-        List<SecurityRuleEntity> all = dao.queryAll();
-        Set<String> shellAllowed = new LinkedHashSet<>();
-        Set<String> defaultAllow = new LinkedHashSet<>();
-        List<String> hardBlockRaw = new ArrayList<>();
-        List<String> softBlockRaw = new ArrayList<>();
-        for (SecurityRuleEntity r : all) {
-            switch (r.getRuleType()) {
-                case RULE_TYPE_SHELL_ALLOWED -> shellAllowed.add(r.getRuleValue());
-                case RULE_TYPE_DEFAULT_ALLOW -> defaultAllow.add(r.getRuleValue());
-                case RULE_TYPE_HARD_BLOCK -> hardBlockRaw.add(r.getRuleValue());
-                case RULE_TYPE_SOFT_BLOCK -> softBlockRaw.add(r.getRuleValue());
+        try {
+            List<SecurityRuleEntity> all = dao.queryAll();
+            Set<String> shellAllowed = new LinkedHashSet<>();
+            Set<String> defaultAllow = new LinkedHashSet<>();
+            List<String> hardBlockRaw = new ArrayList<>();
+            List<String> softBlockRaw = new ArrayList<>();
+            for (SecurityRuleEntity r : all) {
+                switch (r.getRuleType()) {
+                    case RULE_TYPE_SHELL_ALLOWED -> shellAllowed.add(r.getRuleValue());
+                    case RULE_TYPE_DEFAULT_ALLOW -> defaultAllow.add(r.getRuleValue());
+                    case RULE_TYPE_HARD_BLOCK -> hardBlockRaw.add(r.getRuleValue());
+                    case RULE_TYPE_SOFT_BLOCK -> softBlockRaw.add(r.getRuleValue());
+                }
             }
+            return new ConfigSnapshot(shellAllowed, defaultAllow,
+                    compilePatterns(hardBlockRaw), compilePatterns(softBlockRaw));
+        } catch (Exception e) {
+            // 表尚未创建（@PostConstruct 早于 InitialServiceImpl），返空快照待后续 refresh
+            log.warn("[SecurityConfig] DB not ready, returning empty snapshot: {}", e.getMessage());
+            return new ConfigSnapshot(Set.of(), Set.of(), List.of(), List.of());
         }
-        return new ConfigSnapshot(shellAllowed, defaultAllow,
-                compilePatterns(hardBlockRaw), compilePatterns(softBlockRaw));
     }
 
     private static List<Pattern> compilePatterns(List<String> patterns) {
@@ -298,17 +305,24 @@ String RULE_TYPE_HARD_BLOCK = "HARD_BLOCK";
 String RULE_TYPE_SOFT_BLOCK = "SOFT_BLOCK";
 ```
 
-- [ ] **Step 3: 在 InitialServiceImpl 注册建表**
+- [ ] **Step 3: 在 InitialServiceImpl 注册建表并触发 refresh**
 
-在 `InitialServiceImpl.java` 的 `tableCreate0()` 方法中添加：
+在 `InitialServiceImpl.java` 中添加：
 
 ```java
 @Resource
 private com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao securityConfigDao;
+@Resource
+private com.github.hbq969.ai.zephyr.security.service.SecurityConfigService securityConfigService;
 
 // 在 tableCreate0() 中添加:
 ThrowUtils.call("zephyr_security_rules",
         () -> securityConfigDao.createSecurityRulesTable());
+
+// 在 scriptInitial0() 末尾添加（SQL 播种后刷新快照）:
+asyncScriptInitialDone(5, java.util.concurrent.TimeUnit.SECONDS, () -> {
+    securityConfigService.refresh();
+});
 ```
 
 - [ ] **Step 4: 编译验证**
@@ -341,7 +355,7 @@ git commit -m "feat: SecurityConfigService — 两阶段初始化 + volatile Con
 
 - [ ] **Step 1: 改造 SecurityEvaluator**
 
-删除 `@PostConstruct init()`、`initReadOnlyCommands()`、`initPatterns()` 方法。添加 `@Resource private SecurityConfigService securityConfigService;`。
+删除 `initReadOnlyCommands()`、`initPatterns()` 中仅与 4 个迁移配置相关的部分。添加 `@Resource private SecurityConfigService securityConfigService;`。
 
 修改 `evaluateShell()` 在方法入口一次性获取 snapshot：
 
@@ -349,8 +363,11 @@ git commit -m "feat: SecurityConfigService — 两阶段初始化 + volatile Con
 @Resource
 private SecurityConfigService securityConfigService;
 
-// 删除: init(), initReadOnlyCommands(), initPatterns()
-// 删除: readOnlyCommands, hardBlockShellPatterns, hardBlockPathPrefixes, softBlockShellPatterns 字段
+// 保留: @Resource ZephyrConfigProperties cfg (用于 isEnabled, confirmTimeout, maxBypass, HardBlock.pathPrefixes)
+// 保留: @PostConstruct init() 中 hardBlockPathPrefixes 的初始化 (cfg.getSecurity().getHardBlock().getPathPrefixes())
+// 保留: hardBlockPathPrefixes 字段 (evaluateFileWrite 仍在使用)
+// 删除: readOnlyCommands 字段, hardBlockShellPatterns 字段, softBlockShellPatterns 字段
+// 删除: initReadOnlyCommands() 方法, initPatterns() 中编译 shell 正则的部分
 
 private Result evaluateShell(Map<String, Object> arguments, String mode, WorkspaceBoundary boundary) {
     if (arguments == null || !arguments.containsKey("command")) return Result.allow();
@@ -572,7 +589,7 @@ public class SecurityConfigCtrl {
             apiKey = "security_list", apiDesc = "安全配置_规则列表")
     public ReturnMessage<?> list(@PathVariable String type) {
         validateType(type);
-        return ReturnMessage.success(dao.queryByType(type));
+        return ReturnMessage.success(dao.queryAllByType(type));
     }
 
     @Operation(summary = "新增安全配置规则")
@@ -944,8 +961,8 @@ open http://localhost:30733/zephyr/zephyr-ui/index.html#/settings/security
 ```java
 package com.github.hbq969.ai.zephyr.security.service;
 
-import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
 import com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao;
+import com.github.hbq969.ai.zephyr.security.dao.entity.SecurityRuleEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -955,7 +972,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -965,123 +981,93 @@ import static org.mockito.Mockito.when;
 class SecurityConfigServiceTest {
 
     @Mock private SecurityConfigDao dao;
-    @Mock private ZephyrConfigProperties cfg;
-    @Mock private com.github.hbq969.ai.zephyr.security.AuditLogger auditLogger;
 
     @InjectMocks
     private SecurityConfigService service;
 
-    @BeforeEach
-    void setUp() {
-        // 模拟 YAML 种子
-        ZephyrConfigProperties.Shell shell = mockShell();
-        ZephyrConfigProperties.Security sec = mockSecurity();
-        when(cfg.getShell()).thenReturn(shell);
-        when(cfg.getSecurity()).thenReturn(sec);
-    }
-
     @Test
-    void init_shouldLoadFromYamlAndCountDownLatch() {
+    void init_shouldReturnEmptySnapshotWhenDbNotReady() {
+        when(dao.queryAll()).thenThrow(new RuntimeException("table not found"));
         service.init();
         SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
-        assertThat(snap.shellAllowedCommands()).contains("ls", "cat");
-        assertThat(snap.defaultAllowCommands()).contains("ls");
-        assertThat(snap.hardBlockPatterns()).hasSizeGreaterThan(0);
+        assertThat(snap.shellAllowedCommands()).isEmpty();
+        assertThat(snap.defaultAllowCommands()).isEmpty();
+        assertThat(snap.hardBlockPatterns()).isEmpty();
+        assertThat(snap.softBlockPatterns()).isEmpty();
     }
 
     @Test
-    void merge_shouldUseDbWhenPopulated() {
+    void init_shouldLoadAllRulesFromDb() {
+        SecurityRuleEntity e1 = new SecurityRuleEntity();
+        e1.setRuleType(RULE_TYPE_SHELL_ALLOWED); e1.setRuleValue("ls");
+        SecurityRuleEntity e2 = new SecurityRuleEntity();
+        e2.setRuleType(RULE_TYPE_HARD_BLOCK); e2.setRuleValue("rm\\\\s+-rf");
+        when(dao.queryAll()).thenReturn(List.of(e1, e2));
         service.init();
-        // 模拟 DB 返回数据
-        when(dao.queryAll()).thenReturn(List.of(/* ... */));
-        service.refresh();
-        // DB 有数据时应使用 DB 值
+        SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
+        assertThat(snap.shellAllowedCommands()).containsExactly("ls");
+        assertThat(snap.hardBlockPatterns()).hasSize(1);
+        assertThat(snap.defaultAllowCommands()).isEmpty();
     }
 
     @Test
-    void merge_shouldFallbackToSeedWhenDbEmpty() {
+    void refresh_shouldReloadSnapshotFromDb() {
+        SecurityRuleEntity e1 = new SecurityRuleEntity();
+        e1.setRuleType(RULE_TYPE_SOFT_BLOCK); e1.setRuleValue("kill\\\\s+-9");
+        when(dao.queryAll()).thenReturn(List.of(e1));
+        service.refresh();
+        SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
+        assertThat(snap.softBlockPatterns()).hasSize(1);
+    }
+
+    @Test
+    void concurrentReadsDuringRefresh_shouldNotSeeCorruptedState() throws Exception {
         service.init();
-        when(dao.queryAll()).thenReturn(List.of());
-        service.refresh();
-        // DB 全覆盖空时应该 fallback 到 YAML
-    }
+        int readers = 10;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(readers + 1);
+        java.util.concurrent.CyclicBarrier barrier = new java.util.concurrent.CyclicBarrier(readers + 1);
+        java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger(0);
 
-    @Test
-    void merge_partialDb_shouldMergePerType() {
-        // 只有 HARD_BLOCK 有 DB 数据，其他类型应从 YAML fallback
-    }
-
-    private ZephyrConfigProperties.Shell mockShell() {
-        ZephyrConfigProperties.Shell s = new ZephyrConfigProperties.Shell();
-        s.setAllowedCommands("ls,cat");
-        return s;
-    }
-
-    private ZephyrConfigProperties.Security mockSecurity() {
-        ZephyrConfigProperties.Security s = new ZephyrConfigProperties.Security();
-        s.setDefaultAllowCommands("ls");
-        ZephyrConfigProperties.Security.HardBlock hb = new ZephyrConfigProperties.Security.HardBlock();
-        hb.setShellPatterns(List.of("rm\\\\s+-rf"));
-        s.setHardBlock(hb);
-        ZephyrConfigProperties.Security.SoftBlock sb = new ZephyrConfigProperties.Security.SoftBlock();
-        sb.setShellPatterns(List.of("kill\\\\s+-9"));
-        s.setSoftBlock(sb);
-        return s;
-    }
-}
-```
-
-- [ ] **Step 2: 并发测试**
-
-```java
-@Test
-void concurrentReadsDuringRefresh_shouldNotSeeCorruptedState() throws Exception {
-    service.init();
-    int readers = 10;
-    ExecutorService executor = Executors.newFixedThreadPool(readers + 1);
-    CyclicBarrier barrier = new CyclicBarrier(readers + 1);
-    AtomicInteger errors = new AtomicInteger(0);
-
-    for (int i = 0; i < readers; i++) {
+        for (int i = 0; i < readers; i++) {
+            executor.submit(() -> {
+                try {
+                    barrier.await();
+                    for (int j = 0; j < 1000; j++) {
+                        SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
+                        assertThat(snap.shellAllowedCommands()).isNotNull();
+                        assertThat(snap.hardBlockPatterns()).isNotNull();
+                    }
+                } catch (Exception e) { errors.incrementAndGet(); }
+            });
+        }
         executor.submit(() -> {
             try {
                 barrier.await();
-                for (int j = 0; j < 1000; j++) {
-                    SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
-                    // snapshot 内部字段不应为 null
-                    assertThat(snap.shellAllowedCommands()).isNotNull();
-                    assertThat(snap.hardBlockPatterns()).isNotNull();
+                for (int j = 0; j < 100; j++) {
+                    when(dao.queryAll()).thenReturn(List.of());
+                    service.refresh();
                 }
             } catch (Exception e) { errors.incrementAndGet(); }
         });
+        executor.shutdown();
+        assertThat(executor.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThat(errors.get()).isEqualTo(0);
     }
-    executor.submit(() -> {
-        try {
-            barrier.await();
-            for (int j = 0; j < 100; j++) {
-                when(dao.queryAll()).thenReturn(List.of());
-                service.refresh();
-            }
-        } catch (Exception e) { errors.incrementAndGet(); }
-    });
-    executor.shutdown();
-    assertThat(executor.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
-    assertThat(errors.get()).isEqualTo(0);
 }
 ```
 
-- [ ] **Step 3: 运行测试**
+- [ ] **Step 2: 运行测试**
 
 ```bash
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
-mvn test -pl . -Dtest="SecurityConfigServiceTest,com.github.hbq969.ai.zephyr.security.ctrl.*"
+mvn test -pl . -Dtest="SecurityConfigServiceTest"
 ```
 
-- [ ] **Step 4: 提交**
+- [ ] **Step 3: 提交**
 
 ```bash
 git add src/test/java/com/github/hbq969/ai/zephyr/security/
-git commit -m "test: SecurityConfigService 单元测试 + 并发测试"
+git commit -m "test: SecurityConfigService DB-only 单元测试 + 并发测试"
 ```
 
 ---
