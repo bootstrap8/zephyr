@@ -31,3 +31,920 @@ ALTER TABLE zephyr_knowledge_base ADD COLUMN IF NOT EXISTS graph_enabled SMALLIN
 ALTER TABLE zephyr_knowledge_doc ADD COLUMN IF NOT EXISTS graph_status varchar(16);
 
 alter table if exists zephyr_workspaces add column if not exists is_system smallint default 0;
+-- ============================================================
+-- 安全规则种子数据：从 application.yml 迁移到 zephyr_security_rules
+-- 对所有数据库类型兼容（H2 / PostgreSQL / MySQL）
+-- ============================================================
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_001', 'SHELL_ALLOWED', 'rm', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'rm');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_002', 'SHELL_ALLOWED', 'python3', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'python3');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_003', 'SHELL_ALLOWED', 'python', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'python');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_004', 'SHELL_ALLOWED', 'node', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'node');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_005', 'SHELL_ALLOWED', 'ruby', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'ruby');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_006', 'SHELL_ALLOWED', 'perl', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'perl');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_007', 'SHELL_ALLOWED', 'php', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'php');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_008', 'SHELL_ALLOWED', 'lua', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'lua');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_009', 'SHELL_ALLOWED', 'deno', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'deno');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_010', 'SHELL_ALLOWED', 'bun', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'bun');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_011', 'SHELL_ALLOWED', 'npm', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'npm');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_012', 'SHELL_ALLOWED', 'npx', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'npx');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_013', 'SHELL_ALLOWED', 'yarn', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'yarn');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_014', 'SHELL_ALLOWED', 'pnpm', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'pnpm');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_015', 'SHELL_ALLOWED', 'pip', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'pip');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_016', 'SHELL_ALLOWED', 'pip3', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'pip3');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_017', 'SHELL_ALLOWED', 'gem', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'gem');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_018', 'SHELL_ALLOWED', 'composer', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'composer');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_019', 'SHELL_ALLOWED', 'cargo', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'cargo');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_020', 'SHELL_ALLOWED', 'go', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'go');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_021', 'SHELL_ALLOWED', 'git', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'git');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_022', 'SHELL_ALLOWED', 'hg', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'hg');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_023', 'SHELL_ALLOWED', 'javac', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'javac');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_024', 'SHELL_ALLOWED', 'java', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'java');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_025', 'SHELL_ALLOWED', 'mvn', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'mvn');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_026', 'SHELL_ALLOWED', 'gradle', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'gradle');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_027', 'SHELL_ALLOWED', 'make', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'make');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_028', 'SHELL_ALLOWED', 'cmake', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'cmake');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_029', 'SHELL_ALLOWED', 'gcc', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'gcc');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_030', 'SHELL_ALLOWED', 'g++', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'g++');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_031', 'SHELL_ALLOWED', 'clang', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'clang');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_032', 'SHELL_ALLOWED', 'clang++', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'clang++');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_033', 'SHELL_ALLOWED', 'rustc', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'rustc');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_034', 'SHELL_ALLOWED', 'dotnet', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'dotnet');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_035', 'SHELL_ALLOWED', 'ls', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'ls');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_036', 'SHELL_ALLOWED', 'cat', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'cat');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_037', 'SHELL_ALLOWED', 'head', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'head');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_038', 'SHELL_ALLOWED', 'tail', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'tail');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_039', 'SHELL_ALLOWED', 'wc', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'wc');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_040', 'SHELL_ALLOWED', 'find', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'find');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_041', 'SHELL_ALLOWED', 'grep', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'grep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_042', 'SHELL_ALLOWED', 'egrep', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'egrep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_043', 'SHELL_ALLOWED', 'awk', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'awk');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_044', 'SHELL_ALLOWED', 'sed', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'sed');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_045', 'SHELL_ALLOWED', 'mkdir', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'mkdir');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_046', 'SHELL_ALLOWED', 'touch', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'touch');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_047', 'SHELL_ALLOWED', 'cp', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'cp');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_048', 'SHELL_ALLOWED', 'mv', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'mv');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_049', 'SHELL_ALLOWED', 'ln', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'ln');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_050', 'SHELL_ALLOWED', 'stat', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'stat');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_051', 'SHELL_ALLOWED', 'file', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'file');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_052', 'SHELL_ALLOWED', 'du', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'du');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_053', 'SHELL_ALLOWED', 'df', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'df');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_054', 'SHELL_ALLOWED', 'tree', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'tree');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_055', 'SHELL_ALLOWED', 'realpath', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'realpath');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_056', 'SHELL_ALLOWED', 'basename', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'basename');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_057', 'SHELL_ALLOWED', 'dirname', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'dirname');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_058', 'SHELL_ALLOWED', 'sort', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'sort');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_059', 'SHELL_ALLOWED', 'uniq', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'uniq');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_060', 'SHELL_ALLOWED', 'cut', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'cut');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_061', 'SHELL_ALLOWED', 'tr', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'tr');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_062', 'SHELL_ALLOWED', 'tee', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'tee');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_063', 'SHELL_ALLOWED', 'diff', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'diff');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_064', 'SHELL_ALLOWED', 'patch', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'patch');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_065', 'SHELL_ALLOWED', 'echo', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'echo');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_066', 'SHELL_ALLOWED', 'printf', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'printf');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_067', 'SHELL_ALLOWED', 'xargs', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'xargs');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_068', 'SHELL_ALLOWED', 'envsubst', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'envsubst');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_069', 'SHELL_ALLOWED', 'column', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'column');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_070', 'SHELL_ALLOWED', 'jq', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'jq');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_071', 'SHELL_ALLOWED', 'yq', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'yq');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_072', 'SHELL_ALLOWED', 'iconv', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'iconv');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_073', 'SHELL_ALLOWED', 'strings', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'strings');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_074', 'SHELL_ALLOWED', 'od', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'od');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_075', 'SHELL_ALLOWED', 'hexdump', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'hexdump');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_076', 'SHELL_ALLOWED', 'xxd', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'xxd');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_077', 'SHELL_ALLOWED', 'tar', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'tar');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_078', 'SHELL_ALLOWED', 'gzip', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'gzip');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_079', 'SHELL_ALLOWED', 'gunzip', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'gunzip');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_080', 'SHELL_ALLOWED', 'zip', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'zip');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_081', 'SHELL_ALLOWED', 'unzip', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'unzip');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_082', 'SHELL_ALLOWED', 'bzip2', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'bzip2');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_083', 'SHELL_ALLOWED', 'bunzip2', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'bunzip2');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_084', 'SHELL_ALLOWED', 'xz', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'xz');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_085', 'SHELL_ALLOWED', 'unxz', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'unxz');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_086', 'SHELL_ALLOWED', 'zstd', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'zstd');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_087', 'SHELL_ALLOWED', 'unzstd', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'unzstd');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_088', 'SHELL_ALLOWED', 'curl', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'curl');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_089', 'SHELL_ALLOWED', 'date', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'date');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_090', 'SHELL_ALLOWED', 'env', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'env');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_091', 'SHELL_ALLOWED', 'which', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'which');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_092', 'SHELL_ALLOWED', 'whoami', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'whoami');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_093', 'SHELL_ALLOWED', 'uname', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'uname');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_094', 'SHELL_ALLOWED', 'hostname', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'hostname');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_095', 'SHELL_ALLOWED', 'uptime', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'uptime');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_096', 'SHELL_ALLOWED', 'free', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'free');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_097', 'SHELL_ALLOWED', 'vmstat', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'vmstat');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_098', 'SHELL_ALLOWED', 'iostat', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'iostat');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_shell_099', 'SHELL_ALLOWED', 'ulimit', 'Shell白名单命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SHELL_ALLOWED' AND rule_value = 'ulimit');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_001', 'DEFAULT_ALLOW', 'ls', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'ls');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_002', 'DEFAULT_ALLOW', 'cat', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'cat');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_003', 'DEFAULT_ALLOW', 'head', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'head');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_004', 'DEFAULT_ALLOW', 'tail', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'tail');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_005', 'DEFAULT_ALLOW', 'less', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'less');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_006', 'DEFAULT_ALLOW', 'more', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'more');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_007', 'DEFAULT_ALLOW', 'file', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'file');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_008', 'DEFAULT_ALLOW', 'stat', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'stat');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_009', 'DEFAULT_ALLOW', 'tree', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'tree');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_010', 'DEFAULT_ALLOW', 'od', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'od');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_011', 'DEFAULT_ALLOW', 'hexdump', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'hexdump');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_012', 'DEFAULT_ALLOW', 'find', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'find');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_013', 'DEFAULT_ALLOW', 'grep', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'grep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_014', 'DEFAULT_ALLOW', 'egrep', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'egrep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_015', 'DEFAULT_ALLOW', 'fgrep', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'fgrep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_016', 'DEFAULT_ALLOW', 'locate', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'locate');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_017', 'DEFAULT_ALLOW', 'which', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'which');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_018', 'DEFAULT_ALLOW', 'whereis', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'whereis');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_019', 'DEFAULT_ALLOW', 'type', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'type');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_020', 'DEFAULT_ALLOW', 'wc', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'wc');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_021', 'DEFAULT_ALLOW', 'sort', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'sort');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_022', 'DEFAULT_ALLOW', 'uniq', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'uniq');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_023', 'DEFAULT_ALLOW', 'cut', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'cut');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_024', 'DEFAULT_ALLOW', 'tr', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'tr');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_025', 'DEFAULT_ALLOW', 'diff', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'diff');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_026', 'DEFAULT_ALLOW', 'cmp', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'cmp');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_027', 'DEFAULT_ALLOW', 'comm', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'comm');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_028', 'DEFAULT_ALLOW', 'join', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'join');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_029', 'DEFAULT_ALLOW', 'paste', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'paste');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_030', 'DEFAULT_ALLOW', 'expand', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'expand');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_031', 'DEFAULT_ALLOW', 'unexpand', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'unexpand');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_032', 'DEFAULT_ALLOW', 'fmt', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'fmt');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_033', 'DEFAULT_ALLOW', 'fold', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'fold');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_034', 'DEFAULT_ALLOW', 'iconv', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'iconv');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_035', 'DEFAULT_ALLOW', 'nl', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'nl');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_036', 'DEFAULT_ALLOW', 'rev', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'rev');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_037', 'DEFAULT_ALLOW', 'tac', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'tac');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_038', 'DEFAULT_ALLOW', 'pwd', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'pwd');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_039', 'DEFAULT_ALLOW', 'whoami', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'whoami');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_040', 'DEFAULT_ALLOW', 'id', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'id');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_041', 'DEFAULT_ALLOW', 'groups', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'groups');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_042', 'DEFAULT_ALLOW', 'users', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'users');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_043', 'DEFAULT_ALLOW', 'who', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'who');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_044', 'DEFAULT_ALLOW', 'w', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'w');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_045', 'DEFAULT_ALLOW', 'last', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'last');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_046', 'DEFAULT_ALLOW', 'lastlog', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'lastlog');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_047', 'DEFAULT_ALLOW', 'date', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'date');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_048', 'DEFAULT_ALLOW', 'uname', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'uname');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_049', 'DEFAULT_ALLOW', 'hostname', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'hostname');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_050', 'DEFAULT_ALLOW', 'hostid', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'hostid');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_051', 'DEFAULT_ALLOW', 'arch', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'arch');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_052', 'DEFAULT_ALLOW', 'nproc', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'nproc');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_053', 'DEFAULT_ALLOW', 'df', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'df');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_054', 'DEFAULT_ALLOW', 'du', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'du');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_055', 'DEFAULT_ALLOW', 'free', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'free');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_056', 'DEFAULT_ALLOW', 'uptime', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'uptime');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_057', 'DEFAULT_ALLOW', 'dmesg', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'dmesg');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_058', 'DEFAULT_ALLOW', 'ps', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'ps');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_059', 'DEFAULT_ALLOW', 'pgrep', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'pgrep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_060', 'DEFAULT_ALLOW', 'top', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'top');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_061', 'DEFAULT_ALLOW', 'env', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'env');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_062', 'DEFAULT_ALLOW', 'printenv', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'printenv');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_063', 'DEFAULT_ALLOW', 'ulimit', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'ulimit');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_064', 'DEFAULT_ALLOW', 'umask', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'umask');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_065', 'DEFAULT_ALLOW', 'getconf', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'getconf');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_066', 'DEFAULT_ALLOW', 'basename', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'basename');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_067', 'DEFAULT_ALLOW', 'dirname', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'dirname');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_068', 'DEFAULT_ALLOW', 'realpath', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'realpath');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_069', 'DEFAULT_ALLOW', 'readlink', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'readlink');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_070', 'DEFAULT_ALLOW', 'echo', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'echo');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_071', 'DEFAULT_ALLOW', 'printf', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'printf');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_072', 'DEFAULT_ALLOW', 'man', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'man');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_073', 'DEFAULT_ALLOW', 'whatis', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'whatis');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_074', 'DEFAULT_ALLOW', 'apropos', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'apropos');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_075', 'DEFAULT_ALLOW', 'info', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'info');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_076', 'DEFAULT_ALLOW', 'cal', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'cal');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_077', 'DEFAULT_ALLOW', 'clear', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'clear');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_078', 'DEFAULT_ALLOW', 'reset', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'reset');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_079', 'DEFAULT_ALLOW', 'tty', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'tty');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_080', 'DEFAULT_ALLOW', 'sleep', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'sleep');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_081', 'DEFAULT_ALLOW', 'test', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'test');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_082', 'DEFAULT_ALLOW', 'expr', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'expr');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_083', 'DEFAULT_ALLOW', 'true', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'true');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_084', 'DEFAULT_ALLOW', 'false', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'false');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_085', 'DEFAULT_ALLOW', 'yes', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'yes');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_086', 'DEFAULT_ALLOW', 'command', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'command');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_087', 'DEFAULT_ALLOW', 'builtin', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'builtin');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_088', 'DEFAULT_ALLOW', 'hash', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'hash');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_def_089', 'DEFAULT_ALLOW', 'tsort', 'Default模式免确认命令', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'DEFAULT_ALLOW' AND rule_value = 'tsort');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_01', 'HARD_BLOCK', 'rm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+/(\*|$|\s)', 'rm -rf / 或 rm -rf /*', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'rm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+/(\*|$|\s)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_02', 'HARD_BLOCK', 'rm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+/[^\s]', 'rm -rf 任何绝对路径', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'rm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+/[^\s]');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_03', 'HARD_BLOCK', 'dd\s+.*of=/dev/(sd|hd|nvme|xvd|vd|mmcblk|dm-|loop)', 'dd 覆写磁盘', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'dd\s+.*of=/dev/(sd|hd|nvme|xvd|vd|mmcblk|dm-|loop)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_04', 'HARD_BLOCK', 'mkfs\.\S*\s+/dev/', 'mkfs 格式化设备', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'mkfs\.\S*\s+/dev/');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_05', 'HARD_BLOCK', ':\(\)\s*\{.*:\|&\s*\}|fork\s+bomb', 'fork 炸弹', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = ':\(\)\s*\{.*:\|&\s*\}|fork\s+bomb');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_06', 'HARD_BLOCK', 'shred\s+.*/(dev|etc|boot|bin|sbin|lib|usr|var|home|root|opt|sys|proc)/', 'shred 安全擦除系统路径', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'shred\s+.*/(dev|etc|boot|bin|sbin|lib|usr|var|home|root|opt|sys|proc)/');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_07', 'HARD_BLOCK', 'mv\s+.*/dev/null', 'mv 到 /dev/null 销毁数据', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'mv\s+.*/dev/null');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_08', 'HARD_BLOCK', '(?:/etc/sudoers|/etc/sudoers\.d/)', '修改 sudoers 文件', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:/etc/sudoers|/etc/sudoers\.d/)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_09', 'HARD_BLOCK', '(?:usermod|gpasswd|adduser|useradd)\s+.*\b(?:sudo|wheel|admin|root)\b', '添加用户到特权组', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:usermod|gpasswd|adduser|useradd)\s+.*\b(?:sudo|wheel|admin|root)\b');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_10', 'HARD_BLOCK', 'chmod\s+(?:.*[ug]\+s|[4-7]\d{2})', '设置 SUID/SGID 位', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'chmod\s+(?:.*[ug]\+s|[4-7]\d{2})');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_11', 'HARD_BLOCK', '(?:iptables\s+-(?:F|X)\b|nft\s+flush\s+ruleset|ufw\s+disable)', '清空/禁用防火墙', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:iptables\s+-(?:F|X)\b|nft\s+flush\s+ruleset|ufw\s+disable)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_12', 'HARD_BLOCK', 'iptables\s+--flush', 'iptables 长格式清空', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'iptables\s+--flush');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_13', 'HARD_BLOCK', 'systemctl\s+(?:stop|disable|mask)\s+(?:selinux|apparmor|auditd|firewalld|iptables|ufw|fail2ban|clamav|crowdstrike)', '停止安全服务', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'systemctl\s+(?:stop|disable|mask)\s+(?:selinux|apparmor|auditd|firewalld|iptables|ufw|fail2ban|clamav|crowdstrike)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_14', 'HARD_BLOCK', 'setenforce\s+0', '关闭 SELinux', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'setenforce\s+0');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_15', 'HARD_BLOCK', '/etc/pam\.d/', '修改 PAM 配置', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '/etc/pam\.d/');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_16', 'HARD_BLOCK', '/etc/ssh/(?:sshd_config|ssh_config)', '修改 SSH 服务配置', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '/etc/ssh/(?:sshd_config|ssh_config)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_17', 'HARD_BLOCK', '(?:>|>>|tee\s+(?:-a\s+)?)\S*authorized_keys', '写入 SSH 公钥', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:>|>>|tee\s+(?:-a\s+)?)\S*authorized_keys');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_18', 'HARD_BLOCK', '(?:>|>>|tee\s+(?:-a\s+)?)\S*(?:\.bashrc|\.zshrc|\.profile|\.bash_profile|/etc/profile)', '写入 shell RC 文件', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:>|>>|tee\s+(?:-a\s+)?)\S*(?:\.bashrc|\.zshrc|\.profile|\.bash_profile|/etc/profile)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_19', 'HARD_BLOCK', '(?:>|>>|cp|mv)\s+.*/(?:usr/)?(?:s?bin|lib(?:64)?)/', '写入系统二进制目录', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:>|>>|cp|mv)\s+.*/(?:usr/)?(?:s?bin|lib(?:64)?)/');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_20', 'HARD_BLOCK', 'crontab\s+-(?:[^l]|e|r)', '修改 crontab（排除 -l 列出）', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'crontab\s+-(?:[^l]|e|r)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_21', 'HARD_BLOCK', 'kubectl\s+delete\s+(?:namespace|ns\b|pods?|deployment|deploy\b|statefulset|daemonset|secret|configmap|service\b|svc\b|ingress|ing\b|pvc|pv\b)', 'kubectl 删除关键资源', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'kubectl\s+delete\s+(?:namespace|ns\b|pods?|deployment|deploy\b|statefulset|daemonset|secret|configmap|service\b|svc\b|ingress|ing\b|pvc|pv\b)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_22', 'HARD_BLOCK', 'docker\s+(?:run|create).*--privileged.*(?:-v|--volume)\s+:/', 'docker 特权容器挂载宿主机根目录', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'docker\s+(?:run|create).*--privileged.*(?:-v|--volume)\s+:/');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_23', 'HARD_BLOCK', 'docker\s+system\s+prune', 'docker 清理所有未使用资源', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'docker\s+system\s+prune');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_24', 'HARD_BLOCK', '(?:cat|head|tail|read|strings|xxd|od|hexdump).*(?:\.env|credentials|private.?key|secret|token|password|id_rsa|id_ed25519|id_ecdsa).*(?:\||>|curl|http|nc\s|socat\s|ssh\s|scp\s|rsync\s)', '敏感文件经网络外传', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = '(?:cat|head|tail|read|strings|xxd|od|hexdump).*(?:\.env|credentials|private.?key|secret|token|password|id_rsa|id_ed25519|id_ecdsa).*(?:\||>|curl|http|nc\s|socat\s|ssh\s|scp\s|rsync\s)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_25', 'HARD_BLOCK', 'nc\s+.*-[ec]\s+(?:/bin/|/usr/bin/)?(?:bash|sh|zsh|dash|python|perl|ruby)', 'nc 反弹 shell', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'nc\s+.*-[ec]\s+(?:/bin/|/usr/bin/)?(?:bash|sh|zsh|dash|python|perl|ruby)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_26', 'HARD_BLOCK', 'bash\s+.*-i.*>&.*/(?:dev|tmp)/tcp/', 'bash TCP 反弹 shell', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'bash\s+.*-i.*>&.*/(?:dev|tmp)/tcp/');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_hard_27', 'HARD_BLOCK', 'socat\s+.*EXEC:(?:bash|sh|zsh|python)', 'socat 反弹 shell', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'HARD_BLOCK' AND rule_value = 'socat\s+.*EXEC:(?:bash|sh|zsh|python)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_01', 'SOFT_BLOCK', '\brm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+', 'rm -rf 变体', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = '\brm\s+(-[a-zA-Z]*[rf][a-zA-Z]*\s+)+');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_02', 'SOFT_BLOCK', 'git\s+push\s+.*(?:--force|--force-with-lease)', 'git force push', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'git\s+push\s+.*(?:--force|--force-with-lease)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_03', 'SOFT_BLOCK', 'git\s+(?:reset\s+--hard|clean\s+-fdx)', 'git hard reset / clean', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'git\s+(?:reset\s+--hard|clean\s+-fdx)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_04', 'SOFT_BLOCK', 'git\s+branch\s+-D', 'git 强制删除分支', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'git\s+branch\s+-D');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_05', 'SOFT_BLOCK', '(?:curl|wget).*(?:\||>|bash|sh|python|eval|exec)', 'curl/wget 远程执行', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = '(?:curl|wget).*(?:\||>|bash|sh|python|eval|exec)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_06', 'SOFT_BLOCK', '(?:DROP\s+(?:TABLE|DATABASE)|TRUNCATE|DELETE\s+FROM)', '数据库删除', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = '(?:DROP\s+(?:TABLE|DATABASE)|TRUNCATE|DELETE\s+FROM)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_07', 'SOFT_BLOCK', 'kubectl\s+delete', 'kubectl 通用删除', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'kubectl\s+delete');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_08', 'SOFT_BLOCK', 'docker\s+(?:rm|stop|kill)', 'docker rm/stop/kill', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'docker\s+(?:rm|stop|kill)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_09', 'SOFT_BLOCK', 'docker-compose\s+down.*-v', 'docker-compose 删除卷', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'docker-compose\s+down.*-v');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_10', 'SOFT_BLOCK', 'docker\s+volume\s+(?:rm|prune)', 'docker 删除卷', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'docker\s+volume\s+(?:rm|prune)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_11', 'SOFT_BLOCK', 'helm\s+(?:delete|uninstall)', 'helm 删除 release', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'helm\s+(?:delete|uninstall)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_12', 'SOFT_BLOCK', '(?:kill\s+-9|pkill)', '强制杀进程', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = '(?:kill\s+-9|pkill)');
+
+INSERT INTO zephyr_security_rules (id, rule_type, rule_value, description, enabled, created_at)
+SELECT 'seed_soft_13', 'SOFT_BLOCK', 'chmod\s+777', 'chmod 777', 1, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules WHERE rule_type = 'SOFT_BLOCK' AND rule_value = 'chmod\s+777');
+
