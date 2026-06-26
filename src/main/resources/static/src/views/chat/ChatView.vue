@@ -305,7 +305,14 @@ onMounted(() => {
   settingsStore.loadMcpServers()
   axios({ url: '/workspace/list', method: 'get' })
     .then(res => {
-      if (res.data.state === 'OK') workspaceStore.setWorkspaces(res.data.body)
+      if (res.data.state === 'OK') {
+        workspaceStore.setWorkspaces(res.data.body)
+        // 页面刷新后无选中 workspace 时自动选中系统 workspace
+        if (!workspaceStore.currentId) {
+          const sysWs = workspaceStore.workspaces.find(w => w.isSystem === 1)
+          if (sysWs) workspaceStore.selectWorkspace(sysWs.id)
+        }
+      }
     })
 })
 </script>
