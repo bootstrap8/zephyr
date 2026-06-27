@@ -167,9 +167,12 @@ function onSend(text: string, filePaths?: string[]) {
           } else if (event.type === 'tool_call') {
             chatStore.upsertToolCall(event.toolName, { status: 'running' })
           } else if (event.type === 'tool_result') {
-            const isError = event.toolOutput && event.toolOutput.startsWith(langData.chatArea_toolExecutionError)
+            const status = event.toolStatus || (
+                event.toolOutput && event.toolOutput.startsWith(langData.chatArea_toolExecutionError)
+                    ? 'error' : 'success'
+            )
             chatStore.upsertToolCall(event.toolName, {
-              status: isError ? 'error' : 'success',
+              status,
               output: event.toolOutput,
             })
           } else if (event.type === 'confirm_action' && event.content) {

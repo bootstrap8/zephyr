@@ -8,6 +8,7 @@ export interface ChatEvent {
   toolName?: string
   toolInput?: Record<string, unknown>
   toolOutput?: string
+  toolStatus?: string
   usage?: { inputTokens: number; outputTokens: number }
   error?: string
 }
@@ -26,7 +27,7 @@ export interface ToolCall {
   name: string
   input: Record<string, unknown>
   output?: string
-  status: 'running' | 'success' | 'error'
+  status: 'running' | 'success' | 'error' | 'rejected'
 }
 
 // === Conversation ===

@@ -114,6 +114,7 @@ const locale: any = {
         "toolCard_success": "成功",
         "toolCard_failed": "失败",
         "toolCard_running": "运行中",
+        "toolCard_rejected": "拒绝",
         "toolCard_inputParams": "输入参数",
         "toolCard_result": "返回结果",
 
@@ -586,6 +587,7 @@ const locale: any = {
         "toolCard_success": "Success",
         "toolCard_failed": "Failed",
         "toolCard_running": "Running",
+        "toolCard_rejected": "Rejected",
         "toolCard_inputParams": "Input Parameters",
         "toolCard_result": "Result",
 
@@ -1037,6 +1039,7 @@ const locale: any = {
         "toolCard_success": "成功",
         "toolCard_failed": "失敗",
         "toolCard_running": "実行中",
+        "toolCard_rejected": "拒否",
         "toolCard_inputParams": "入力パラメータ",
         "toolCard_result": "結果",
 

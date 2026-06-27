@@ -25,4 +25,5 @@ public interface ChatDao {
     void insertMessage(MessageEntity entity);
     void deleteMessagesByConvId(@Param("conversationId") String conversationId);
     void updateWorkspace(@Param("id") String id, @Param("workspaceId") String workspaceId, @Param("userName") String userName);
+    void updateMessageToolCallsJson(@Param("id") String id, @Param("toolCallsJson") String toolCallsJson);
 }

@@ -244,21 +244,26 @@ public class ChatServiceImpl implements ChatService {
                             }).toList());
                         }
                         messages.add(assistantMsg);
-                        persistAssistantMessage(cid, result, msgSeq++);
+                        String assistantMsgId = persistAssistantMessage(cid, result, msgSeq++);
 
                         List<String> enabledKbIds = cid != null ? knowledgeDao.queryKbIdsByConversation(cid) : List.of();
-                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid, mode, emitter, handle);
+                        List<Map<String, Object>> toolResults = dispatchTools(result.getToolCalls(), userName, enabledKbIds, cid, mode, emitter, handle, assistantMsgId);
                         handle.touch();
+
+                        chatDao.updateMessageToolCallsJson(assistantMsgId,
+                                buildToolCallsJsonFromResults(result.getToolCalls(), toolResults));
 
                         for (int i = 0; i < result.getToolCalls().size(); i++) {
                             LlmResult.ToolCall tc = result.getToolCalls().get(i);
-                            String output = toolResults.get(i).get("content").toString();
+                            Map<String, Object> tr = toolResults.get(i);
+                            String output = tr.get("content").toString();
                             try {
                                 emitter.send(SseEmitter.event().name("message")
                                         .data(ChatEvent.builder()
                                                 .type("tool_result")
                                                 .toolName(tc.getName())
                                                 .toolOutput(output)
+                                                .toolStatus((String) tr.get("status"))
                                                 .build()));
                             } catch (IOException e) {
                                 log.warn("推送 tool_result 事件失败: {}", e.getMessage());
@@ -325,7 +330,7 @@ public class ChatServiceImpl implements ChatService {
         return emitter;
     }
 
-    private void persistAssistantMessage(String cid, LlmResult result, long now) {
+    private String persistAssistantMessage(String cid, LlmResult result, long now) {
         MessageEntity msg = new MessageEntity();
         msg.setId(cn.hutool.core.lang.UUID.fastUUID().toString(true).substring(0, SHORT_ID_LENGTH));
         msg.setConversationId(cid);
@@ -338,7 +343,7 @@ public class ChatServiceImpl implements ChatService {
                 m.put("id", tc.getId());
                 m.put("name", tc.getName());
                 m.put("input", tc.getArguments());
-                m.put("status", "success");
+                m.put("status", "running");
                 return m;
             }).toList()));
         }
@@ -351,6 +356,7 @@ public class ChatServiceImpl implements ChatService {
             chatDao.updateConversationTitle(cid, conv.getTitle(),
                     System.currentTimeMillis() / 1000, conv.getUserName());
         }
+        return msg.getId();
     }
 
     /**
@@ -452,7 +458,8 @@ public class ChatServiceImpl implements ChatService {
 
     private List<Map<String, Object>> dispatchTools(List<LlmResult.ToolCall> toolCalls,
             String userName, List<String> enabledKbIds, String conversationId, String mode,
-            SseEmitter emitter, ConversationSessionManager.SessionHandle handle) {
+            SseEmitter emitter, ConversationSessionManager.SessionHandle handle,
+            String assistantMsgId) {
         List<Map<String, Object>> results = new ArrayList<>();
         boolean rejected = false;
 
@@ -470,7 +477,8 @@ public class ChatServiceImpl implements ChatService {
                 rejected = true;
                 log.warn("[安全] HARD_BLOCK cid={}, tool={}, rule={}",
                         conversationId, tc.getName(), secResult.rule());
-                results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+                results.add(Map.of("role", "tool", "tool_call_id", tc.getId(),
+                        "status", "rejected", "content",
                         "操作被拒绝（安全规则: " + secResult.rule() + "）— " + secResult.reason()));
                 continue;
             }
@@ -493,7 +501,8 @@ public class ChatServiceImpl implements ChatService {
                                     .build()));
                 } catch (IOException e) {
                     log.warn("推送 confirm_action 事件失败: {}", e.getMessage());
-                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(),
+                            "status", "rejected", "content",
                             "操作需确认但推送失败: " + e.getMessage()));
                     continue;
                 }
@@ -502,13 +511,27 @@ public class ChatServiceImpl implements ChatService {
                 ConfirmResult confirm = waitForUserConfirm(confirmId,
                         cfg.getSecurity().getConfirmTimeoutSeconds());
 
-                if (confirm == null || !confirm.allowed()) {
+                if (confirm == null) {
+                    // 超时 = 拒绝（非用户主动拒绝）
+                    rejected = true;
+                    log.warn("[安全] 确认超时 cid={}, tool={}",
+                            conversationId, tc.getName());
+                    auditLogger.log("TIMEOUT", tc.getName(), "DENIED",
+                            secResult.rule(), userName);
+                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(),
+                            "status", "rejected", "content",
+                            "操作确认超时: " + secResult.reason()));
+                    continue;
+                }
+
+                if (!confirm.allowed()) {
                     rejected = true;
                     log.info("[安全] 用户拒绝 SOFT_BLOCK cid={}, tool={}",
                             conversationId, tc.getName());
                     auditLogger.log("USER_DENIED", tc.getName(), "DENIED",
                             secResult.rule(), userName);
-                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+                    results.add(Map.of("role", "tool", "tool_call_id", tc.getId(),
+                            "status", "rejected", "content",
                             "操作已被用户拒绝: " + secResult.reason()));
                     continue;
                 }
@@ -519,6 +542,7 @@ public class ChatServiceImpl implements ChatService {
 
             // === 执行工具（原有逻辑） ===
             String content;
+            String toolStatus = "success";
             try {
                 content = switch (tc.getName()) {
                     case "use_skill" -> executeUseSkill(tc.getArguments().get("skill_name").toString(), userName);
@@ -531,9 +555,11 @@ public class ChatServiceImpl implements ChatService {
                 };
             } catch (Exception e) {
                 content = "工具执行错误: " + e.getMessage();
+                toolStatus = "error";
             }
             content = sanitizeToolOutput(content);
-            results.add(Map.of("role", "tool", "tool_call_id", tc.getId(), "content",
+            results.add(Map.of("role", "tool", "tool_call_id", tc.getId(),
+                    "status", toolStatus, "content",
                     content.length() > cfg.getChat().getToolOutput().getMaxLength()
                             ? content.substring(0, cfg.getChat().getToolOutput().getMaxLength()) + "..."
                             : content));
@@ -554,11 +580,14 @@ public class ChatServiceImpl implements ChatService {
                                         .type("tool_result")
                                         .toolName(toolCalls.get(i).getName())
                                         .toolOutput(results.get(i).get("content").toString())
+                                        .toolStatus((String) results.get(i).get("status"))
                                         .build()));
                     } catch (IOException e) {
                         log.warn("推送终止前的 tool_result 事件失败: {}", e.getMessage());
                     }
                 }
+                chatDao.updateMessageToolCallsJson(assistantMsgId,
+                        buildToolCallsJsonFromResults(toolCalls, results));
                 throw new ConversationSessionManager.CancelSessionException(cid);
             }
         } else {
@@ -567,6 +596,21 @@ public class ChatServiceImpl implements ChatService {
         }
 
         return results;
+    }
+
+    private String buildToolCallsJsonFromResults(List<LlmResult.ToolCall> toolCalls,
+            List<Map<String, Object>> results) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < toolCalls.size(); i++) {
+            LlmResult.ToolCall tc = toolCalls.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", tc.getId());
+            m.put("name", tc.getName());
+            m.put("input", tc.getArguments());
+            m.put("status", results.get(i).get("status"));
+            list.add(m);
+        }
+        return gson.toJson(list);
     }
 
     /**
@@ -583,8 +627,7 @@ public class ChatServiceImpl implements ChatService {
                 }
             }
             log.warn("[安全] 确认超时 confirmId={}", confirmId);
-            auditLogger.log("TIMEOUT", "", "DENIED", "确认超时", "");
-            return null; // 超时 = 拒绝
+            return null; // 超时 = 拒绝（dispatchTools 中会写入审计日志）
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;

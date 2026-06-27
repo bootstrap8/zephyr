@@ -15,6 +15,7 @@ public class ChatEvent {
     private String toolName;
     private Object toolInput;
     private String toolOutput;
+    private String toolStatus;
     private Object usage;
     private String error;
 }

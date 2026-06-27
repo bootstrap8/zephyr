@@ -54,4 +54,9 @@
         where id = #{id} and user_name = #{userName}
     </update>
 
+    <update id="updateMessageToolCallsJson">
+        update zephyr_messages set tool_calls_json = #{toolCallsJson}
+        where id = #{id}
+    </update>
+
 </mapper>

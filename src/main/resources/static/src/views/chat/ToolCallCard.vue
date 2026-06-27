@@ -68,8 +68,9 @@ onMounted(() => { if (isRunning.value) startTimer() })
       <span v-if="tool.status !== 'running'" class="tool-status" :class="tool.status">
         <Icon v-if="tool.status === 'success'" icon="lucide:check-circle" style="font-size:11px" />
         <Icon v-else-if="tool.status === 'error'" icon="lucide:x-circle" style="font-size:11px" />
+        <Icon v-else-if="tool.status === 'rejected'" icon="lucide:shield-alert" style="font-size:11px" />
         <Icon v-else icon="lucide:loader-circle" style="font-size:11px" />
-        {{ tool.status === 'success' ? langData.toolCard_success : tool.status === 'error' ? langData.toolCard_failed : langData.toolCard_running }}
+        {{ tool.status === 'success' ? langData.toolCard_success : tool.status === 'error' ? langData.toolCard_failed : tool.status === 'rejected' ? langData.toolCard_rejected : langData.toolCard_running }}
       </span>
     </div>
     <!-- 折叠时显示参数预览（仅 animating 且有 input 时） -->
@@ -100,6 +101,7 @@ onMounted(() => { if (isRunning.value) startTimer() })
 .tool-status { margin-left: auto; font-size: 11px; padding: 1px 8px; border-radius: 99px; display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 .tool-status.success { background: rgba(93,184,114,0.12); color: var(--el-color-success); }
 .tool-status.error { background: rgba(198,69,69,0.12); color: var(--el-color-danger); }
+.tool-status.rejected { background: rgba(230,162,60,0.12); color: var(--el-color-warning); }
 .tool-status.running { background: rgba(204,120,92,0.12); color: var(--el-color-primary); }
 
 .chevron { transition: transform 0.2s; font-size: 14px; color: var(--el-text-color-placeholder); flex-shrink: 0; margin-left: 4px; }
