@@ -324,21 +324,23 @@ function toolsCount(count: number): string {
                 <span v-if="t.description" class="tool-desc">{{ t.description }}</span>
               </div>
               <span class="tool-source" :class="t.source">{{ t.source === 'discovered' ? langData.mcpMgmt_autoDiscovered : langData.mcpMgmt_manualAdd }}</span>
-              <label class="toggle-switch">
+              <label v-if="s.canManage" class="toggle-switch">
                 <input type="checkbox" :checked="t.enabled" @change="toggleTool(t.id!, ($event.target as HTMLInputElement).checked, s.id!)" />
                 <span class="toggle-slider"></span>
               </label>
-              <button class="btn-icon-sm" @click="confirmDeleteTool(t.id!, s.id!, t.toolName)" :title="langData.btnDelete"><Icon icon="lucide:x" width="13" /></button>
+              <button v-if="s.canManage" class="btn-icon-sm" @click="confirmDeleteTool(t.id!, s.id!, t.toolName)" :title="langData.btnDelete"><Icon icon="lucide:x" width="13" /></button>
             </div>
           </template>
           <div v-else class="tools-empty">{{ s.status === 'connected' ? langData.mcpMgmt_noToolsConnected : langData.mcpMgmt_noToolsDisconnected }}</div>
-          <div v-if="addingToolFor === s.id" class="add-tool-row">
-            <input v-model="newToolName" :placeholder="langData.mcpMgmt_toolName" />
-            <input v-model="newToolDesc" :placeholder="langData.mcpMgmt_toolDesc" />
-            <button class="btn-primary btn-sm" @click="addTool(s.id!)">{{ langData.btnAdd }}</button>
-            <button class="btn-secondary btn-sm" @click="addingToolFor = null">{{ langData.btnCancel }}</button>
-          </div>
-          <button v-else class="add-tool-btn" @click.stop="addingToolFor = s.id!; newToolName = ''; newToolDesc = ''"><Icon icon="lucide:plus" width="14" /> {{ langData.mcpMgmt_addToolManually }}</button>
+          <template v-if="s.canManage">
+            <div v-if="addingToolFor === s.id" class="add-tool-row">
+              <input v-model="newToolName" :placeholder="langData.mcpMgmt_toolName" />
+              <input v-model="newToolDesc" :placeholder="langData.mcpMgmt_toolDesc" />
+              <button class="btn-primary btn-sm" @click="addTool(s.id!)">{{ langData.btnAdd }}</button>
+              <button class="btn-secondary btn-sm" @click="addingToolFor = null">{{ langData.btnCancel }}</button>
+            </div>
+            <button v-else class="add-tool-btn" @click.stop="addingToolFor = s.id!; newToolName = ''; newToolDesc = ''"><Icon icon="lucide:plus" width="14" /> {{ langData.mcpMgmt_addToolManually }}</button>
+          </template>
         </div>
           </div>
         </div>

@@ -70,7 +70,7 @@ function goTo(path: string) {
           <span class="sp-value">{{ settingsStore.knowledgeBases.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', settingsStore.knowledgeBases.length) : langData.settingsPanel_noMcp }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
-        <div class="sp-item" @click="goTo('/settings/workspace')">
+        <div v-if="settingsStore.isAdmin" class="sp-item" @click="goTo('/settings/workspace')">
           <Icon icon="lucide:folder-open" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_workspace }}</span>
           <span class="sp-value">{{ workspaceStore.workspaces.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', workspaceStore.workspaces.length) : langData.settingsPanel_noMcp }}</span>
