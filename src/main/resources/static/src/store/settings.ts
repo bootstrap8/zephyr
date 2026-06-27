@@ -196,6 +196,24 @@ export const useSettingsStore = defineStore('settings', () => {
     await loadMcpServers()
   }
 
+  // === 内置工具控制 API ===
+
+  const builtinToolControls = ref<any[]>([])
+
+  async function loadBuiltinToolControls() {
+    try {
+      const res = await axios({ url: '/builtin-tool/list', method: 'get' })
+      if (res.data.state === 'OK' && Array.isArray(res.data.body)) {
+        builtinToolControls.value = res.data.body
+      }
+    } catch (_) {}
+  }
+
+  async function toggleBuiltinTool(toolName: string, requireAdmin: number) {
+    await axios({ url: '/builtin-tool/toggle', method: 'post', data: { toolName, requireAdmin } })
+    await loadBuiltinToolControls()
+  }
+
   // === Skill API 方法 ===
 
   async function loadSkills() {
@@ -412,6 +430,7 @@ export const useSettingsStore = defineStore('settings', () => {
     loadMcpServers, createMcpServer, updateMcpServer, deleteMcpServer,
     connectMcpServer, disconnectMcpServer,
     loadMcpTools, createMcpTool, deleteMcpTool, toggleMcpTool, toggleServerScope, loadMcpToolCount,
+    builtinToolControls, loadBuiltinToolControls, toggleBuiltinTool,
     loadSkills, loadUserInfo, installSkill, uploadSkill, uninstallSkill, batchUninstallSkills, toggleSkill,
     syncScanSkills, syncInstallSkills,
     loadMemories, loadMemoryDetail, createMemory, updateMemory, deleteMemories, toggleMemory,

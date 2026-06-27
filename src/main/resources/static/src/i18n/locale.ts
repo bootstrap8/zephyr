@@ -133,6 +133,7 @@ const locale: any = {
         "settingsPanel_memorySummary": "用户 {user}  项目 {project}",
         "settingsPanel_workspace": "工作空间",
         "settingsPanel_securityMgmt": "安全规则配置",
+        "settingsPanel_toolControl": "内置工具控制",
 
         // 模型配置
         "modelConfig_title": "模型配置",
@@ -456,6 +457,15 @@ const locale: any = {
         "securityMgmt_confirmBatchEnableMsg": "确认批量启用选中的 {count} 条规则？",
         "securityMgmt_confirmBatchDisableMsg": "确认批量禁用选中的 {count} 条规则？",
 
+        // 内置工具控制
+        "toolControl_title": "内置工具控制",
+        "toolControl_subtitle": "控制 shell 族内置工具对非管理员角色的可用性",
+        "toolControl_toolName": "工具名",
+        "toolControl_description": "描述",
+        "toolControl_requireAdmin": "权限限制",
+        "toolControl_adminOnly": "仅管理员可用",
+        "toolControl_allUsers": "所有角色可用",
+
         // 暗黑模式
         "darkMode_on": "暗黑模式",
         "darkMode_off": "明亮模式"
@@ -594,6 +604,7 @@ const locale: any = {
         "settingsPanel_memorySummary": "User {user}  Project {project}",
         "settingsPanel_workspace": "Workspace",
         "settingsPanel_securityMgmt": "Security Rules",
+        "settingsPanel_toolControl": "Built-in Tool Control",
 
         // Model config
         "modelConfig_title": "Model Configuration",
@@ -907,6 +918,14 @@ const locale: any = {
         "securityMgmt_confirmBatchEnableMsg": "Enable {count} selected rule(s)?",
         "securityMgmt_confirmBatchDisableMsg": "Disable {count} selected rule(s)?",
 
+        "toolControl_title": "Built-in Tool Control",
+        "toolControl_subtitle": "Control availability of shell built-in tools for non-admin roles",
+        "toolControl_toolName": "Tool Name",
+        "toolControl_description": "Description",
+        "toolControl_requireAdmin": "Permission",
+        "toolControl_adminOnly": "Admin only",
+        "toolControl_allUsers": "All roles",
+
         // Dark mode
         "darkMode_on": "Dark mode",
         "darkMode_off": "Light mode"
@@ -1035,6 +1054,7 @@ const locale: any = {
         "settingsPanel_memorySummary": "ユーザー {user}  プロジェクト {project}",
         "settingsPanel_workspace": "ワークスペース",
         "settingsPanel_securityMgmt": "セキュリティルール",
+        "settingsPanel_toolControl": "組み込みツール制御",
 
         // Model config
         "modelConfig_title": "モデル設定",
@@ -1347,6 +1367,14 @@ const locale: any = {
         "securityMgmt_batchDisable": "一括無効化",
         "securityMgmt_confirmBatchEnableMsg": "選択した {count} 件のルールを有効にしますか？",
         "securityMgmt_confirmBatchDisableMsg": "選択した {count} 件のルールを無効にしますか？",
+
+        "toolControl_title": "組み込みツール制御",
+        "toolControl_subtitle": "管理者以外のロールに対するシェルツールの可用性を制御",
+        "toolControl_toolName": "ツール名",
+        "toolControl_description": "説明",
+        "toolControl_requireAdmin": "権限",
+        "toolControl_adminOnly": "管理者のみ",
+        "toolControl_allUsers": "全ロール",
 
         // Dark mode
         "darkMode_on": "ダークモード",

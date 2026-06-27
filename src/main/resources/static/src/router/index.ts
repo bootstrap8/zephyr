@@ -57,6 +57,11 @@ const router = createRouter({
       name: 'SecuritySettings',
       component: () => import('../views/settings/SecuritySettings.vue'),
     },
+    {
+      path: '/settings/tools',
+      name: 'ToolControlSettings',
+      component: () => import('../views/settings/ToolControlSettings.vue'),
+    },
   ],
 })
 

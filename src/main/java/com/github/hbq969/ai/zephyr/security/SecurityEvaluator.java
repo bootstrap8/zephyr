@@ -34,6 +34,9 @@ public class SecurityEvaluator {
     @Resource
     private SecurityConfigService securityConfigService;
 
+    @Resource
+    private com.github.hbq969.ai.zephyr.builtintool.service.BuiltinToolService builtinToolService;
+
     // === 运行时编译后的 Path Prefix 缓存 ===
 
     private List<String> hardBlockPathPrefixes;
@@ -91,7 +94,24 @@ public class SecurityEvaluator {
         }
 
         Result result = switch (toolName) {
-            case "execute_shell" -> evaluateShell(arguments, mode, boundary);
+            case "execute_shell" -> {
+                if (builtinToolService.requiresAdmin(userName, "execute_shell")) {
+                    yield Result.block("ROLE_CHECK", "命令未执行（无权限）");
+                }
+                yield evaluateShell(arguments, mode, boundary);
+            }
+            case "list_processes" -> {
+                if (builtinToolService.requiresAdmin(userName, "list_processes")) {
+                    yield Result.block("ROLE_CHECK", "命令未执行（无权限）");
+                }
+                yield Result.allow();
+            }
+            case "kill_process" -> {
+                if (builtinToolService.requiresAdmin(userName, "kill_process")) {
+                    yield Result.block("ROLE_CHECK", "命令未执行（无权限）");
+                }
+                yield Result.allow();
+            }
             case "write_file", "edit_file" -> evaluateFileWrite(arguments, mode, boundary);
             default -> Result.allow();
         };

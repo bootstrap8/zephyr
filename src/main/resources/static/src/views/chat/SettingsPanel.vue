@@ -76,6 +76,12 @@ function goTo(path: string) {
           <span class="sp-value">{{ workspaceStore.workspaces.length > 0 ? langData.settingsPanel_mcpCount.replace('{count}', workspaceStore.workspaces.length) : langData.settingsPanel_noMcp }}</span>
           <Icon icon="lucide:chevron-right" class="sp-arrow" />
         </div>
+        <div v-if="settingsStore.isAdmin" class="sp-item" @click="goTo('/settings/tools')">
+          <Icon icon="lucide:terminal" class="sp-item-icon" />
+          <span>{{ langData.settingsPanel_toolControl }}</span>
+          <span class="sp-value"></span>
+          <Icon icon="lucide:chevron-right" class="sp-arrow" />
+        </div>
         <div v-if="settingsStore.isAdmin" class="sp-item" @click="goTo('/settings/security')">
           <Icon icon="lucide:shield" class="sp-item-icon" />
           <span>{{ langData.settingsPanel_securityMgmt }}</span>

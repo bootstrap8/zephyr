@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.github.hbq969.ai.zephyr.builtintool.dao.BuiltinToolDao">
+
+  <select id="queryAll" resultType="com.github.hbq969.ai.zephyr.builtintool.dao.entity.BuiltinToolControlEntity">
+    select tool_name as toolName, description, require_admin as requireAdmin,
+           created_at as createdAt, updated_at as updatedAt
+    from zephyr_builtin_tool_controls
+    order by tool_name
+  </select>
+
+  <update id="updateRequireAdmin">
+    update zephyr_builtin_tool_controls
+    set require_admin = #{requireAdmin}, updated_at = #{updatedAt}
+    where tool_name = #{toolName}
+  </update>
+
+  <insert id="insert">
+    insert into zephyr_builtin_tool_controls (tool_name, description, require_admin, created_at, updated_at)
+    values (#{entity.toolName}, #{entity.description}, #{entity.requireAdmin}, #{entity.createdAt}, #{entity.updatedAt})
+  </insert>
+
+</mapper>
