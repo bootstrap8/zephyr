@@ -14,6 +14,7 @@ import { Icon } from '@iconify/vue'
 import { getLangData } from '@/i18n/locale'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import type { ConfirmActionEvent } from '@/types/chat'
+import { msg } from '@/utils/Utils'
 import axios from '@/network'
 
 const convStore = useConversationsStore()
@@ -99,6 +100,10 @@ function newChat() {
 }
 
 function onSend(text: string, filePaths?: string[]) {
+  if (!settingsStore.modelsLoaded || settingsStore.models.length === 0) {
+    msg(langData.inputArea_noModelWarning, 'warning')
+    return
+  }
   if (text === '/context') {
     axios({ url: '/chat/context-usage', method: 'get', params: { conversationId: convStore.currentId } })
       .then(res => {
@@ -187,7 +192,9 @@ function onSend(text: string, filePaths?: string[]) {
             settingsStore.loadContextUsage(convStore.currentId)
             chatStore.streaming = false
           } else if (event.type === 'error') {
-            chatStore.appendToken('\n\n' + langData.context_errorPrefix + (event.content || langData.context_requestFailed))
+            const errMsg = event.content || langData.context_requestFailed
+            chatStore.appendToken('\n\n' + langData.context_errorPrefix + errMsg)
+            msg(errMsg, 'warning')
             chatStore.streaming = false
           }
         } catch (_) {}

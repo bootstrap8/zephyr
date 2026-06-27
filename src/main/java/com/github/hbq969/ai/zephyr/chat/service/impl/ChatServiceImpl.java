@@ -24,6 +24,7 @@ import com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao;
 import com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity;
 import com.github.hbq969.ai.zephyr.knowledge.dao.KnowledgeDao;
 import com.github.hbq969.ai.zephyr.knowledge.service.KnowledgeService;
+import com.github.hbq969.code.sm.login.session.UserContext;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import jakarta.annotation.Resource;
@@ -126,7 +127,11 @@ public class ChatServiceImpl implements ChatService {
         });
 
         // === 异步阶段 ===
+        com.github.hbq969.code.sm.login.model.UserInfo currentUser = UserContext.getNoCheck();
         sessionManager.getExecutor().execute(() -> {
+            if (currentUser != null) {
+                UserContext.set(currentUser);
+            }
             boolean completed = false;
             try {
                 long now = System.currentTimeMillis() / 1000;
@@ -313,6 +318,7 @@ public class ChatServiceImpl implements ChatService {
                 handle.killTrackedProcesses();
                 log.info("[会话] SSE 响应完成 cid={}, completed={}", cid, completed);
                 sessionManager.remove(cid);
+                UserContext.remove();
             }
         });
 

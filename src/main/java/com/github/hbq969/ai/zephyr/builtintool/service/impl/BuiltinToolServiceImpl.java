@@ -55,10 +55,16 @@ public class BuiltinToolServiceImpl implements BuiltinToolService, ApplicationLi
     public boolean requiresAdmin(String userName, String toolName) {
         UserInfo ui = UserContext.getNoCheck();
         if (ui != null && ui.isAdmin()) {
+            log.debug("[内置工具管控] admin 用户豁免: tool={}, user={}", toolName, userName);
             return false;
         }
         Boolean v = requireAdminCache.get(toolName);
-        return v != null && v;
+        boolean blocked = v != null && v;
+        if (blocked) {
+            log.info("[内置工具管控] 非 admin 用户被拦截: tool={}, user={}, roles={}", toolName, userName,
+                    ui == null ? "[]" : ui.getRoleNames());
+        }
+        return blocked;
     }
 
     @Override

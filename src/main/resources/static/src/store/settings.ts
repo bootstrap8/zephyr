@@ -4,13 +4,9 @@ import type { ModelConfig, McpServer, McpTool, SkillConfig, MemoryItem } from '@
 import axios from '@/network'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const currentModel = ref('DeepSeek-V3')
-  const models = ref<ModelConfig[]>([
-    { name: 'DeepSeek-V3', isDefault: true },
-    { name: 'Claude Opus 4.7', isDefault: false },
-    { name: 'Claude Sonnet 4.6', isDefault: false },
-    { name: 'GPT-4o', isDefault: false }
-  ])
+  const currentModel = ref('')
+  const models = ref<ModelConfig[]>([])
+  const modelsLoaded = ref(false)
   const mcpServers = ref<McpServer[]>([])
   const mcpToolCount = ref(0)
   const skills = ref<SkillConfig[]>([])
@@ -55,9 +51,9 @@ export const useSettingsStore = defineStore('settings', () => {
         }))
         models.value = list
         const def = list.find((m: ModelConfig) => m.isDefault)
-        currentModel.value = def ? def.name : (list.length > 0 ? list[0].name : '无')
+        currentModel.value = def ? def.name : (list.length > 0 ? list[0].name : '')
       }
-    } catch (_) { /* keep defaults */ }
+    } catch (_) { models.value = [] } finally { modelsLoaded.value = true }
   }
 
   async function addModelRemote(name: string, baseUrl: string, apiKey: string, maxContextTokens: string, params: string, modelType?: string, dimensions?: number) {
@@ -422,7 +418,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   return {
-    currentModel, models, mcpServers, mcpToolCount, skills, isAdmin, memories, knowledgeBases,
+    currentModel, models, modelsLoaded, mcpServers, mcpToolCount, skills, isAdmin, memories, knowledgeBases,
     contextUsed, contextLoaded, contextTotal, contextPercent, contextDetail,
     setModel, addModel,
     loadModels, addModelRemote, updateModelRemote, deleteModelRemote, setDefaultModelRemote, detectContextRemote, detectCtxRaw, fetchModels, toggleModelScope,
