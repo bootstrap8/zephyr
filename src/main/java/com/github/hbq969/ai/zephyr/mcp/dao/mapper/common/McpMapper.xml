@@ -183,4 +183,11 @@
         where name = #{name} and scope = #{scope}
     </select>
 
+    <select id="queryAllDistinctToolNames" resultType="java.lang.String">
+        select distinct tool_name as "toolName"
+        from zephyr_mcp_tools
+        where tool_name is not null
+        order by tool_name
+    </select>
+
 </mapper>

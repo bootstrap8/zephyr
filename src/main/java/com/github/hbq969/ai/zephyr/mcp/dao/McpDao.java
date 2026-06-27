@@ -48,4 +48,6 @@ public interface McpDao {
     McpToolEntity queryToolByName(@Param("toolName") String toolName);
 
     McpToolEntity queryToolByNameAndUser(@Param("toolName") String toolName, @Param("userName") String userName);
+
+    List<String> queryAllDistinctToolNames();
 }
