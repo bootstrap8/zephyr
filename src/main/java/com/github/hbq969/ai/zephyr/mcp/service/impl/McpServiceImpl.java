@@ -9,10 +9,13 @@ import com.github.hbq969.ai.zephyr.mcp.service.McpService;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnection;
 import com.github.hbq969.ai.zephyr.mcp.utils.McpConnectionManager;
 import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
+import com.github.hbq969.code.common.initial.event.ScriptInitialDoneEvent;
 import com.github.hbq969.code.sm.login.model.UserInfo;
 import com.github.hbq969.code.sm.login.session.UserContext;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,8 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class McpServiceImpl implements McpService {
+@Order(2)
+public class McpServiceImpl implements McpService, ApplicationListener<ScriptInitialDoneEvent> {
 
     @Resource private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
@@ -340,6 +344,11 @@ public class McpServiceImpl implements McpService {
 
     private String encryptHeaders(String plain) {
         return AESUtil.encrypt(plain, cfg.getEncrypt().getRestful().getAes().getKey(), cfg.getEncrypt().getRestful().getAes().getIv(), StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public void onApplicationEvent(ScriptInitialDoneEvent event) {
+        reconnectOnStartup();
     }
 
     @Override

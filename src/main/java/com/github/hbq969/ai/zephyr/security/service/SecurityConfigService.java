@@ -2,9 +2,10 @@ package com.github.hbq969.ai.zephyr.security.service;
 
 import com.github.hbq969.ai.zephyr.security.dao.SecurityConfigDao;
 import com.github.hbq969.ai.zephyr.security.dao.entity.SecurityRuleEntity;
-import jakarta.annotation.PostConstruct;
+import com.github.hbq969.code.common.initial.event.ScriptInitialDoneEvent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
 
 import cn.hutool.core.lang.PatternPool;
@@ -16,15 +17,15 @@ import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 
 @Slf4j
 @Service
-public class SecurityConfigService {
+public class SecurityConfigService implements ApplicationListener<ScriptInitialDoneEvent> {
 
     @Resource
     private SecurityConfigDao dao;
 
     private volatile ConfigSnapshot snapshot;
 
-    @PostConstruct
-    void init() {
+    @Override
+    public void onApplicationEvent(ScriptInitialDoneEvent event) {
         refresh();
     }
 
@@ -57,7 +58,7 @@ public class SecurityConfigService {
             return new ConfigSnapshot(shellAllowed, defaultAllow,
                     compilePatterns(hardBlockRaw), compilePatterns(softBlockRaw));
         } catch (Exception e) {
-            // 表尚未创建（@PostConstruct 早于 InitialServiceImpl），返空快照待后续 refresh
+            // 表尚未创建，返空快照待 ScriptInitialDoneEvent 后 refresh
             log.warn("[SecurityConfig] DB not ready, returning empty snapshot: {}", e.getMessage());
             return new ConfigSnapshot(Set.of(), Set.of(), List.of(), List.of());
         }

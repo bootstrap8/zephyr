@@ -7,7 +7,9 @@ import com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties;
 import com.github.hbq969.ai.zephyr.workspace.dao.WorkspaceDao;
 import com.github.hbq969.ai.zephyr.workspace.dao.entity.WorkspaceEntity;
 import com.github.hbq969.ai.zephyr.workspace.service.WorkspaceService;
+import com.github.hbq969.code.common.initial.event.ScriptInitialDoneEvent;
 import jakarta.annotation.Resource;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class WorkspaceServiceImpl implements WorkspaceService {
+public class WorkspaceServiceImpl implements WorkspaceService, ApplicationListener<ScriptInitialDoneEvent> {
 
     @Resource
     private WorkspaceDao workspaceDao;
@@ -29,6 +31,11 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     public List<WorkspaceEntity> list(String userName) {
         return workspaceDao.queryByUserName(userName);
+    }
+
+    @Override
+    public void onApplicationEvent(ScriptInitialDoneEvent event) {
+        ensureSystemWorkspace();
     }
 
     @Override

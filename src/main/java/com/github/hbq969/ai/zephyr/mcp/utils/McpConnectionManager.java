@@ -5,10 +5,12 @@ import com.github.hbq969.ai.zephyr.mcp.dao.McpDao;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpServerEntity;
 import com.github.hbq969.ai.zephyr.mcp.dao.entity.McpToolEntity;
 import com.github.hbq969.code.common.encrypt.ext.utils.AESUtil;
-import jakarta.annotation.PostConstruct;
+import com.github.hbq969.code.common.initial.event.ScriptInitialDoneEvent;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -22,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-public class McpConnectionManager {
+@Order(1)
+public class McpConnectionManager implements ApplicationListener<ScriptInitialDoneEvent> {
 
 
 
@@ -35,7 +38,11 @@ public class McpConnectionManager {
 
     @Resource private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
-    @PostConstruct
+    @Override
+    public void onApplicationEvent(ScriptInitialDoneEvent event) {
+        cleanupOrphanProcesses();
+    }
+
     void cleanupOrphanProcesses() {
         log.info("开始启动清理 MCP 服务器...");
 

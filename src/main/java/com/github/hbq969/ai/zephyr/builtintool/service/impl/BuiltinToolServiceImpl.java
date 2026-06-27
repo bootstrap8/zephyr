@@ -3,11 +3,12 @@ package com.github.hbq969.ai.zephyr.builtintool.service.impl;
 import com.github.hbq969.ai.zephyr.builtintool.dao.BuiltinToolDao;
 import com.github.hbq969.ai.zephyr.builtintool.dao.entity.BuiltinToolControlEntity;
 import com.github.hbq969.ai.zephyr.builtintool.service.BuiltinToolService;
+import com.github.hbq969.code.common.initial.event.ScriptInitialDoneEvent;
 import com.github.hbq969.code.sm.login.model.UserInfo;
 import com.github.hbq969.code.sm.login.session.UserContext;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -17,15 +18,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class BuiltinToolServiceImpl implements BuiltinToolService {
+public class BuiltinToolServiceImpl implements BuiltinToolService, ApplicationListener<ScriptInitialDoneEvent> {
 
     @Resource
     private BuiltinToolDao builtinToolDao;
 
     private volatile Map<String, Boolean> requireAdminCache = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    void init() {
+    @Override
+    public void onApplicationEvent(ScriptInitialDoneEvent event) {
         refreshCache();
     }
 

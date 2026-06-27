@@ -494,3 +494,15 @@ UNION ALL
     SELECT 'seed_soft_13', 'SOFT_BLOCK', 'chmod\s+777', 'chmod 777', 1, 1735800000
 WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules);
 
+-- ============================================================
+-- 内置工具管控种子数据：从 InitialServiceImpl.insertSeed 迁移
+-- ============================================================
+
+INSERT INTO zephyr_builtin_tool_controls (tool_name, description, require_admin, created_at, updated_at)
+    SELECT 'execute_shell', '在工作空间目录执行任意 shell 命令，支持前台阻塞和后台运行', 1, 1735800000, 1735800000
+UNION ALL
+    SELECT 'list_processes', '列出当前用户启动的所有后台进程及其 PID', 1, 1735800000, 1735800000
+UNION ALL
+    SELECT 'kill_process', '根据 PID 终止指定的后台进程', 1, 1735800000, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_builtin_tool_controls);
+

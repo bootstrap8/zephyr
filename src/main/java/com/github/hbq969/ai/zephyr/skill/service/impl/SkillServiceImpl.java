@@ -9,11 +9,12 @@ import com.github.hbq969.ai.zephyr.skill.dao.SkillDao;
 import com.github.hbq969.ai.zephyr.skill.dao.entity.SkillConfigEntity;
 import com.github.hbq969.ai.zephyr.skill.model.SkillVO;
 import com.github.hbq969.ai.zephyr.skill.service.SkillService;
+import com.github.hbq969.code.common.initial.event.ScriptInitialDoneEvent;
 import com.github.hbq969.code.sm.login.model.UserInfo;
 import com.github.hbq969.code.sm.login.session.UserContext;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,7 +33,7 @@ import static com.github.hbq969.ai.zephyr.constant.ZephyrConstants.*;
 
 @Service
 @Slf4j
-public class SkillServiceImpl implements SkillService {
+public class SkillServiceImpl implements SkillService, ApplicationListener<ScriptInitialDoneEvent> {
 
     @Resource private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
@@ -73,7 +74,11 @@ public class SkillServiceImpl implements SkillService {
 
     // === 迁移 ===
 
-    @PostConstruct
+    @Override
+    public void onApplicationEvent(ScriptInitialDoneEvent event) {
+        migrateOldSkills();
+    }
+
     public void migrateOldSkills() {
         Path home = Paths.get(cfg.getSkills().getHome());
         Path marker = home.resolve(".migrated-to-isolation");

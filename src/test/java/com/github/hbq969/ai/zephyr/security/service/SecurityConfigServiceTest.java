@@ -23,9 +23,9 @@ class SecurityConfigServiceTest {
     private SecurityConfigService service;
 
     @Test
-    void init_shouldReturnEmptySnapshotWhenDbNotReady() {
+    void refresh_shouldReturnEmptySnapshotWhenDbNotReady() {
         when(dao.queryAll()).thenThrow(new RuntimeException("table not found"));
-        service.init();
+        service.refresh();
         SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
         assertThat(snap.shellAllowedCommands()).isEmpty();
         assertThat(snap.defaultAllowCommands()).isEmpty();
@@ -34,13 +34,13 @@ class SecurityConfigServiceTest {
     }
 
     @Test
-    void init_shouldLoadAllRulesFromDb() {
+    void refresh_shouldLoadAllRulesFromDb() {
         SecurityRuleEntity e1 = new SecurityRuleEntity();
         e1.setRuleType(RULE_TYPE_SHELL_ALLOWED); e1.setRuleValue("ls");
         SecurityRuleEntity e2 = new SecurityRuleEntity();
         e2.setRuleType(RULE_TYPE_HARD_BLOCK); e2.setRuleValue("rm\\s+-rf");
         when(dao.queryAll()).thenReturn(List.of(e1, e2));
-        service.init();
+        service.refresh();
         SecurityConfigService.ConfigSnapshot snap = service.getSnapshot();
         assertThat(snap.shellAllowedCommands()).containsExactly("ls");
         assertThat(snap.hardBlockPatterns()).hasSize(1);
@@ -58,8 +58,8 @@ class SecurityConfigServiceTest {
     }
 
     @Test
-    void concurrentReadsDuringRefresh_shouldNotSeeCorruptedState() throws Exception {
-        service.init();
+    void concurrentReads_shouldNotSeeCorruptedStateDuringRefresh() throws Exception {
+        service.refresh();
         int readers = 10;
         java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(readers + 1);
         java.util.concurrent.CyclicBarrier barrier = new java.util.concurrent.CyclicBarrier(readers + 1);

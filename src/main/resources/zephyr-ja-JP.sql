@@ -487,3 +487,15 @@ UNION ALL
     SELECT 'seed_soft_13', 'SOFT_BLOCK', 'chmod\s+777', 'chmod 777', 1, 1735800000
 WHERE NOT EXISTS (SELECT 1 FROM zephyr_security_rules);
 
+-- ============================================================
+-- ビルトインツール制御シードデータ：InitialServiceImpl.insertSeed から移行
+-- ============================================================
+
+INSERT INTO zephyr_builtin_tool_controls (tool_name, description, require_admin, created_at, updated_at)
+    SELECT 'execute_shell', 'ワークスペースディレクトリで任意のシェルコマンドを実行、フォアグラウンド/バックグラウンド対応', 1, 1735800000, 1735800000
+UNION ALL
+    SELECT 'list_processes', '現在のユーザーが起動したすべてのバックグラウンドプロセスとそのPIDを表示', 1, 1735800000, 1735800000
+UNION ALL
+    SELECT 'kill_process', '指定されたPIDのバックグラウンドプロセスを終了', 1, 1735800000, 1735800000
+WHERE NOT EXISTS (SELECT 1 FROM zephyr_builtin_tool_controls);
+
