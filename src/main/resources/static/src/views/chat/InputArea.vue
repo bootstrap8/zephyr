@@ -393,7 +393,7 @@ async function loadMcpTools() {
   try {
     const res = await axios({ url: '/mcp/server/list', method: 'get' })
     if (res.data.state !== 'OK') return
-    const servers = res.data.body
+    const servers = (res.data.body as any[]).filter((s: any) => s.status === 'connected')
     const groups: typeof mcpGroups.value = []
     const toolReqs = servers.map((s: any) =>
       axios({ url: '/mcp/tool/list', method: 'get', params: { serverId: s.id } })
