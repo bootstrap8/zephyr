@@ -21,6 +21,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
@@ -32,11 +33,16 @@ public class McpConnectionManager implements ApplicationListener<ScriptInitialDo
     private static final Path PIDS_DIR = Paths.get(System.getProperty("user.home"), MCP_PIDS_DIR);
 
     private final Map<String, McpConnection> connections = new ConcurrentHashMap<>();
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     @Resource private com.github.hbq969.ai.zephyr.config.ZephyrConfigProperties cfg;
 
     @Override
     public void onApplicationEvent(ScriptInitialDoneEvent event) {
+        if (!initialized.compareAndSet(false, true)) {
+            log.info("MCP 启动清理已跳过（已执行过一次），避免重复初始化");
+            return;
+        }
         cleanupOrphanProcesses();
     }
 

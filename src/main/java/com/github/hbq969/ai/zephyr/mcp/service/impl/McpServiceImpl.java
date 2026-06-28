@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @Slf4j
@@ -39,6 +40,8 @@ public class McpServiceImpl implements McpService, ApplicationListener<ScriptIni
 
     private static final String SCOPE_SHARED = "shared";
     private static final String SCOPE_USER = "user";
+
+    private final AtomicBoolean reconnectDone = new AtomicBoolean(false);
 
     private boolean isAdmin() {
         UserInfo ui = UserContext.getNoCheck();
@@ -363,6 +366,10 @@ public class McpServiceImpl implements McpService, ApplicationListener<ScriptIni
 
     @Override
     public void onApplicationEvent(ScriptInitialDoneEvent event) {
+        if (!reconnectDone.compareAndSet(false, true)) {
+            log.info("MCP 启动重连已跳过（已执行过一次），避免重复重连");
+            return;
+        }
         reconnectOnStartup();
     }
 
