@@ -53,12 +53,12 @@ function truncate(s: string) {
 const displayName = computed(() => {
   const name = props.tool.name
   const input = props.tool.input
-  if (name === 'use_skill' && input?.skill_name) return `use_skill: ${input.skill_name}`
-  if (name === 'use_memory' && input?.memory_name) return `use_memory: ${input.memory_name}`
-  if (name === 'search_knowledge' && input?.query) return `search_knowledge: ${truncate(String(input.query))}`
-  if (name === 'execute_shell' && input?.command) return `execute_shell: ${truncate(String(input.command))}`
-  if (name === 'kill_process' && input?.pid != null) return `kill_process: PID ${input.pid}`
-  if (!BUILTIN_TOOLS.has(name)) return `MCP: ${name}`
+  if (name === 'use_skill' && input?.skill_name) return `use_skill(${input.skill_name})`
+  if (name === 'use_memory' && input?.memory_name) return `use_memory(${input.memory_name})`
+  if (name === 'search_knowledge' && input?.query) return `search_knowledge(${truncate(String(input.query))})`
+  if (name === 'execute_shell' && input?.command) return `execute_shell(${truncate(String(input.command))})`
+  if (name === 'kill_process' && input?.pid != null) return `kill_process(PID ${input.pid})`
+  if (!BUILTIN_TOOLS.has(name)) return `mcp(${name})`
   return name
 })
 

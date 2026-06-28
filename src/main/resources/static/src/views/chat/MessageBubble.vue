@@ -7,8 +7,10 @@ import ToolCallCard from './ToolCallCard.vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import { getLangData } from '@/i18n/locale'
+import { useSettingsStore } from '@/store/settings'
 
 const langData = getLangData()
+const settingsStore = useSettingsStore()
 const props = defineProps<{ message: Message; isLast: boolean }>()
 
 const md = new MarkdownIt({
@@ -149,7 +151,7 @@ onUpdated(setupCodeBlocks)
         <div class="ai-avatar">
           <Icon icon="lucide:sparkles" />
         </div>
-        <span class="ai-label">zephyr</span>
+        <span class="ai-label">{{ settingsStore.appName }}</span>
       </div>
       <div v-if="message.thinking" class="mb-2">
         <ThinkingBlock :content="message.thinking" :animating="streaming" />
